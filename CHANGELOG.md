@@ -4,6 +4,14 @@ Releases are cut from a tag (`bun run version:set`, then `git push
 --follow-tags`); the tag is what CI builds. Entries say what a release gives
 the person using it, in the order it matters.
 
+## Unreleased
+
+### The interface
+
+- Side by side, `^←` and `^→` move the divider beside the pane in focus, four
+  columns a press, never narrower than a pane can be read. What a drag does,
+  for a keyboard — and for a recording, which has no mouse.
+
 ## 0.1.0 — 2026-09-03
 
 The first release. A team of coding agents, each on its own provider and

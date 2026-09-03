@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { dividerAt, paneAt, planPanes, resize } from './layout.ts'
+import { dividerAt, nudge, paneAt, planPanes, resize } from './layout.ts'
 
 describe('placing panes', () => {
   test('splits the width between two agents, leaving a column for the rule', () => {
@@ -111,5 +111,48 @@ describe('dragging a border', () => {
     const { panes: after } = planPanes(['a', 'b'], 101, 20, weights)
 
     expect(after[0]?.width).toBeGreaterThanOrEqual(24)
+  })
+})
+
+describe('moving a divider from the keyboard', () => {
+  // A mouse can drag a divider; a keyboard could not, and neither can a
+  // recording, so the one thing side by side is for could only be shown to
+  // somebody sitting at the terminal.
+  const columns = 121
+
+  test('a step to the right gives the pane on the left that many columns', () => {
+    const plan = planPanes(['a', 'b'], columns, 20)
+    const before = plan.panes[0]?.width ?? 0
+
+    const moved = planPanes(['a', 'b'], columns, 20, nudge({}, plan, 'a', 4))
+
+    expect(moved.panes[0]?.width).toBe(before + 4)
+    expect(moved.panes[1]?.width).toBe((plan.panes[1]?.width ?? 0) - 4)
+  })
+
+  test('from the pane on the right, the divider on its left is the one that moves', () => {
+    const plan = planPanes(['a', 'b'], columns, 20)
+
+    const moved = planPanes(['a', 'b'], columns, 20, nudge({}, plan, 'b', -4))
+
+    expect(moved.panes[0]?.width).toBe((plan.panes[0]?.width ?? 0) - 4)
+  })
+
+  test('never pushes a pane narrower than it can be read', () => {
+    let weights = {}
+    for (let step = 0; step < 40; step += 1) {
+      weights = nudge(weights, planPanes(['a', 'b'], columns, 20, weights), 'a', 4)
+    }
+
+    const { panes } = planPanes(['a', 'b'], columns, 20, weights)
+
+    expect(panes[1]?.width).toBeGreaterThanOrEqual(24)
+    expect(panes[0]?.width).toBeLessThan(columns - 24)
+  })
+
+  test('does nothing when there is no divider to move', () => {
+    const plan = planPanes(['a'], columns, 20)
+
+    expect(nudge({ a: 2 }, plan, 'a', 4)).toEqual({ a: 2 })
   })
 })

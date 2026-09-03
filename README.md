@@ -169,6 +169,11 @@ Naming a file with `@` sends it: `what does @src/auth.ts do?` arrives with the
 file attached, rather than costing the agent a turn to go and find it. `^t`
 finds one by part of its name, for the keyboards where `@` is awkward.
 
+`^l` puts two agents side by side, so a handoff can be watched from both ends.
+The divider between them moves with the mouse or with `^←` and `^→`:
+
+![Two panes side by side, the divider between them moved with the keyboard](docs/split.gif)
+
 Typing `/spawn coder` starts another one mid-session, onto the job you are on
 and into the same checkout, without leaving what you were doing. `/help` lists
 the rest, and `/tour` is eight pages on what the whole thing is — the same

@@ -140,6 +140,40 @@ export function dividerAt(
 }
 
 /**
+ * How far one press moves a divider. Four columns is a nudge you can see and
+ * still land where you meant after a few of them.
+ */
+export const DIVIDER_STEP = 4
+
+/**
+ * The divider beside the pane in focus, moved by some columns.
+ *
+ * A mouse could drag a divider and a keyboard could not — and neither can a
+ * recording, so the one thing side by side is for could only ever be shown
+ * to somebody sitting at the terminal. The divider on the focused pane's
+ * right moves; from the last pane, the one on its left. No divider, no
+ * change.
+ */
+export function nudge(
+  weights: Record<string, number>,
+  plan: Plan,
+  focused: string,
+  by: number,
+): Record<string, number> {
+  const divider =
+    plan.dividers.find((one) => one.before === focused) ??
+    plan.dividers.find((one) => one.after === focused) ??
+    plan.dividers[0]
+  if (!divider) return weights
+
+  const before = plan.panes.find((pane) => pane.id === divider.before)
+  const after = plan.panes.find((pane) => pane.id === divider.after)
+  if (!before || !after) return weights
+
+  return resize(weights, divider.before, divider.after, divider.x + by, { before, after })
+}
+
+/**
  * Moves width from one pane to its neighbour, in weights rather than columns.
  *
  * Expressed as a share of what the two of them have between them: the pair

@@ -16,7 +16,7 @@ import { clip, measure, split as splitAt } from '../components/row.ts'
 import { blanks, Row, Surface } from '../components/surface.tsx'
 import { fold, widthOf } from '../components/text-width.ts'
 import type { DividerBox, PaneBox } from '../layout.ts'
-import { dividerAt, paneAt, planPanes, resize } from '../layout.ts'
+import { DIVIDER_STEP, dividerAt, nudge, paneAt, planPanes, resize } from '../layout.ts'
 import { wordmark } from '../logo.ts'
 import { hidePaths, shorten } from '../private.ts'
 import { marquee, pulseOf } from '../pulse.ts'
@@ -367,6 +367,15 @@ export function Session(props: SessionProps) {
   useInput(
     (input, key) => {
       if (key.tab) return move(key.shift ? -1 : 1)
+      // With control held, the arrows move the divider beside this pane —
+      // what a drag does, for a keyboard and for a recording.
+      if (key.ctrl && (key.leftArrow || key.rightArrow)) {
+        if (split.length > 0) {
+          const by = key.leftArrow ? -DIVIDER_STEP : DIVIDER_STEP
+          setWeights((current) => nudge(current, plan, props.target, by))
+        }
+        return
+      }
       if (key.leftArrow) return move(-1)
       if (key.rightArrow) return move(1)
       // Page keys work without a modifier: they are the one thing you reach
@@ -862,6 +871,7 @@ function Tray({
     ['tab', 'agent'],
     ['pgup', 'back'],
     ['^l', split ? 'unsplit' : 'split'],
+    ...(split ? ([['^←→', 'divider']] as [string, string][]) : []),
     ['^r', thinking ? 'hide reasoning' : 'reasoning'],
     ['^t', 'name a file'],
     ['^k', 'tasks'],

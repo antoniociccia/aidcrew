@@ -48,6 +48,7 @@ export const GROUPS: ShortcutGroup[] = [
       { keys: '^k', what: 'the jobs open in this repository' },
       { keys: '^n', what: 'everything said while you were looking elsewhere' },
       { keys: '^l', what: 'side by side, or back to tabs' },
+      { keys: '^← ^→', what: 'move the divider, when side by side' },
       { keys: '^x', what: 'drop what this agent has queued' },
       { keys: 'esc', what: 'stop the turn in flight, leaving the agent standing' },
     ],
