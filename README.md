@@ -169,11 +169,6 @@ Naming a file with `@` sends it: `what does @src/auth.ts do?` arrives with the
 file attached, rather than costing the agent a turn to go and find it. `^t`
 finds one by part of its name, for the keyboards where `@` is awkward.
 
-`^l` puts two agents side by side, so a handoff can be watched from both ends.
-The divider between them moves with the mouse or with `^←` and `^→`:
-
-![Two panes side by side, the divider between them moved with the keyboard](docs/split.gif)
-
 Typing `/spawn coder` starts another one mid-session, onto the job you are on
 and into the same checkout, without leaving what you were doing. `/help` lists
 the rest, and `/tour` is eight pages on what the whole thing is — the same
@@ -189,6 +184,21 @@ stopped — and an agent you have turned loose with `/yolo` is sent back to carr
 on when it reaches that bound with the work unfinished, a few times, before the
 stop is real. Nobody watching means nobody to say "go on", so the harness says
 it. An agent that is asking first stops and waits for you.
+
+### Side by side
+
+`^l` asks which agents to put next to each other and draws them in their own
+panes, so a handoff can be watched from both ends at once — the plan going out
+of one pane and the files arriving in the other. Each pane keeps its own
+scroll, its own spinner and its own cost; a question an agent asks is answered
+only from its own pane, and `tab` still moves between them.
+
+The divider between two panes moves. Drag it with the mouse, or press `^←` and
+`^→` to move it four columns a press; either way a pane is never pushed
+narrower than it can be read, and the split you settle on is remembered for
+the project. `^l` again returns to one agent at a time.
+
+![Two panes side by side, the divider between them moved with the keyboard](docs/split.gif)
 
 ## Writing a plugin
 
