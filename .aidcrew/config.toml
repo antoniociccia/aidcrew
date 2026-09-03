@@ -1,0 +1,35 @@
+# Written by aidcrew. Safe to edit and to commit — it holds no secrets.
+#
+# An example team, to show the shape. Mixed models are the point: the planner
+# runs on a strong model, the workers on cheaper ones, and the reviewer on a
+# free tier. Change these to whatever you have keys for.
+
+[sources]
+instructions = ["~/.claude/CLAUDE.md", "./CLAUDE.md"]
+agents = ["~/.claude/agents", "./.claude/agents"]
+
+[defaults]
+provider = "zen"
+model = "deepseek-v4-flash"
+sharedMemory = true
+leader = "architect"
+
+[agents.architect]
+provider = "anthropic"
+model = "claude-opus-5"
+
+[agents.coder]
+provider = "zen"
+model = "deepseek-v4"
+
+[agents.reviewer]
+provider = "zen"
+model = "deepseek-v4-flash-free"
+
+[agents.tester]
+provider = "zen"
+model = "deepseek-v4-flash"
+
+[agents.plugin-writer]
+provider = "zen"
+model = "deepseek-v4"

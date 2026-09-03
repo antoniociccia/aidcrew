@@ -1,0 +1,5 @@
+# Written by aidcrew. Runtime state, not project configuration.
+# The config and the agents next to this file are meant to be committed.
+history.db*
+ui.json
+wt/

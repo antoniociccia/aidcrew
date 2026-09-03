@@ -1,0 +1,15 @@
+{
+  "name": "@aidcrew/tool-data",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aidcrew/core": "workspace:*",
+    "@aidcrew/plugin-sdk": "workspace:*",
+    "@aidcrew/tool-fs": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

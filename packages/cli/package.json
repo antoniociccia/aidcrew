@@ -1,0 +1,40 @@
+{
+  "name": "@aidcrew/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "aidcrew": "./src/bin.ts"
+  },
+  "dependencies": {
+    "@aidcrew/core": "workspace:*",
+    "@aidcrew/hooks-guard": "workspace:*",
+    "@aidcrew/loader-claude": "workspace:*",
+    "@aidcrew/mcp-bridge": "workspace:*",
+    "@aidcrew/plugin-sdk": "workspace:*",
+    "@aidcrew/prices": "workspace:*",
+    "@aidcrew/provider-anthropic": "workspace:*",
+    "@aidcrew/provider-gemini": "workspace:*",
+    "@aidcrew/provider-openai-compat": "workspace:*",
+    "@aidcrew/tool-bash": "workspace:*",
+    "@aidcrew/tool-data": "workspace:*",
+    "@aidcrew/tool-fs": "workspace:*",
+    "@aidcrew/tool-git": "workspace:*",
+    "@aidcrew/tool-head": "workspace:*",
+    "@aidcrew/tool-outline": "workspace:*",
+    "@aidcrew/tool-search": "workspace:*",
+    "@aidcrew/tool-skills": "workspace:*",
+    "@aidcrew/tool-stat": "workspace:*",
+    "@aidcrew/tool-tree": "workspace:*",
+    "@aidcrew/tool-unix": "workspace:*",
+    "@aidcrew/tui": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "gpt-tokenizer": "^4.0.0",
+    "@aidcrew/loader-claude": "workspace:*"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,153 @@
+name: Release
+
+# Cut a release by pushing a tag:
+#
+#   bun scripts/version.ts 0.2.0     # writes the version, commits, tags
+#   git push --follow-tags
+#
+# The tag is the only trigger. A release built from a branch would have a
+# version nobody can get back to.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  # Pinned, because the runtime is baked into every binary: two releases built
+  # by whatever "latest" meant on their day would differ in ways no diff shows.
+  BUN_VERSION: 1.4.0
+
+jobs:
+  # The same checks a pull request gets, then every binary cross-compiled on
+  # one runner: the Bun runtime for each platform is downloaded and wrapped
+  # around the same bundle, so five machines would produce the same bytes more
+  # slowly. A tag is not a reason to skip the checks: it is the one build
+  # people will actually run.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun test --timeout 30000
+
+      - name: Check the tag against the version in the package
+        run: |
+          tagged="${GITHUB_REF_NAME#v}"
+          declared=$(bun --print 'require("./packages/cli/package.json").version')
+          if [ "$tagged" != "$declared" ]; then
+            echo "tag v$tagged does not match package version $declared" >&2
+            exit 1
+          fi
+
+      - name: Build every platform
+        run: AIDCREW_VERSION="${GITHUB_REF_NAME#v}" bun scripts/build.ts --all
+
+      - name: Start the Linux binary
+        run: |
+          chmod +x dist/aidcrew-linux-x64
+          built=$(./dist/aidcrew-linux-x64 --version)
+          [ "$built" = "${GITHUB_REF_NAME#v}" ] || {
+            echo "binary reports $built, expected ${GITHUB_REF_NAME#v}" >&2
+            exit 1
+          }
+          ./dist/aidcrew-linux-x64 --help > /dev/null
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  # A binary is proved by starting it where it will run. These two build the
+  # same bundle natively and start it; the assets that ship come from the
+  # cross-compile above, and the runtime inside them is the same version.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: AIDCREW_VERSION="${GITHUB_REF_NAME#v}" bun scripts/build.ts bun-darwin-arm64
+      - name: Start the macOS binary
+        run: |
+          chmod +x dist/aidcrew-macos-arm64
+          built=$(./dist/aidcrew-macos-arm64 --version)
+          [ "$built" = "${GITHUB_REF_NAME#v}" ] || {
+            echo "binary reports $built, expected ${GITHUB_REF_NAME#v}" >&2
+            exit 1
+          }
+          ./dist/aidcrew-macos-arm64 --help > /dev/null
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - name: Build the Windows binary
+        shell: pwsh
+        run: |
+          $env:AIDCREW_VERSION = $env:GITHUB_REF_NAME.TrimStart('v')
+          bun scripts/build.ts bun-windows-x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Start the Windows binary
+        shell: pwsh
+        run: |
+          $expected = $env:GITHUB_REF_NAME.TrimStart('v')
+          $built = (& .\dist\aidcrew-windows-x64.exe --version | Out-String).Trim()
+          if ($built -ne $expected) {
+            Write-Error "binary reports $built, expected $expected"
+            exit 1
+          }
+          & .\dist\aidcrew-windows-x64.exe --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  # Nothing is published until every platform has started its binary.
+  publish:
+    needs: [check, macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      # The notes are the CHANGELOG's section for this version, which was
+      # written for the person using it. Commit messages are the fallback,
+      # for a tag that skipped the CHANGELOG.
+      - name: Notes from the CHANGELOG
+        run: |
+          awk -v version="${GITHUB_REF_NAME#v}" '
+            $0 ~ "^## " version { on = 1; next }
+            /^## / { if (on) exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if [ -s notes.md ]; then
+            echo "notes: from CHANGELOG.md"
+          else
+            echo "notes: no CHANGELOG section for ${GITHUB_REF_NAME#v}, generating from commits"
+          fi
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s notes.md ]; then
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md \
+              dist/aidcrew-* dist/checksums.txt
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes \
+              dist/aidcrew-* dist/checksums.txt
+          fi

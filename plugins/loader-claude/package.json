@@ -1,0 +1,14 @@
+{
+  "name": "@aidcrew/loader-claude",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aidcrew/core": "workspace:*",
+    "@aidcrew/plugin-sdk": "workspace:*",
+    "yaml": "^2.8.1"
+  }
+}

@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      # With a timeout the runner can meet. Three tests measure real time —
+      # lsof against a port, a plugin reload, a tree walk — and the 5s default
+      # failed all of them on a machine that was merely busy.
+      - run: bun test --timeout 30000
+
+      # The binary is what people run, so it is checked on every pull request
+      # rather than discovered broken at the moment of tagging.
+      - run: bun run build
+      - run: ./dist/aidcrew-linux-x64 --version
+
+  # The other two platforms a release ships for, started where they will run:
+  # a binary that has only ever been started on ubuntu is not a tested one.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/build.ts bun-darwin-arm64
+      - run: ./dist/aidcrew-macos-arm64 --version && ./dist/aidcrew-macos-arm64 --help > /dev/null
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/build.ts bun-windows-x64
+      # Captured and compared, not just run: on a pipe, Windows once printed
+      # nothing for --version and exited 0, which only the release job saw.
+      - shell: pwsh
+        run: |
+          $declared = (Get-Content packages/cli/package.json | ConvertFrom-Json).version
+          $built = (& .\dist\aidcrew-windows-x64.exe --version | Out-String).Trim()
+          if ($built -ne $declared) {
+            Write-Error "binary reports '$built', expected $declared"
+            exit 1
+          }
+          & .\dist\aidcrew-windows-x64.exe --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun audit --audit-level=high

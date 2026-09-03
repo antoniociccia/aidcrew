@@ -1,0 +1,21 @@
+{
+  "name": "@aidcrew/tui",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aidcrew/cli": "workspace:*",
+    "@aidcrew/core": "workspace:*",
+    "@aidcrew/fast-width": "workspace:*",
+    "@aidcrew/hooks-compact": "workspace:*",
+    "@aidcrew/hooks-guard": "workspace:*",
+    "@aidcrew/loader-claude": "workspace:*",
+    "@aidcrew/prices": "workspace:*",
+    "@aidcrew/tool-skills": "workspace:*",
+    "ink": "^7.1.1",
+    "react": "^19.2.8"
+  }
+}

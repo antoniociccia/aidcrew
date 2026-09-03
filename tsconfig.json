@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "types": ["bun"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    "paths": {
+      "@aidcrew/core": ["./packages/core/src/index.ts"],
+      "@aidcrew/core/*": ["./packages/core/src/*"],
+      "@aidcrew/plugin-sdk": ["./packages/plugin-sdk/src/index.ts"],
+      "@aidcrew/plugin-sdk/*": ["./packages/plugin-sdk/src/*"],
+      "@aidcrew/cli": ["./packages/cli/src/index.ts"],
+      "@aidcrew/tui": ["./packages/tui/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/**/*.ts",
+    "plugins/**/*.ts",
+    // Checked too, or they rot. The examples are what somebody writing a
+    // plugin copies from, and the scripts are how a release is built — both
+    // were outside this list, and both had drifted.
+    "examples/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

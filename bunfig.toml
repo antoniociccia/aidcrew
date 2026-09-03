@@ -1,0 +1,12 @@
+# Loaded before anything else, for both `bun run` and `bun test`.
+#
+# It replaces the width function Ink uses to lay out every row of every frame.
+# See packages/fast-width/src/plugin.ts for why: the published one costs about
+# 650µs for a string with one non-ASCII character in it, and a screenful of
+# those is ninety milliseconds a frame.
+preload = ["./packages/fast-width/src/plugin.ts"]
+
+[test]
+# The width replacement, and the one line that makes Ink draw during a test
+# the way it draws for a person — see packages/tui/src/testing/ink-renders.ts.
+preload = ["./packages/fast-width/src/plugin.ts", "./packages/tui/src/testing/ink-renders.ts"]

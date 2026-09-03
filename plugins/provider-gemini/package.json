@@ -1,0 +1,14 @@
+{
+  "name": "@aidcrew/provider-gemini",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aidcrew/core": "workspace:*",
+    "@aidcrew/plugin-sdk": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

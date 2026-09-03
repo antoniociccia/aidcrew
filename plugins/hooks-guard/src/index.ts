@@ -1,0 +1,6 @@
+export { irreversible } from './irreversible.ts'
+export type { GuardOptions, GuardRequest, Trust } from './plugin.ts'
+export { createGuard, createGuardPlugin, default } from './plugin.ts'
+export { refuseWrite } from './protected.ts'
+export type { Change, Snapshot } from './undo.ts'
+export { changes, commit, discard, keep, snapshot, UNDO_DIR, undo, undoRoot } from './undo.ts'

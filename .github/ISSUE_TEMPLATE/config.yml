@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: A question, or an idea to talk through
+    url: https://github.com/antoniociccia/aidcrew/discussions
+    about: Discussions is the place for anything that is not yet a bug or a concrete request.
+  - name: A plugin that will not load
+    url: https://github.com/antoniociccia/aidcrew/blob/main/README.md#writing-a-plugin
+    about: Run `aidcrew plugin check <dir>` first — it says what the host will say about it.

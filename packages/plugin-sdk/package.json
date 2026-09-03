@@ -1,0 +1,14 @@
+{
+  "name": "@aidcrew/plugin-sdk",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@aidcrew/core": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

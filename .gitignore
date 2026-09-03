@@ -1,0 +1,44 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Per-agent git worktrees and runtime state. Never committed: they are
+# checkouts of this same repository, and they hold transcripts and tool output.
+#
+# Matched at any depth, not only at the root: a project opened inside this one
+# keeps its own .aidcrew, and the root-anchored form let a worktree — an entire
+# second checkout of this repository — be staged as an embedded git repo.
+**/.aidcrew/wt/
+**/.aidcrew/*.log
+# The session record an earlier version kept here. It now lives under
+# ~/.aidcrew/projects, where a record of what somebody did belongs: it changes
+# on every run and holds tool output and the contents of files that were read.
+**/.aidcrew/history.db*
+# The layout: which agents were side by side and how wide. Per person rather
+# than per project, and it changes every time the focus moves.
+**/.aidcrew/ui.json
+
+# Agent definitions under .aidcrew/agents ARE committed on purpose: they are
+# what makes a team travel with the project.
+
+# Secrets never live in the repo; providers read credentials from the
+# environment or the OS keychain.
+.env
+.env.*
+!.env.example
+
+.DS_Store
+
+# Compiled binaries, built on demand and published from CI.
+dist/
+
+
+# Recordings made while working on the demo; the one that ships is docs/demo.gif.
+demo/
+
+# Scratch tests a review agent leaves behind while proving a point.
+probe*.test.ts
+verify_probe.test.ts
+zz-*.test.ts
+zz-*.test.tsx
+zz-*.test.ts*
