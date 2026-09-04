@@ -763,3 +763,30 @@ describe('how many tool calls one turn may make', () => {
     }
   })
 })
+
+describe('how a job is proved and brought home', () => {
+  test("the check is the project's to declare, over what is read off its files", async () => {
+    config(repo, '[defaults]\ncheck = "make verify"\n')
+
+    expect((await loadWorkspaceConfig({ cwd: repo, home })).check).toBe('make verify')
+  })
+
+  test('merging on a verified job can be turned off', async () => {
+    config(repo, '[defaults]\nmergeOnDone = false\n')
+
+    expect((await loadWorkspaceConfig({ cwd: repo, home })).mergeOnDone).toBe(false)
+  })
+
+  test('both are absent when nothing is said', async () => {
+    const loaded = await loadWorkspaceConfig({ cwd: repo, home })
+
+    expect(loaded.check).toBeUndefined()
+    expect(loaded.mergeOnDone).toBeUndefined()
+  })
+
+  test('refuses a merge setting that is not a boolean', async () => {
+    config(repo, '[defaults]\nmergeOnDone = "later"\n')
+
+    await expect(loadWorkspaceConfig({ cwd: repo, home })).rejects.toThrow(/mergeOnDone/)
+  })
+})

@@ -99,6 +99,10 @@ export type WorkspaceConfig = {
    * the default.
    */
   toolCallsPerTurn?: number
+  /** The command a job is proved by before it is called done; read off the project's files when absent. */
+  check?: string
+  /** Whether a verified job's branch is merged into the repository. On unless said otherwise. */
+  mergeOnDone?: boolean
   agents: Record<string, AgentOverride>
   /**
    * What a model costs, when the service will not say.
@@ -352,6 +356,15 @@ function apply(
       )
     }
     config.toolCallsPerTurn = calls
+  }
+
+  const check = readString(raw.defaults?.check, 'defaults.check', path)
+  if (check !== undefined) config.check = check
+  if (raw.defaults?.mergeOnDone !== undefined) {
+    if (typeof raw.defaults.mergeOnDone !== 'boolean') {
+      throw new WorkspaceConfigError(`${path}: defaults.mergeOnDone must be true or false`)
+    }
+    config.mergeOnDone = raw.defaults.mergeOnDone
   }
 
   const provider = readString(raw.defaults?.provider, 'defaults.provider', path)

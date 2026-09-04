@@ -112,6 +112,8 @@ export async function runTeam(
     ...(session.workspace.toolCallsPerTurn
       ? { maxTurnsPerInstruction: session.workspace.toolCallsPerTurn }
       : {}),
+    ...(session.workspace.check ? { check: session.workspace.check } : {}),
+    ...(session.workspace.mergeOnDone === false ? { mergeOnDone: false } : {}),
     host: session.host,
     credentials,
     tools: session.host.registry.tools(),

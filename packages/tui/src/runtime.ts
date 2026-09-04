@@ -467,6 +467,10 @@ export type TeamOptions = {
   leader?: string
   /** Tool calls one turn may make, when the project says so. */
   toolCallsPerTurn?: number
+  /** The command a job is proved by, when the project says so. */
+  check?: string
+  /** Whether a verified job is merged; on unless said otherwise. */
+  mergeOnDone?: boolean
   skills: Parameters<typeof createSkillsPlugin>[0]
   /** Called whenever anything changes, so the interface can redraw. */
   onChange(lines: Line[], snapshots: AgentSnapshot[]): void
@@ -727,6 +731,8 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     ...(orchestration ? { orchestration } : {}),
     ...(leads ? { leader: leads } : {}),
     ...(options.toolCallsPerTurn ? { maxTurnsPerInstruction: options.toolCallsPerTurn } : {}),
+    ...(options.check ? { check: options.check } : {}),
+    ...(options.mergeOnDone === false ? { mergeOnDone: false } : {}),
     // Every hook comes from the registry, including these two: there is no
     // privileged path into the loop, and an interface that forgot to register
     // one of them would simply run without it.
@@ -1334,6 +1340,35 @@ export function toLines(event: TeamEvent): Line[] {
       ]
     }
 
+    case 'job_verified':
+      return [
+        {
+          agentId: event.task,
+          kind: 'note',
+          text: `verified: \`${event.command}\` passes on work/${event.task}`,
+        },
+      ]
+    case 'job_check_failed':
+      return [
+        {
+          agentId: event.task,
+          kind: 'note',
+          text:
+            event.reason === 'uncommitted'
+              ? `not done: work not committed (${event.detail})${event.again ? ' — the leader is sent back' : ''}`
+              : `not done: \`${event.command}\` failed on work/${event.task}${event.again ? ' — the leader is sent back' : ' — left as it is'}`,
+        },
+      ]
+    case 'job_merged':
+      return [
+        {
+          agentId: event.task,
+          kind: 'note',
+          text: `merged work/${event.task} into the repository: ${event.detail}`,
+        },
+      ]
+    case 'job_merge_failed':
+      return [{ agentId: event.task, kind: 'note', text: `not merged — ${event.detail}` }]
     case 'workspace_kept':
       // Filed under the task: the agent that was in it has just gone.
       return [

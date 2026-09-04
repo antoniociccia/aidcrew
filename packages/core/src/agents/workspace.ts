@@ -311,6 +311,24 @@ export class WorkspaceManager {
     return holding.trim() === ''
   }
 
+  /** Commits on a task's branch that the repository's own HEAD does not have. */
+  async ahead(taskId: string): Promise<number> {
+    const workspace = this.#workspaces.get(taskId)
+    if (!workspace?.isolated) return 0
+    const branch = branchOf(taskId)
+    if (!(await this.#branchExists(branch))) return 0
+    const count = (await this.#git(['rev-list', '--count', `HEAD..${branch}`])).trim()
+    return count === '' ? 0 : Number(count)
+  }
+
+  /** The files changed and not committed in a task's checkout, as git lists them. */
+  async changedFiles(taskId: string): Promise<string[]> {
+    const workspace = this.#workspaces.get(taskId)
+    if (!workspace?.isolated) return []
+    const status = await this.#status(workspace.path)
+    return status === '' ? [] : status.split('\n').map((line) => line.slice(3).trim())
+  }
+
   /**
    * Merges a task's branch into the repository, or says why not.
    *

@@ -22,6 +22,12 @@ the person using it, in the order it matters.
   no agent has to remember to make one. A later session's checkout for the
   same job starts from the branch. `/merge` brings the branch into the
   repository, or backs out at once and names the conflict.
+- Done is checked, not said. When the leader ends a turn with a job that has
+  changes, the harness runs the project's check on the job's branch — read
+  off the project's files, or named by `[defaults] check` — and merges the
+  branch if it passes. If it fails, or the work was never committed, the
+  leader is sent back with the output, twice at most, and the job stays open.
+  `[defaults] mergeOnDone = false` keeps a verified branch unmerged.
 
 ### The project
 

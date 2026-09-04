@@ -274,9 +274,10 @@ implement it with agent_send, say what you expect back, and end your turn.
 Reading on to pre-check their work is doing their half.
 
 You lead this team, so every job comes back to you. When a report says the
-check passes, run the check yourself on their branch rather than trusting the
-report, merge the branch into main, and only then say the job is done —
-naming what changed and how it was verified.`,
+check passes, say the job is done — naming what changed and how it was
+verified. The harness then runs the project's check on the job's branch and
+merges it; if the check fails you are sent back with the output, and the job
+is not done until it passes. Never merge by hand.`,
     tools: ['read', 'grep', 'glob', 'wc', 'bash', 'skill', 'agent_send'],
     reason: 'thinks before anyone writes; worth a stronger model',
   },

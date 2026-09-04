@@ -204,6 +204,11 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
   const [leader, setLeader] = useState<string | undefined>()
   /** Tool calls one turn may make, when the project says so. */
   const [turnBound, setTurnBound] = useState<number | undefined>(undefined)
+  /** How a job is proved and brought home, when the project says. */
+  const [doneRules, setDoneRules] = useState<{
+    check?: string | undefined
+    mergeOnDone?: boolean | undefined
+  }>({})
   const [projectPrices, setProjectPrices] = useState<
     Record<string, { input: number; output: number }>
   >({})
@@ -488,6 +493,7 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
     setOrchestration(project.config.sources.orchestration)
     setLeader(project.config.leader)
     setTurnBound(project.config.toolCallsPerTurn)
+    setDoneRules({ check: project.config.check, mergeOnDone: project.config.mergeOnDone })
     setSharedNotes(project.config.sharedMemory)
 
     // A project with no agents, or no key to run them, needs the wizard —
@@ -524,6 +530,8 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
       orchestration,
       ...(leader ? { leader } : {}),
       ...(turnBound ? { toolCallsPerTurn: turnBound } : {}),
+      ...(doneRules.check ? { check: doneRules.check } : {}),
+      ...(doneRules.mergeOnDone === false ? { mergeOnDone: false } : {}),
       runtime,
       cwd,
       env,
@@ -671,6 +679,7 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
     setOrchestration(project.config.sources.orchestration)
     setLeader(project.config.leader)
     setTurnBound(project.config.toolCallsPerTurn)
+    setDoneRules({ check: project.config.check, mergeOnDone: project.config.mergeOnDone })
     setSharedNotes(project.config.sharedMemory)
     await enterSession(cwd, project.agents)
     // The team exists; now what a team is for. A first run used to end at a

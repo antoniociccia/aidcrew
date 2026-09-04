@@ -152,6 +152,14 @@ so nothing an agent commits can be lost with a directory. `/merge` brings the
 branch into the repository, and backs out at once if it conflicts. `aidcrew
 undo` takes back the last change any of them made.
 
+Done is checked, not said. When the leader ends a turn with a job that has
+changes, the harness runs the project's check on the job's branch — `bun
+test`, `pytest`, `go test`, `cargo test`, read off the project's files, or
+whatever `[defaults] check` names — and merges the branch if it passes. If it
+fails, or the work was never committed, the leader is sent back with the
+output, twice at most, and the job stays open. `mergeOnDone = false` keeps a
+verified branch unmerged, for you to look at first.
+
 A checkout with uncommitted work in it outlives the session. Close the
 terminal with files changed and not committed and the worktree stays under
 `.aidcrew/wt/`; the next session picks it up where it was left and says so. A

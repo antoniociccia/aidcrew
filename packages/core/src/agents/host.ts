@@ -5,6 +5,7 @@ import type { Hooks } from '../plugins/types.ts'
 import type { AgentDef } from '../sources/types.ts'
 import type { ContentBlock, Message, Usage } from '../types.ts'
 import { addUsage } from '../types.ts'
+import { detectCheck, runCheck } from './check.ts'
 import type { AgentMessage, Limits } from './governor.ts'
 import { Governor } from './governor.ts'
 import type { Note, SharedMemory } from './shared.ts'
@@ -117,6 +118,22 @@ export type TeamEvent =
    * be seen to be.
    */
   | { type: 'agent_continued'; id: string; round: number; of: number }
+  /** The job's check passed on its branch, run by the harness. */
+  | { type: 'job_verified'; task: string; command: string }
+  /**
+   * The job is not done: the check failed, or the work was never committed.
+   * `again` says whether the leader was sent back to fix it.
+   */
+  | {
+      type: 'job_check_failed'
+      task: string
+      reason: 'failed' | 'uncommitted'
+      command?: string
+      detail: string
+      again: boolean
+    }
+  | { type: 'job_merged'; task: string; detail: string }
+  | { type: 'job_merge_failed'; task: string; detail: string }
 
 /**
  * Something one party handed to another that has not come back.
@@ -194,6 +211,15 @@ export type HostOptions = {
    */
   hookNames?: string[]
   maxTurnsPerInstruction?: number
+  /**
+   * The command a job is proved by, run on the job's branch before it is
+   * called done. Absent, it is read off the project's files; where nothing
+   * is recognised there is no check, and a job with changes is merged as it
+   * is.
+   */
+  check?: string
+  /** Whether a verified job's branch is merged into the repository. On unless said otherwise. */
+  mergeOnDone?: boolean
   /**
    * Asked when one agent sends work to another that is already busy.
    *
@@ -311,6 +337,10 @@ export class InProcessHost {
   readonly #handoffs: Handoff[] = []
   readonly #governor: Governor
   readonly #workspaces: WorkspaceManager
+  /** How many times each job's leader has been sent back by a failed check. */
+  readonly #verifications = new Map<string, number>()
+  /** Jobs being checked right now, so two ends of turn cannot check one twice. */
+  readonly #verifying = new Set<string>()
   /** What everyone on a task knows, by task. */
   readonly #shared = new Map<string, SharedMemory>()
   /** Checkouts picked up from an earlier session that have been announced. */
@@ -821,6 +851,97 @@ export class InProcessHost {
       // which starved the timers and the pump alike, for the rest of the
       // process.
       await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+  }
+
+  /**
+   * Decides whether a job is done, when its leader stops.
+   *
+   * Only the leader's clean end counts, and only once nobody else on the job
+   * is working or waited on: the leader's first turn usually ends with the
+   * work in somebody else's hands. Then the harness does what the briefing
+   * asks of the model — runs the check on the job's branch, and merges when
+   * it passes — and sends the leader back, a bounded number of times, when
+   * it does not. A job whose work was never committed is sent back too: a
+   * branch cannot carry what is not on it.
+   */
+  async settleJob(agentId: string, ended: string): Promise<void> {
+    if (ended !== 'end_turn' && ended !== 'stop_sequence') return
+    const leader = this.#options.leader ?? [...this.#agents.keys()][0]
+    if (agentId !== leader) return
+    const agent = this.#agents.get(agentId)
+    if (!agent) return
+    const task = taskOf(agent.definition)
+    if (this.#verifying.has(task)) return
+
+    const onTask = [...this.#agents.values()].filter((one) => taskOf(one.definition) === task)
+    const ids = new Set(onTask.map((one) => one.definition.id))
+    if (onTask.some((one) => one !== agent && one.busy())) return
+    if (
+      this.#handoffs.some((one) => one.from !== 'user' && (ids.has(one.to) || ids.has(one.from)))
+    ) {
+      return
+    }
+
+    const uncommitted = await this.#workspaces.changedFiles(task)
+    const ahead = await this.#workspaces.ahead(task)
+    if (uncommitted.length === 0 && ahead === 0) return
+
+    this.#verifying.add(task)
+    try {
+      const { onEvent } = this.#options
+      const sendBack = async (
+        event: Extract<TeamEvent, { type: 'job_check_failed' }>,
+        text: string,
+      ) => {
+        const round = this.#verifications.get(task) ?? 0
+        const again = round < MAX_VERIFICATIONS
+        if (again) this.#verifications.set(task, round + 1)
+        onEvent({ ...event, again })
+        if (again) await this.tell(agentId, text)
+      }
+
+      if (uncommitted.length > 0) {
+        const detail = uncommitted.join(', ')
+        await sendBack(
+          { type: 'job_check_failed', task, reason: 'uncommitted', detail, again: false },
+          `This is the harness, not a colleague: the checkout for this job has changes that are not committed — ${detail}. ` +
+            'A branch cannot carry what is not on it. Have them committed, then report again.',
+        )
+        return
+      }
+
+      const path =
+        this.#workspaces.list().find((one) => one.taskId === task)?.path ?? this.#options.cwd
+      const command = this.#options.check ?? detectCheck(path)
+      if (command !== undefined) {
+        const verdict = await runCheck(command, path)
+        if (!verdict.passed) {
+          await sendBack(
+            {
+              type: 'job_check_failed',
+              task,
+              reason: 'failed',
+              command,
+              detail: verdict.output,
+              again: false,
+            },
+            `This is the harness, not a colleague: \`${command}\` failed on the job's branch (exit ${verdict.code}):\n\n${verdict.output}\n\n` +
+              'The job is not done until this passes. Have it fixed, then report again.',
+          )
+          return
+        }
+        onEvent({ type: 'job_verified', task, command })
+      }
+
+      if (this.#options.mergeOnDone === false) return
+      const outcome = await this.#workspaces.merge(task)
+      if (outcome.result === 'merged') onEvent({ type: 'job_merged', task, detail: outcome.detail })
+      else if (outcome.result !== 'up-to-date') {
+        onEvent({ type: 'job_merge_failed', task, detail: outcome.detail })
+      }
+    } finally {
+      this.#verifying.delete(task)
     }
   }
 
@@ -1354,6 +1475,7 @@ class LiveAgent {
     }
 
     await this.#answerWhoeverAsked(message, ended, said)
+    await this.#host.settleJob(this.#def.id, ended)
   }
 
   /**
@@ -1802,6 +1924,13 @@ export const MAIN_TASK = 'main'
  */
 export const MAX_CONTINUATIONS = 4
 
+/**
+ * How many times a leader is sent back by a failed check before the job is
+ * left where it is. Two: once is a slip, twice is a pattern, and a model that
+ * cannot make the check pass should not be sent round for ever on the bill.
+ */
+export const MAX_VERIFICATIONS = 2
+
 /** What an agent is told when the harness sends it back to work. */
 function carryOn(limit: number | undefined, left: number): string {
   const reached = limit === undefined ? 'its limit' : `the limit of ${limit} tool calls`
@@ -2046,10 +2175,9 @@ anything on or call it done.
 
 In a git repository your checkout is on a branch made for the job, work/<job>. Commit as
 you go — small, with no signature or trailer — and never git reset --hard or git push
---force. The leader brings it home: when a report says the checks pass, run them on that
-branch, then merge it into the repository's branch with
-git -C "$(git rev-parse --git-common-dir)/.." merge --no-ff --no-edit work/<job>
-and only then say the job is done.
+--force. When the leader says the job is done, the harness runs the project's check on that
+branch and merges it if it passes; if it fails, or work is not committed, the leader is sent
+back with the output. Nobody merges by hand.
 
 If you are stuck, say so to whoever gave you the work, with what you tried. Stopping
 quietly reads exactly like still working.

@@ -61,19 +61,13 @@ exists only in that directory, on this machine.
 Commit as you go. Small commits, in the imperative, saying what changed for
 whoever reads it — never a signature or a co-author trailer.
 
-Bringing it home is the team leader's job. Every job reports back to them —
-the harness sees to that, so you do not have to remember to — and they are the
-one agent that is always on the team. Nobody else merges, and the leader does
-not merge because it thinks everyone has finished: it merges because the report
-came back saying it passes.
+Bringing it home is the harness's job, not yours. When the leader ends a turn
+saying the job is done, the harness runs the project's check on the job's
+branch and merges it if it passes; if the check fails, or work is not
+committed, the leader is sent back with the output. So the leader says done
+only when the report says the checks pass, and nobody merges by hand.
 
-From inside your worktree, when it does:
-
-    git -C "$(git rev-parse --git-common-dir)/.." merge --no-ff work/<name>
-
-That is the main checkout, which is not yours: merge only when the tests pass,
-and if the merge conflicts, resolve it there and say so rather than forcing
-anything. Never `git reset --hard`, never `git push --force`, never
+Never `git reset --hard`, never `git push --force`.
 `git clean` outside your own worktree.
 
 If you are the leader and you are about to end your turn, ask yourself whether

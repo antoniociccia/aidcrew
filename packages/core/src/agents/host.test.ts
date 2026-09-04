@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Provider, Tool } from '../loop.ts'
@@ -3572,5 +3572,195 @@ describe('a turn that ends in an error', () => {
       expect.objectContaining({ from: 'user', to: 'coder', cutShort: 'failed' }),
     ])
     await host.shutdown()
+  })
+})
+
+/**
+ * "Finished means checked" was a sentence in the briefing, and a sentence is
+ * something a model can say without doing. When the leader stops with a job
+ * that has changes, the harness runs the project's check on the job's branch
+ * itself, sends the leader back if it fails, and merges the branch if it
+ * passes. A model can still say "done"; the harness no longer takes its word.
+ */
+describe('a job is done when the harness says so', () => {
+  async function git(args: string[], cwd: string): Promise<string> {
+    const proc = Bun.spawn(['git', ...args], {
+      cwd,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: 'T',
+        GIT_AUTHOR_EMAIL: 't@t',
+        GIT_COMMITTER_NAME: 'T',
+        GIT_COMMITTER_EMAIL: 't@t',
+      },
+    })
+    const [out] = await Promise.all([new Response(proc.stdout).text(), proc.exited])
+    return out
+  }
+
+  async function repository(): Promise<string> {
+    const repo = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-host-done-')))
+    await git(['init', '-q', '-b', 'main'], repo)
+    writeFileSync(join(repo, 'app.ts'), 'export const version = 1\n')
+    await git(['add', '.'], repo)
+    await git(['commit', '-qm', 'initial'], repo)
+    return repo
+  }
+
+  async function committed(dir: string, file: string, body: string): Promise<void> {
+    writeFileSync(join(dir, file), body)
+    await git(['add', file], dir)
+    await git(['commit', '-qm', `add ${file}`], dir)
+  }
+
+  function verifiedHost(cwd: string, scripts: Record<string, StreamDelta[][]>, check: string) {
+    const events: TeamEvent[] = []
+    const host = new InProcessHost({
+      cwd,
+      providerFor: (agent) => scripted(scripts)(agent.model ?? 'default'),
+      tools: [],
+      limits: { maxHops: 3 },
+      isolate: true,
+      leader: 'architect',
+      check,
+      onEvent: (event) => events.push(event),
+    })
+    return { host, events }
+  }
+
+  test("runs the project's check on the job's branch when the leader stops, and merges it", async () => {
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(repo, { m: [text('done')] }, 'exit 0')
+      const architect = await host.spawn(def('architect', 'm'))
+      await committed(architect.workspace, 'new.ts', 'export const fresh = true\n')
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      expect(events).toContainEqual({ type: 'job_verified', task: 'main', command: 'exit 0' })
+      expect(events.find((event) => event.type === 'job_merged')).toMatchObject({ task: 'main' })
+      expect(readFileSync(join(repo, 'new.ts'), 'utf8')).toContain('fresh')
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('sends the leader back with the output when the check fails, and merges nothing', async () => {
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(
+        repo,
+        { m: [text('done'), text('fixed'), text('fixed again')] },
+        'echo boom; exit 1',
+      )
+      const architect = await host.spawn(def('architect', 'm'))
+      await committed(architect.workspace, 'new.ts', 'export const fresh = true\n')
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      const failures = events.filter((event) => event.type === 'job_check_failed')
+      expect(failures.length).toBeGreaterThanOrEqual(2)
+      expect(failures[0]).toMatchObject({
+        task: 'main',
+        reason: 'failed',
+        command: 'echo boom; exit 1',
+      })
+      expect((failures[0] as { detail: string }).detail).toContain('boom')
+      // Sent back a bounded number of times, then left where it is: a model
+      // that cannot make the check pass is not sent round for ever.
+      expect((failures.at(-1) as { again: boolean }).again).toBe(false)
+      expect(events.some((event) => event.type === 'job_merged')).toBe(false)
+      expect(existsSync(join(repo, 'new.ts'))).toBe(false)
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('sends the leader back when the work is not committed, because a branch cannot carry it', async () => {
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(
+        repo,
+        { m: [text('done'), text('committed')] },
+        'exit 0',
+      )
+      const architect = await host.spawn(def('architect', 'm'))
+      writeFileSync(join(architect.workspace, 'new.ts'), 'export const fresh = true\n')
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      const first = events.find((event) => event.type === 'job_check_failed')
+      expect(first).toMatchObject({ task: 'main', reason: 'uncommitted' })
+      expect((first as { detail: string }).detail).toContain('new.ts')
+      expect(events.some((event) => event.type === 'job_merged')).toBe(false)
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('says nothing when the job has nothing the repository does not', async () => {
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(repo, { m: [text('nothing to do')] }, 'exit 0')
+      await host.spawn(def('architect', 'm'))
+
+      await host.tell('architect', 'anything?')
+      await host.idle()
+
+      expect(
+        events.filter((event) =>
+          ['job_verified', 'job_check_failed', 'job_merged', 'job_merge_failed'].includes(
+            event.type,
+          ),
+        ),
+      ).toEqual([])
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('waits until the colleague it handed the work to has reported', async () => {
+    // The leader's first turn ends with the work in somebody else's hands.
+    // Verifying there would check a branch nobody has finished with; the
+    // check waits for the leader's turn after the report comes back.
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(
+        repo,
+        {
+          lead: [
+            [...call('t1', 'agent_send', { to: 'coder', text: 'do it' }), ...text('handed over')],
+            text('done'),
+          ],
+          work: [text('did it')],
+        },
+        'exit 0',
+      )
+      const architect = await host.spawn(def('architect', 'lead'))
+      await host.spawn(def('coder', 'work'))
+      await committed(architect.workspace, 'new.ts', 'export const fresh = true\n')
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      const verified = events.findIndex((event) => event.type === 'job_verified')
+      const reported = events.findIndex(
+        (event) => event.type === 'agent_message' && event.from === 'coder',
+      )
+      expect(verified).toBeGreaterThan(reported)
+      expect(events.filter((event) => event.type === 'job_verified')).toHaveLength(1)
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
   })
 })

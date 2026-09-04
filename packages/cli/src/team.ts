@@ -110,6 +110,10 @@ export type TeamOptions = {
   leader?: string
   /** Tool calls one turn may make, when the project says so. */
   maxTurnsPerInstruction?: number
+  /** The command a job is proved by, when the project says so. */
+  check?: string
+  /** Whether a verified job is merged; on unless said otherwise. */
+  mergeOnDone?: boolean
 }
 
 /**
@@ -133,6 +137,8 @@ export function createTeamHost(options: TeamOptions): InProcessHost {
     ...(options.maxTurnsPerInstruction
       ? { maxTurnsPerInstruction: options.maxTurnsPerInstruction }
       : {}),
+    ...(options.check ? { check: options.check } : {}),
+    ...(options.mergeOnDone === false ? { mergeOnDone: false } : {}),
     ...(options.hooks ? { hooks: options.hooks } : {}),
     ...(options.hookNames ? { hookNames: options.hookNames } : {}),
     ...(options.history
