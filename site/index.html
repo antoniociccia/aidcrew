@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aidcrew — a team of coding agents, each on its own model, in one terminal</title>
+<meta name="description" content="aidcrew runs a team of coding agents in your terminal, each on its own model and provider. Every job in its own git worktree; the harness runs the tests and merges. Everything is a plugin. Single binary for macOS, Linux and Windows. MIT.">
+<link rel="canonical" href="https://aidcrew.com/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="aidcrew — a team of coding agents, each on its own model">
+<meta property="og:description" content="Plan on a strong model, write on a cheap one, review on a free tier. Every job in its own git worktree; the harness runs the tests and merges. MIT, single binary.">
+<meta property="og:url" content="https://aidcrew.com/">
+<meta property="og:image" content="https://aidcrew.com/media/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2356b4e9'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='36' font-weight='700' text-anchor='middle' fill='%230e0f15'%3ED%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <a class="mark" href="#" aria-label="aidcrew">
+    <span class="ai">A I</span><span class="d">D</span><span class="crew">C R E W</span>
+  </a>
+  <nav>
+    <a href="#how">How it works</a>
+    <a href="#plugins">Plugins</a>
+    <a href="#guards">Guards</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/antoniociccia/aidcrew" rel="noopener">Source</a>
+  </nav>
+</header>
+
+<main>
+
+<section class="hero">
+  <h1>A team of coding agents,<br>each on its own model,<br>in one terminal.</h1>
+  <p class="lead">
+    The architect plans on a strong model. The coder writes on a cheap one. The reviewer runs on a
+    free tier. Each with its own key, on its own service, in its own git worktree — and when the
+    leader says a job is done, the harness runs the tests and merges. It does not take the model's
+    word for it.
+  </p>
+  <div class="actions">
+    <a class="button primary" href="#install">Install</a>
+    <a class="button" href="https://github.com/antoniociccia/aidcrew" rel="noopener">Read the source</a>
+    <span class="meta">MIT · macOS, Linux, Windows · one file, nothing to install beside it</span>
+  </div>
+
+  <figure class="film">
+    <video autoplay muted loop playsinline preload="metadata" poster="media/social-preview.png">
+      <source src="media/demo.mp4" type="video/mp4">
+    </video>
+    <figcaption>
+      One take, cut for length. An empty repository, the setup wizard, a key, a team of two. The
+      architect plans on <code>glm-5.3-flash</code>; the coder builds, tests and commits on
+      <code>deepseek-v4-flash</code>; the leader verifies the branch and it comes home to
+      <code>main</code>. The whole run, through OpenRouter, cost under a cent.
+    </figcaption>
+  </figure>
+</section>
+
+<section class="three" id="why">
+  <article style="--voice:#56b4e9">
+    <h2>One model for everything is the expensive way.</h2>
+    <p>
+      Mixed models are the base case here, not an extension: two agents hold two credentials on
+      two services in one session. When a job comes home the pane says what it cost, on which
+      models — and what the same tokens would have cost on <code>claude-sonnet-5</code> and
+      <code>gpt-5</code>. That line is the argument for running a team at all.
+    </p>
+  </article>
+  <article style="--voice:#23c4a0">
+    <h2>Done is checked, not said.</h2>
+    <p>
+      Every job gets a git worktree on a branch of its own. When the leader ends a turn with
+      changes on it, the harness runs the project's check — <code>bun test</code>,
+      <code>pytest</code>, <code>go test</code>, <code>cargo test</code>, read off the files, or
+      whatever the config names — and merges the branch if it passes. If it fails, or the work was
+      never committed, the leader is sent back with the output.
+    </p>
+  </article>
+  <article style="--voice:#e58fc2">
+    <h2>Everything is a plugin.</h2>
+    <p>
+      The core has no dependencies and knows no provider or tool by name; a test fails the build
+      if it ever learns one. What ships — the OpenAI, Anthropic and Gemini dialects, the
+      filesystem and shell tools, the guards, compaction, prices — loads through the same registry
+      a stranger's plugin does. A whole provider is about twenty lines.
+    </p>
+  </article>
+</section>
+
+<section class="how" id="how">
+  <div class="text">
+    <h2>How a job goes home</h2>
+    <ol>
+      <li><strong>You ask the leader.</strong> One instruction, to one agent. Everything that follows reports back to it.</li>
+      <li><strong>It hands the work on.</strong> A plan goes to the coder with <code>agent_send</code>: the files to touch, what each should do, and the check that proves it. Nobody stops to ask permission — nobody is watching.</li>
+      <li><strong>The coder commits as it goes,</strong> on <code>work/&lt;job&gt;</code>, made for it when the checkout was. A commit is safe from the moment it exists; the shell cannot even <code>cd</code> out of the checkout.</li>
+      <li><strong>The harness brings it home.</strong> When the leader says done, the check runs on the branch, the branch merges, and the pane says what it cost — or the leader is sent back, twice at most.</li>
+    </ol>
+    <p class="aside">
+      Two agents side by side, so a handoff can be watched from both ends at once. The divider
+      moves with the mouse, or with <code>^←</code> and <code>^→</code>.
+    </p>
+  </div>
+  <figure class="film small">
+    <img src="media/split.gif" alt="Two panes side by side, the divider between them moved with the keyboard" loading="lazy">
+  </figure>
+</section>
+
+<section class="plugins" id="plugins">
+  <div class="text">
+    <h2>Add a service in a file.</h2>
+    <p>
+      Drop a TypeScript module in <code>~/.aidcrew/plugins</code> or <code>.aidcrew/plugins</code>.
+      No build step, no publishing, no restart. A plugin declares any of <code>providers</code>,
+      <code>tools</code>, <code>loaders</code>, <code>hooks</code>, <code>prices</code> and
+      <code>ui</code> — and may ask you a question before it registers.
+    </p>
+    <p>
+      The claim is enforced, not described. <code>packages/core/src/architecture.test.ts</code>
+      fails the build if the core imports a tool or a provider, reaches out of its own package,
+      or so much as names a real service in a string:
+    </p>
+    <pre><code>const forbidden = /\b(openai|anthropic|deepseek|openrouter|gemini|ollama)\b/i</code></pre>
+  </div>
+<pre class="code"><code><span class="k">import</span> { definePlugin, defineProvider } <span class="k">from</span> <span class="s">'@aidcrew/plugin-sdk'</span>
+<span class="k">import</span> { z } <span class="k">from</span> <span class="s">'zod'</span>
+
+<span class="k">export default</span> definePlugin({
+  name: <span class="s">'my-service'</span>,
+  providers: [
+    defineProvider({
+      id: <span class="s">'my-service'</span>,
+      endpoint: <span class="s">'https://api.example.com/v1'</span>,
+      configSchema: z.object({ apiKey: z.string().min(<span class="n">1</span>) }),
+      create: ({ apiKey }) => ({
+        id: <span class="s">'my-service'</span>,
+        <span class="k">async</span> *send(request, signal) {
+          <span class="c">// Translate the canonical request,</span>
+          <span class="c">// stream back canonical deltas.</span>
+        },
+      }),
+    }),
+  ],
+})</code></pre>
+</section>
+
+<section class="what">
+  <h2>What is here</h2>
+  <dl>
+    <dt>Providers</dt><dd>Anthropic; Gemini; anything OpenAI-compatible — Zen, OpenRouter, DeepSeek, OpenAI, Ollama, vLLM, or any endpoint by URL — in both dialects, chosen by trying. A model without native tool calling gets its tools in the prompt and its calls read back from the text.</dd>
+    <dt>Tools</dt><dd><code>read</code>, <code>write</code>, <code>edit</code>, <code>grep</code>, <code>glob</code>, <code>tree</code>, <code>head</code>, <code>stat</code>, <code>json</code>, <code>toml</code>, <code>outline</code>, <code>symbols</code>, <code>imports</code>, <code>deps</code>, <code>git-log</code>, <code>bash</code>, <code>skill</code>, <code>agent_send</code>. Everything that only reads is a tool of its own, so looking something up never needs approving.</dd>
+    <dt>MCP</dt><dd>Any MCP server, over stdio or HTTP, from the <code>.mcp.json</code> a project already has. Its tools arrive as ordinary tools; a server a project declares does not start until you say it may.</dd>
+    <dt>Cost</dt><dd>Per agent, per job and per session, from the service's own price list, the project's stated prices, or a bundled list checked against what the services publish — with a tilde when it is an estimate.</dd>
+    <dt>Sessions</dt><dd>Every turn written to disk; a session resumes where it was left — transcript, history and checkouts included. A checkout with uncommitted work outlives the session.</dd>
+    <dt>The screen</dt><dd>The alternate buffer, every frame exactly the window's height, drawn over the last rather than after a wipe: nothing scrolls, nothing blinks. Nine palettes, each solid or hairline; the default stays six hues under the common forms of colour blindness, and that is a test.</dd>
+  </dl>
+</section>
+
+<section class="guards" id="guards">
+  <h2>Cloning a repository is not consent.</h2>
+  <p>
+    Everything that arrives with a clone is inert until you type a command: a project's plugins
+    are not imported, its MCP servers are not started, the parts of its config that let an agent
+    act unasked do not apply. Answers are remembered in your own store, never in the project.
+  </p>
+  <ul>
+    <li>A <strong>never-write list</strong> — <code>.git</code>, <code>.env</code>, <code>.ssh</code>, <code>.aws</code>, private keys, the session database — in every mode.</li>
+    <li>An <strong>always-ask list</strong> of commands that cannot be taken back, in every spelling the guard knows: <code>rm -rf</code>, <code>git push --force</code>, <code>git reset --hard</code>, <code>dd</code>, <code>curl … | sh</code>. Approving one never approves the next. Headless, a question is a refusal.</li>
+    <li>A <strong>snapshot of every file</strong> before it changes, and <code>aidcrew undo</code> to take it back.</li>
+    <li>A shell that <strong>cannot leave its checkout</strong>: <code>cd</code> or <code>git -C</code> pointed at another checkout — the repository root included — is refused, and told where it was going.</li>
+    <li>Keys read from stdin, stored <code>0600</code>, never logged, never echoed. A committed config names the variable, never the value.</li>
+  </ul>
+  <p class="aside">
+    Not a sandbox, and the <a href="https://github.com/antoniociccia/aidcrew/blob/main/SECURITY.md" rel="noopener">security document</a>
+    says exactly what these are not.
+  </p>
+</section>
+
+<section class="install" id="install">
+  <h2>Install</h2>
+  <p>One file, no runtime to install alongside it.</p>
+<pre class="code"><code><span class="c"># macOS, Apple silicon</span>
+curl -Lo aidcrew https://github.com/antoniociccia/aidcrew/releases/latest/download/aidcrew-macos-arm64
+chmod +x aidcrew &amp;&amp; sudo mv aidcrew /usr/local/bin/
+aidcrew --version
+
+<span class="c"># then: sixty seconds against real files, with no key and no account</span>
+aidcrew demo</code></pre>
+  <p class="platforms">
+    Also
+    <a href="https://github.com/antoniociccia/aidcrew/releases/latest/download/aidcrew-macos-x64">macOS x64</a>,
+    <a href="https://github.com/antoniociccia/aidcrew/releases/latest/download/aidcrew-linux-x64">Linux x64</a>,
+    <a href="https://github.com/antoniociccia/aidcrew/releases/latest/download/aidcrew-linux-arm64">Linux arm64</a>,
+    <a href="https://github.com/antoniociccia/aidcrew/releases/latest/download/aidcrew-windows-x64.exe">Windows x64</a>
+    and <a href="https://github.com/antoniociccia/aidcrew/releases/latest/download/checksums.txt">checksums</a>.
+    Before a release is published, the binary it built is started on each of the three platforms.
+    On Windows the shell tool runs <code>bash</code>, which Git for Windows provides.
+  </p>
+  <p class="platforms">
+    From source, with <a href="https://bun.sh" rel="noopener">Bun</a> 1.3 or later:
+    <code>git clone https://github.com/antoniociccia/aidcrew &amp;&amp; cd aidcrew &amp;&amp; bun install &amp;&amp; bun run build</code>
+  </p>
+</section>
+
+<section class="help">
+  <h2>It is better with more hands on it.</h2>
+  <p>
+    Providers and plugins for services not yet covered. Reports from real use on Windows.
+    Corrections to the model price list, with a link. Agent files and briefings that work well for
+    a language or a kind of project. Palettes. The
+    <a href="https://github.com/antoniociccia/aidcrew/blob/main/CONTRIBUTING.md" rel="noopener">ground rules</a>
+    are short: the failing test first, comments that say why, three checks before a pull request.
+  </p>
+  <div class="actions">
+    <a class="button" href="https://github.com/antoniociccia/aidcrew/discussions" rel="noopener">Discussions</a>
+    <a class="button" href="https://github.com/antoniociccia/aidcrew/issues/new/choose" rel="noopener">Open an issue</a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span class="mark small"><span class="ai">A I</span><span class="d">D</span><span class="crew">C R E W</span></span>
+  <span>MIT licence · TypeScript on Bun, Ink for the terminal</span>
+  <span>
+    <a href="https://github.com/antoniociccia/aidcrew" rel="noopener">GitHub</a> ·
+    <a href="https://github.com/antoniociccia/aidcrew/releases" rel="noopener">Releases</a> ·
+    <a href="https://github.com/antoniociccia/aidcrew/blob/main/CHANGELOG.md" rel="noopener">Changelog</a>
+  </span>
+</footer>
+
+</body>
+</html>
