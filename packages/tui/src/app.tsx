@@ -10,7 +10,7 @@ import {
   setSharedMemory,
   setSourcePaths as setSourcePathsInConfig,
 } from '@aidcrew/cli'
-import type { AgentDef, AgentSnapshot, Contention, Task } from '@aidcrew/core'
+import type { AgentDef, AgentSnapshot, Contention, MergeOutcome, Task } from '@aidcrew/core'
 import { ORCHESTRATION, ORCHESTRATION_FILE, readTasks, tokensOf } from '@aidcrew/core'
 import { Box, Text, useApp } from 'ink'
 import { useEffect, useRef, useState } from 'react'
@@ -353,6 +353,13 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
         const who = command.agent ?? target
         const patch = await team.diff(who)
         say(who, patch.trim() === '' ? 'nothing changed yet' : patch)
+        return
+      }
+
+      case 'merge': {
+        const who = command.agent ?? target
+        const outcome = await team.merge(who)
+        say(who, mergeSaid(outcome))
         return
       }
 
@@ -1070,3 +1077,10 @@ export function Fatal({ error }: { error: Error }) {
 
 export type { AgentTemplate }
 export { toTemplate }
+
+/** A merge's outcome in the words the pane shows. */
+function mergeSaid(outcome: MergeOutcome): string {
+  if (outcome.result === 'merged') return `merged into the repository: ${outcome.detail}`
+  if (outcome.result === 'conflict') return `not merged — it conflicts:\n${outcome.detail}`
+  return outcome.detail
+}

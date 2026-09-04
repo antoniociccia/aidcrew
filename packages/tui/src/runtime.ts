@@ -34,6 +34,7 @@ import type {
   ContentionRequest,
   Handoff,
   Hooks,
+  MergeOutcome,
   Note,
   SetupOptions,
   TeamEvent,
@@ -411,6 +412,8 @@ export type LiveTeam = {
   kill(agentId: string): Promise<{ workspace: 'removed' | 'kept' | 'none' }>
   /** What an agent has changed in its worktree, as a diff. */
   diff(agentId: string): Promise<string>
+  /** Merges the branch of the job an agent is on into the repository. */
+  merge(agentId: string): Promise<MergeOutcome>
   /** Resolves once nobody on the team has anything left to do. */
   idle(): Promise<void>
   /**
@@ -1182,6 +1185,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     },
 
     diff: async (agentId) => await host.diff(agentId),
+    merge: async (agentId) => await host.merge(agentId),
 
     idle: () => host.idle(),
 

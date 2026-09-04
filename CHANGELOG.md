@@ -15,6 +15,14 @@ the person using it, in the order it matters.
   could be closed and the screen given back had replaced the exit that used
   to follow, leaving sessions running unseen in the background.
 
+### The team
+
+- A job's checkout is on a branch made for it, `work/<job>`, from the moment
+  it is made, so a commit in it is kept whatever happens to the checkout —
+  no agent has to remember to make one. A later session's checkout for the
+  same job starts from the branch. `/merge` brings the branch into the
+  repository, or backs out at once and names the conflict.
+
 ### The project
 
 - `.aidcrew/.gitignore` is written the first time anything creates the

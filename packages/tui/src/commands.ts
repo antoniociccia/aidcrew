@@ -17,6 +17,7 @@ export type Command =
   | { at: 'kill'; agent: string }
   | { at: 'tell'; agent: string; text: string }
   | { at: 'diff'; agent?: string }
+  | { at: 'merge'; agent?: string }
   | { at: 'stop'; agent?: string }
   | { at: 'clear'; agent?: string }
   | { at: 'drop'; agent?: string }
@@ -56,6 +57,11 @@ export const COMMANDS: CommandSpec[] = [
   },
   { name: 'tell', args: '<agent> <message>', what: 'Send a message to an agent by name.' },
   { name: 'diff', args: '[agent]', what: 'Show what an agent has changed in its worktree.' },
+  {
+    name: 'merge',
+    args: '[agent]',
+    what: "Merge the branch of an agent's job into the repository.",
+  },
   { name: 'stop', args: '[agent]', what: 'Stop the turn in flight, leaving the agent standing.' },
   {
     name: 'clear',
@@ -157,6 +163,9 @@ export function parseCommand(text: string): Command | undefined {
 
     case 'diff':
       return { at: 'diff', ...(rest[0] ? { agent: rest[0] } : {}) }
+
+    case 'merge':
+      return { at: 'merge', ...(rest[0] ? { agent: rest[0] } : {}) }
 
     case 'stop':
       return { at: 'stop', ...(rest[0] ? { agent: rest[0] } : {}) }

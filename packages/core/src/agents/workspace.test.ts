@@ -66,16 +66,20 @@ describe('work in a checkout outlives the session', () => {
     expect(readFileSync(join(workspace.path, 'new.ts'), 'utf8')).toBe('export const fresh = true\n')
   })
 
-  test('a checkout whose commits are on no branch stays too', async () => {
-    // Committed on a detached HEAD, so removing the worktree would make the
-    // commit unreachable — which is the same loss with an extra step.
+  test('a commit made in a checkout lands on the branch made for its task, which is what keeps it', async () => {
+    // The checkout used to start on a detached HEAD, so a commit in it was on
+    // no branch and went with the directory — unless every agent remembered
+    // to make a branch first, which is the step they most often skipped.
+    // Now the branch is made with the checkout, and a commit is safe by
+    // default: the checkout can go, the branch stays.
     const manager = new WorkspaceManager(repo)
     const workspace = await manager.create('main')
     writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
     await git(['commit', '-qam', 'bump'], workspace.path)
 
-    expect(await manager.remove('main')).toBe('kept')
-    expect(existsSync(workspace.path)).toBe(true)
+    expect(await manager.remove('main')).toBe('removed')
+    expect(existsSync(workspace.path)).toBe(false)
+    expect(await git(['log', '--oneline', 'work/main'])).toContain('bump')
   })
 
   test('what the harness itself leaves in a checkout does not count as work', async () => {
@@ -442,5 +446,107 @@ describe('the state directory the first checkout is made under', () => {
     const ignore = readFileSync(join(repo, '.aidcrew', '.gitignore'), 'utf8')
     expect(ignore).toContain('wt/')
     expect(ignore).toContain('undo/')
+  })
+})
+
+describe('the branch a task works on', () => {
+  test('is made with the checkout and named for the task', async () => {
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+
+    expect((await git(['rev-parse', '--abbrev-ref', 'HEAD'], workspace.path)).trim()).toBe(
+      'work/coder',
+    )
+
+    await manager.removeAll()
+  })
+
+  test('is picked up again when the checkout is made again', async () => {
+    // The checkout goes at the end of a session; the branch does not. The
+    // next session's checkout for the same task starts from the branch, so
+    // the work is where the agent left it and not where the repository was.
+    const manager = new WorkspaceManager(repo)
+    const first = await manager.create('coder')
+    writeFileSync(join(first.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'bump'], first.path)
+    await manager.removeAll()
+
+    const again = await new WorkspaceManager(repo).create('coder')
+
+    expect(readFileSync(join(again.path, 'app.ts'), 'utf8')).toContain('version = 2')
+    expect((await git(['rev-parse', '--abbrev-ref', 'HEAD'], again.path)).trim()).toBe('work/coder')
+  })
+
+  test('is left alone by a refresh when it has commits of its own', async () => {
+    // Moving a checkout onto the repository's newest commit is only safe when
+    // the checkout has nothing the repository does not; a branch with its own
+    // commits is exactly that, even with a clean status.
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'theirs'], workspace.path)
+    writeFileSync(join(repo, 'other.ts'), 'export const other = 1\n')
+    await git(['add', '.'])
+    await git(['commit', '-qm', 'moved on'])
+
+    expect(await manager.refresh('coder')).toBe('kept')
+    expect(readFileSync(join(workspace.path, 'app.ts'), 'utf8')).toContain('version = 2')
+
+    await manager.removeAll()
+  })
+})
+
+describe('bringing a task home', () => {
+  test('merges its branch into the repository and says so', async () => {
+    // The step that went missing most often was the last one: the work was
+    // committed, on a branch, verified, and reached nobody, because merging
+    // was left to a model with a shell. It is the harness's to do.
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'bump'], workspace.path)
+
+    const outcome = await manager.merge('coder')
+
+    expect(outcome.result).toBe('merged')
+    expect(readFileSync(join(repo, 'app.ts'), 'utf8')).toContain('version = 2')
+    expect(await git(['log', '--oneline', '-1'])).toMatch(/Merge branch 'work\/coder'/)
+
+    await manager.removeAll()
+  })
+
+  test('says when there is nothing to bring', async () => {
+    const manager = new WorkspaceManager(repo)
+    await manager.create('coder')
+
+    expect((await manager.merge('coder')).result).toBe('up-to-date')
+
+    await manager.removeAll()
+  })
+
+  test('backs out of a merge that conflicts, leaving the repository as it was', async () => {
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'theirs'], workspace.path)
+    writeFileSync(join(repo, 'app.ts'), 'export const version = 3\n')
+    await git(['commit', '-qam', 'ours'])
+
+    const outcome = await manager.merge('coder')
+
+    expect(outcome.result).toBe('conflict')
+    expect(outcome.detail).toContain('app.ts')
+    expect(readFileSync(join(repo, 'app.ts'), 'utf8')).toContain('version = 3')
+    expect(await git(['status', '--porcelain', '--', '.', ':(exclude).aidcrew'])).toBe('')
+
+    await manager.removeAll()
+  })
+
+  test('has nothing to merge for a task that shares the project directory', async () => {
+    const plain = mkdtempSync(join(tmpdir(), 'aidcrew-plain-'))
+    const manager = new WorkspaceManager(plain)
+    await manager.create('coder')
+
+    expect((await manager.merge('coder')).result).toBe('not isolated')
   })
 })

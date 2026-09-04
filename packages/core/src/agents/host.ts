@@ -9,6 +9,7 @@ import type { AgentMessage, Limits } from './governor.ts'
 import { Governor } from './governor.ts'
 import type { Note, SharedMemory } from './shared.ts'
 import { asMessage, EMPTY_MEMORY, olderThanKept, remember, shorten, tooLong } from './shared.ts'
+import type { MergeOutcome } from './workspace.ts'
 import { type RemoveOutcome, WorkspaceManager } from './workspace.ts'
 
 export type AgentStatus = 'idle' | 'working' | 'stopped'
@@ -821,6 +822,12 @@ export class InProcessHost {
       // process.
       await new Promise((resolve) => setTimeout(resolve, 0))
     }
+  }
+
+  /** Merges the branch of the task an agent is on into the repository. */
+  async merge(id: string): Promise<MergeOutcome> {
+    const agent = this.#agents.get(id)
+    return this.#workspaces.merge(agent ? taskOf(agent.definition) : id)
   }
 
   async diff(id: string): Promise<string> {
@@ -2037,12 +2044,12 @@ A colleague on your task already has your files; one on another task gets them a
 Finished means checked, not written. If this project has tests, they pass before you hand
 anything on or call it done.
 
-In a git repository your checkout is a worktree on a detached HEAD, where a commit reaches
-nobody. Before changing anything: git switch -c work/<job> 2>/dev/null || git switch
-work/<job>. Commit as you go, small, with no signature or trailer. The leader brings it
-home: when a report says the checks pass, run them on that branch, then
-git -C "$(git rev-parse --git-common-dir)/.." merge --no-ff --no-edit work/<job>.
-A branch nobody merged is work nobody gets. Never git reset --hard or git push --force.
+In a git repository your checkout is on a branch made for the job, work/<job>. Commit as
+you go — small, with no signature or trailer — and never git reset --hard or git push
+--force. The leader brings it home: when a report says the checks pass, run them on that
+branch, then merge it into the repository's branch with
+git -C "$(git rev-parse --git-common-dir)/.." merge --no-ff --no-edit work/<job>
+and only then say the job is done.
 
 If you are stuck, say so to whoever gave you the work, with what you tried. Stopping
 quietly reads exactly like still working.

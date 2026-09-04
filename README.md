@@ -143,16 +143,20 @@ leader`; it defaults to the first agent the project declares, and it is the one
 agent that cannot be dropped from the team, because a team whose leader was
 removed has nowhere for work to come back to.
 
-Every job gets a `git worktree` of its own, shared by the agents working it.
-`/task rotate-keys coder reviewer` opens one; the checkout you are sitting in is
-never touched, and two jobs running at once are two separate diffs rather than
-one corrupted file. `aidcrew undo` takes back the last change any of them made.
+Every job gets a `git worktree` of its own, on a branch named for it —
+`work/<job>` — shared by the agents working it. `/task rotate-keys coder
+reviewer` opens one; the checkout you are sitting in is never touched, and two
+jobs running at once are two separate diffs rather than one corrupted file. A
+commit made in the checkout is on the job's branch from the moment it is made,
+so nothing an agent commits can be lost with a directory. `/merge` brings the
+branch into the repository, and backs out at once if it conflicts. `aidcrew
+undo` takes back the last change any of them made.
 
-A checkout with work in it outlives the session. Close the terminal with files
-changed and not committed, or with commits on no branch, and the worktree
-stays under `.aidcrew/wt/`; the next session picks it up where it was left and
-says so. Only a clean checkout, or one whose work a branch already holds, is
-taken away.
+A checkout with uncommitted work in it outlives the session. Close the
+terminal with files changed and not committed and the worktree stays under
+`.aidcrew/wt/`; the next session picks it up where it was left and says so. A
+checkout whose work is committed can go, because the branch keeps it, and the
+next checkout for that job starts from the branch.
 
 ### Roles
 

@@ -50,6 +50,18 @@ const WORKTREE_ROOT = join('.aidcrew', 'wt')
  * shares the project directory and `isolated` says so. Refusing to run there
  * would be unhelpful; claiming isolation that does not exist would be worse.
  */
+/** What came of merging a task's branch into the repository. */
+export type MergeOutcome = {
+  result: 'merged' | 'up-to-date' | 'conflict' | 'not isolated' | 'no branch'
+  /** The merge commit, the reason, or the conflict, in git's words. */
+  detail: string
+}
+
+/** The branch a task's checkout is on: made with it, kept after it. */
+export function branchOf(taskId: string): string {
+  return `work/${taskId}`
+}
+
 export class WorkspaceManager {
   readonly #root: string
   readonly #workspaces = new Map<string, AgentWorkspace>()
@@ -203,10 +215,16 @@ export class WorkspaceManager {
     // never made. Reporting a move nobody could have made would be a lie in
     // the one place a person looks to find out whether it happened.
     if (head === '' || at === '' || head === at) return 'kept'
+    // Commits of its own — on its branch, reachable from nowhere the
+    // repository has moved to — are work, whatever the status says.
+    const behind = await this.#run(['merge-base', '--is-ancestor', at, head], workspace.path)
+    if (behind.code !== 0) return 'kept'
 
-    // Detached, so this is a move rather than a merge: nothing of the agent's
-    // can be lost by it, because it had nothing.
-    await this.#git(['checkout', '--detach', '--quiet', head], workspace.path)
+    // Nothing of the agent's can be lost by this: it had nothing. On the
+    // task's branch the branch itself moves; a detached checkout moves alone.
+    const onBranch = (await this.#git(['symbolic-ref', '--quiet', 'HEAD'], workspace.path)).trim()
+    if (onBranch !== '') await this.#git(['reset', '--hard', '--quiet', head], workspace.path)
+    else await this.#git(['checkout', '--detach', '--quiet', head], workspace.path)
     return 'moved'
   }
 
@@ -225,9 +243,21 @@ export class WorkspaceManager {
     await this.#git(['worktree', 'prune'])
     if (existsSync(path) && readdirSync(path).length === 0) rmdirSync(path)
 
-    // A detached worktree: the agent works from the current commit without
-    // taking a branch name that the user might also want.
-    await this.#git(['worktree', 'add', '--detach', '--quiet', path, 'HEAD'])
+    // On a branch made for the task, so a commit in the checkout is safe from
+    // the moment it is made. The checkout used to start detached, which left
+    // committing to a branch to the agent — the step most often skipped, and
+    // the one whose omission cost the most. A branch left by an earlier
+    // session is taken up again, work and all; one git will not hand over
+    // (checked out somewhere else) leaves a detached checkout as before.
+    const branch = branchOf(taskId)
+    if (await this.#branchExists(branch)) {
+      await this.#git(['worktree', 'add', '--quiet', path, branch])
+    } else {
+      await this.#git(['worktree', 'add', '--quiet', '-b', branch, path, 'HEAD'])
+    }
+    if (!(await this.#isWorktree(path))) {
+      await this.#git(['worktree', 'add', '--detach', '--quiet', path, 'HEAD'])
+    }
 
     // Checked, because git can decline and this used to believe it had not.
     // The commonest reason is the commonest repository: `git worktree add
@@ -279,6 +309,65 @@ export class WorkspaceManager {
       path,
     )
     return holding.trim() === ''
+  }
+
+  /**
+   * Merges a task's branch into the repository, or says why not.
+   *
+   * The step that went missing most often was this one: work committed, on a
+   * branch, verified, and reaching nobody, because merging was left to a
+   * model with a shell and a paragraph of instructions. A merge that
+   * conflicts is backed out at once, so the repository is left exactly as it
+   * was, with the conflict named for whoever will resolve it.
+   */
+  async merge(taskId: string): Promise<MergeOutcome> {
+    const workspace = this.#workspaces.get(taskId)
+    if (!workspace?.isolated) {
+      return {
+        result: 'not isolated',
+        detail: 'this task shares the project directory, so there is nothing to merge',
+      }
+    }
+    const branch = branchOf(taskId)
+    if (!(await this.#branchExists(branch))) {
+      return { result: 'no branch', detail: `${branch} does not exist` }
+    }
+
+    const attempt = await this.#run(['merge', '--no-ff', '--no-edit', branch])
+    if (attempt.code === 0) {
+      if (/Already up to date/.test(attempt.out)) {
+        return { result: 'up-to-date', detail: `${branch} has nothing the repository does not` }
+      }
+      return { result: 'merged', detail: (await this.#git(['log', '-1', '--oneline'])).trim() }
+    }
+
+    // Best effort: when the merge never started there is nothing to abort,
+    // and git says so to nobody.
+    await this.#run(['merge', '--abort'])
+    return { result: 'conflict', detail: `${attempt.out}${attempt.err}`.trim() }
+  }
+
+  async #branchExists(branch: string): Promise<boolean> {
+    const found = await this.#run(['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`])
+    return found.code === 0
+  }
+
+  /** Like #git, but with the exit code and stderr, for the calls that need a verdict. */
+  async #run(
+    args: string[],
+    cwd = this.#root,
+  ): Promise<{ code: number; out: string; err: string }> {
+    try {
+      const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' })
+      const [out, err, code] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ])
+      return { code, out, err }
+    } catch (cause) {
+      return { code: -1, out: '', err: cause instanceof Error ? cause.message : String(cause) }
+    }
   }
 
   async #gitAvailable(): Promise<boolean> {

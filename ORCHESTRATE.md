@@ -53,22 +53,13 @@ Finished means checked, not written. `bun test`, `bunx tsc --noEmit` and
 
 ## Making your work survive
 
-Your checkout is a worktree on a detached HEAD. The harness keeps it while
-there is uncommitted work in it, or commits no branch can reach — but a
-checkout is a directory on one machine, and a commit on a detached HEAD is
-unreachable from anywhere else. Work that only exists in your worktree is work
-nobody else has, so committing to a branch is not decoration.
+Your checkout is a worktree of the repository on a branch made for the job,
+`work/<job>`, so a commit is safe from the moment you make it: the checkout
+can go at the end of a session, the branch stays. Work that is not committed
+exists only in that directory, on this machine.
 
-So, before you change anything:
-
-    git switch -c work/<what-this-job-is> 2>/dev/null || git switch work/<what-this-job-is>
-
-The fallback is not decoration. You share one checkout with everybody else on
-this task, so whoever gets there second finds the branch already made, and
-`switch -c` alone fails for them.
-
-Then commit as you go. Small commits, in the imperative, saying what changed
-for whoever reads it — never a signature or a co-author trailer.
+Commit as you go. Small commits, in the imperative, saying what changed for
+whoever reads it — never a signature or a co-author trailer.
 
 Bringing it home is the team leader's job. Every job reports back to them —
 the harness sees to that, so you do not have to remember to — and they are the
