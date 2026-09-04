@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { defineTool } from '@aidcrew/plugin-sdk'
 import { z } from 'zod'
+import { leavesWorkspace } from './escape.ts'
 import { insteadOf } from './instead.ts'
 
 const DEFAULT_TIMEOUT_MS = 120_000
@@ -51,6 +52,20 @@ export const bashTool = defineTool({
         content:
           `this agent's checkout is gone: ${cwd} no longer exists. Nothing here can be run ` +
           'and trying again will not help — say so and stop rather than looking for another way in.',
+        isError: true,
+      }
+    }
+
+    // The one place a shell changes where it is, it is asked where: the
+    // file tools already refuse a path outside the workspace, and a `cd` to
+    // another checkout moved a person's own repository onto an agent's
+    // branch before this was here.
+    const outside = leavesWorkspace(command, cwd)
+    if (outside !== undefined) {
+      return {
+        content:
+          `refused: that would leave your checkout for ${outside}. Your checkout is ${cwd}; ` +
+          'work there. Another checkout, the repository root included, is not yours to change.',
         isError: true,
       }
     }

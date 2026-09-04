@@ -311,14 +311,30 @@ export class WorkspaceManager {
     return holding.trim() === ''
   }
 
-  /** Commits on a task's branch that the repository's own HEAD does not have. */
+  /** Commits in a task's checkout that the repository's own HEAD does not have. */
   async ahead(taskId: string): Promise<number> {
     const workspace = this.#workspaces.get(taskId)
     if (!workspace?.isolated) return 0
-    const branch = branchOf(taskId)
-    if (!(await this.#branchExists(branch))) return 0
-    const count = (await this.#git(['rev-list', '--count', `HEAD..${branch}`])).trim()
+    const at = (await this.#git(['rev-parse', 'HEAD'], workspace.path)).trim()
+    if (at === '') return 0
+    const count = (await this.#git(['rev-list', '--count', `HEAD..${at}`])).trim()
     return count === '' ? 0 : Number(count)
+  }
+
+  /**
+   * The branch a task's checkout is on right now.
+   *
+   * The one made for the job, usually — but an agent that made a branch of
+   * its own inside its checkout has not left the job, and what is counted
+   * and merged is where the checkout actually is.
+   */
+  async #branchOn(taskId: string): Promise<string | undefined> {
+    const workspace = this.#workspaces.get(taskId)
+    if (!workspace?.isolated) return undefined
+    const on = (
+      await this.#git(['symbolic-ref', '--quiet', '--short', 'HEAD'], workspace.path)
+    ).trim()
+    return on === '' ? undefined : on
   }
 
   /** The files changed and not committed in a task's checkout, as git lists them. */
@@ -346,7 +362,7 @@ export class WorkspaceManager {
         detail: 'this task shares the project directory, so there is nothing to merge',
       }
     }
-    const branch = branchOf(taskId)
+    const branch = (await this.#branchOn(taskId)) ?? branchOf(taskId)
     if (!(await this.#branchExists(branch))) {
       return { result: 'no branch', detail: `${branch} does not exist` }
     }

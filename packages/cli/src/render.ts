@@ -176,7 +176,7 @@ export function createTeamRenderer({ write, color }: RendererOptions) {
         return
       }
       if (event.type === 'job_verified') {
-        write(paint(event.task, `verified: ${event.command} passes on work/${event.task}`))
+        write(paint(event.task, `verified: ${event.command} passes on work/${event.task}\n`))
         return
       }
       if (event.type === 'job_check_failed') {
@@ -187,17 +187,17 @@ export function createTeamRenderer({ write, color }: RendererOptions) {
         write(
           paint(
             event.task,
-            `not done: ${why}${event.again ? ' — the leader is sent back' : ' — left as it is'}`,
+            `not done: ${why}${event.again ? ' — the leader is sent back' : ' — left as it is'}\n`,
           ),
         )
         return
       }
       if (event.type === 'job_merged') {
-        write(paint(event.task, `merged work/${event.task} into the repository: ${event.detail}`))
+        write(paint(event.task, `merged work/${event.task} into the repository: ${event.detail}\n`))
         return
       }
       if (event.type === 'job_merge_failed') {
-        write(paint(event.task, `not merged — ${event.detail}`))
+        write(paint(event.task, `not merged — ${event.detail}\n`))
         return
       }
       if (event.type === 'workspace_kept') {

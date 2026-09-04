@@ -550,3 +550,36 @@ describe('bringing a task home', () => {
     expect((await manager.merge('coder')).result).toBe('not isolated')
   })
 })
+
+describe('a checkout that moved to a branch of its own', () => {
+  // The branch made for the job is a default, not a cage: an agent that makes
+  // its own branch inside its checkout has not left the job. What the harness
+  // counts, and what it merges, is the branch the checkout is actually on.
+  test('its commits count as the job being ahead', async () => {
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    await git(['switch', '-qc', 'work/coder-own'], workspace.path)
+    writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'theirs'], workspace.path)
+
+    expect(await manager.ahead('coder')).toBe(1)
+
+    await manager.removeAll()
+  })
+
+  test('and that branch is the one merged', async () => {
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    await git(['switch', '-qc', 'work/coder-own'], workspace.path)
+    writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'theirs'], workspace.path)
+
+    const outcome = await manager.merge('coder')
+
+    expect(outcome.result).toBe('merged')
+    expect(outcome.detail).toContain('work/coder-own')
+    expect(readFileSync(join(repo, 'app.ts'), 'utf8')).toContain('version = 2')
+
+    await manager.removeAll()
+  })
+})

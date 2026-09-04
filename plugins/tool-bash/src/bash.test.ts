@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { ToolContext } from '@aidcrew/core'
@@ -153,5 +153,25 @@ describe('when the agent has no checkout left', () => {
     expect(result.content).toContain('/nowhere/at/all')
     expect(result.content).toMatch(/gone|no longer/i)
     expect(result.content).not.toContain('posix_spawn')
+  })
+})
+
+describe('leaving the checkout', () => {
+  test('is refused at the shell, naming where the command was going', async () => {
+    const repo = mkdtempSync(join(tmpdir(), 'aidcrew-bash-'))
+    const checkout = join(repo, '.aidcrew', 'wt', 'main')
+    mkdirSync(checkout, { recursive: true })
+    try {
+      const result = await bashTool.execute(
+        { command: `cd ${repo} && ls` },
+        { cwd: checkout, agentId: 'coder', signal: new AbortController().signal },
+      )
+
+      expect(result.isError).toBe(true)
+      expect(result.content).toContain('refused')
+      expect(result.content).toContain(repo)
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
   })
 })

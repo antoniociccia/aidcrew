@@ -36,6 +36,14 @@ the person using it, in the order it matters.
   figure that makes the case for a mixed team, said when the case has just
   been made. The list of jobs shows the same line for each.
 
+### Guards
+
+- The shell refuses a command that would leave the agent's checkout — `cd`,
+  `pushd` or `git -C` pointed at another checkout, the repository root
+  included — and says where it was going. The file tools already drew that
+  line; watched on a real run, a coder's `cd` into the root moved a person's
+  own repository onto the coder's branch.
+
 ### The project
 
 - `.aidcrew/.gitignore` is written the first time anything creates the
