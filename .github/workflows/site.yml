@@ -1,6 +1,6 @@
 name: Site
 
-# aidcrew.com is the site/ directory, as it is: no build step, so what is in
+# aidcrew.dev is the site/ directory, as it is: no build step, so what is in
 # the repository is what is on the page.
 on:
   push:
