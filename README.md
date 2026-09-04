@@ -182,7 +182,8 @@ the sender so. A headless run queues, as it always did.
 A turn is bounded — fifty tool calls, so a model going round in circles is
 stopped — and an agent you have turned loose with `/yolo` is sent back to carry
 on when it reaches that bound with the work unfinished, a few times, before the
-stop is real. Nobody watching means nobody to say "go on", so the harness says
+stop is real. A project whose jobs are bigger than that raises the bound in its
+config, with `[defaults] toolCallsPerTurn`. Nobody watching means nobody to say "go on", so the harness says
 it. An agent that is asking first stops and waits for you.
 
 ### Side by side

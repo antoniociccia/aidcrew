@@ -42,7 +42,12 @@ export type {
 // the harness rather than being another anonymous Error.
 // Turning a stream of deltas back into messages, which anything that keeps
 // its own conversation needs and nobody should write twice.
-export { accumulate, ProviderProtocolError, ProviderResponseError } from '@aidcrew/core'
+export {
+  accumulate,
+  keepStateOutOfGit,
+  ProviderProtocolError,
+  ProviderResponseError,
+} from '@aidcrew/core'
 export type { ProviderSpec } from './define-plugin.ts'
 export { definePlugin, defineProvider } from './define-plugin.ts'
 export type { PriceSpec, UiSpec } from './define-rest.ts'

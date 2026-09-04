@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { keepStateOutOfGit } from '@aidcrew/plugin-sdk'
 import { repositoryBehind } from '@aidcrew/tool-fs'
 
 /**
@@ -71,6 +72,7 @@ export type Snapshot = { root: string; change: Change }
 export function snapshot(cwd: string, path: string, agentId: string, now: number): Snapshot {
   const root = undoRoot(cwd)
   const full = resolve(cwd, path)
+  keepStateOutOfGit(root)
   const where = join(root, UNDO_DIR)
   mkdirSync(where, { recursive: true })
 

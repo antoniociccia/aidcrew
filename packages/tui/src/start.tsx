@@ -1,6 +1,7 @@
 import { homedir } from 'node:os'
 import { render } from 'ink'
 import { App } from './app.tsx'
+import { leaveOnSignal } from './hangup.ts'
 import { fixedKeyboard } from './keyboard.ts'
 import { paintOver } from './paint-over.ts'
 import { openRuntime } from './runtime.ts'
@@ -68,13 +69,13 @@ export async function startInterface(options: {
     runtime.close()
     screen.release()
   }
-  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.once(signal, close)
+  const stopLeaving = leaveOnSignal(process, close)
 
   try {
     await app.waitUntilExit()
     return 0
   } finally {
     close()
-    for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.off(signal, close)
+    stopLeaving()
   }
 }

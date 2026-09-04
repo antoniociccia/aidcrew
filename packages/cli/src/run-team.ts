@@ -109,6 +109,9 @@ export async function runTeam(
     // leader, and making somebody name one before anything runs would be a
     // setting standing in the way of the thing it configures.
     ...(leader ? { leader } : {}),
+    ...(session.workspace.toolCallsPerTurn
+      ? { maxTurnsPerInstruction: session.workspace.toolCallsPerTurn }
+      : {}),
     host: session.host,
     credentials,
     tools: session.host.registry.tools(),

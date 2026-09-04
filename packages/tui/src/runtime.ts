@@ -462,6 +462,8 @@ export type TeamOptions = {
   orchestration?: string[]
   /** The agent every job reports back to, which cannot be taken off the team. */
   leader?: string
+  /** Tool calls one turn may make, when the project says so. */
+  toolCallsPerTurn?: number
   skills: Parameters<typeof createSkillsPlugin>[0]
   /** Called whenever anything changes, so the interface can redraw. */
   onChange(lines: Line[], snapshots: AgentSnapshot[]): void
@@ -721,6 +723,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     // re-reading it every turn would put a disk read in the way of a keystroke.
     ...(orchestration ? { orchestration } : {}),
     ...(leads ? { leader: leads } : {}),
+    ...(options.toolCallsPerTurn ? { maxTurnsPerInstruction: options.toolCallsPerTurn } : {}),
     // Every hook comes from the registry, including these two: there is no
     // privileged path into the loop, and an interface that forgot to register
     // one of them would simply run without it.
@@ -1269,7 +1272,8 @@ function cutShortly(reason: string, tool?: string): string {
   // What the pane above already says, in one clause: the notice's job is to
   // point at it, not to explain it a second time and differently.
   if (reason === 'failed') return 'failed — the reason is in its pane'
-  if (reason === 'max_turns') return 'stopped after its turn limit without finishing'
+  if (reason === 'max_turns')
+    return 'stopped at its bound of tool calls without finishing — what it wrote is in its checkout'
   if (reason === 'refusal') return 'the model refused to carry on'
   const what = tool ? `the ${tool} it had started never ran` : 'it stopped mid-sentence'
   return `ran out of room before it finished — ${what}`

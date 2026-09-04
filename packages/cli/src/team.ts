@@ -108,6 +108,8 @@ export type TeamOptions = {
   orchestration?: string
   /** The agent every job reports back to, which cannot be taken off the team. */
   leader?: string
+  /** Tool calls one turn may make, when the project says so. */
+  maxTurnsPerInstruction?: number
 }
 
 /**
@@ -128,6 +130,9 @@ export function createTeamHost(options: TeamOptions): InProcessHost {
     ...(options.onContention ? { onContention: options.onContention } : {}),
     ...(options.orchestration ? { orchestration: options.orchestration } : {}),
     ...(options.leader ? { leader: options.leader } : {}),
+    ...(options.maxTurnsPerInstruction
+      ? { maxTurnsPerInstruction: options.maxTurnsPerInstruction }
+      : {}),
     ...(options.hooks ? { hooks: options.hooks } : {}),
     ...(options.hookNames ? { hookNames: options.hookNames } : {}),
     ...(options.history

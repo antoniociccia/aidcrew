@@ -183,3 +183,17 @@ describe('the templates offered on first run', () => {
     }
   })
 })
+
+describe('the directory the first agent is written into', () => {
+  test('keeps the runtime state out of git from the start', async () => {
+    // The wizard is the first thing to make `.aidcrew/` in a new project, and
+    // it made it with nothing to say what in there was the project's and what
+    // was the runtime's. The first `git add .aidcrew` after a session took
+    // the undo snapshots and the checkouts along with the team.
+    await writeAgent(repo, architect)
+
+    const ignore = readFileSync(join(repo, '.aidcrew', '.gitignore'), 'utf8')
+    expect(ignore).toContain('undo/')
+    expect(ignore).toContain('wt/')
+  })
+})

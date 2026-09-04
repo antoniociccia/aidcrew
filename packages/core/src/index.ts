@@ -18,6 +18,7 @@ export {
 } from './agents/host.ts'
 export type { Note, SharedMemory } from './agents/shared.ts'
 export { asContext, EMPTY_MEMORY, remember, shorten } from './agents/shared.ts'
+export { keepStateOutOfGit, STATE_DIR } from './agents/state-dir.ts'
 export type { RunGit, Task } from './agents/tasks.ts'
 export { describeTask, readTasks, WORKTREE_ROOT } from './agents/tasks.ts'
 export type { AgentWorkspace } from './agents/workspace.ts'

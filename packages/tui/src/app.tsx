@@ -202,6 +202,8 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
   const [orchestration, setOrchestration] = useState<string[]>([])
   /** Who leads this team, and therefore cannot be taken off it. */
   const [leader, setLeader] = useState<string | undefined>()
+  /** Tool calls one turn may make, when the project says so. */
+  const [turnBound, setTurnBound] = useState<number | undefined>(undefined)
   const [projectPrices, setProjectPrices] = useState<
     Record<string, { input: number; output: number }>
   >({})
@@ -478,6 +480,7 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
     setProjectPrices(project.config.prices)
     setOrchestration(project.config.sources.orchestration)
     setLeader(project.config.leader)
+    setTurnBound(project.config.toolCallsPerTurn)
     setSharedNotes(project.config.sharedMemory)
 
     // A project with no agents, or no key to run them, needs the wizard —
@@ -513,6 +516,7 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
     live = await startTeam({
       orchestration,
       ...(leader ? { leader } : {}),
+      ...(turnBound ? { toolCallsPerTurn: turnBound } : {}),
       runtime,
       cwd,
       env,
@@ -659,6 +663,7 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
     setProjectPrices(project.config.prices)
     setOrchestration(project.config.sources.orchestration)
     setLeader(project.config.leader)
+    setTurnBound(project.config.toolCallsPerTurn)
     setSharedNotes(project.config.sharedMemory)
     await enterSession(cwd, project.agents)
     // The team exists; now what a team is for. A first run used to end at a

@@ -2,6 +2,7 @@ import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { removeAgentSettings } from '@aidcrew/cli'
 import type { AgentDef } from '@aidcrew/core'
+import { keepStateOutOfGit } from '@aidcrew/core'
 
 /**
  * Writing agents to disk, so nobody has to hand-edit markdown.
@@ -198,6 +199,7 @@ function asYaml(value: string): string {
 /** Writes one agent into the project, creating the directory if needed. */
 export async function writeAgent(cwd: string, agent: AgentTemplate): Promise<string> {
   const directory = join(cwd, AGENTS_DIR)
+  keepStateOutOfGit(cwd)
   await mkdir(directory, { recursive: true })
 
   const path = join(directory, `${agent.id}.md`)

@@ -93,6 +93,12 @@ export type WorkspaceConfig = {
    * name one before anything works would be a setting standing in the way.
    */
   leader?: string
+  /**
+   * How many tool calls one turn may make before it is stopped, when the
+   * project's jobs are bigger than the built-in bound allows for. Absent means
+   * the default.
+   */
+  toolCallsPerTurn?: number
   agents: Record<string, AgentOverride>
   /**
    * What a model costs, when the service will not say.
@@ -337,6 +343,16 @@ function apply(
 
   const leader = readString(raw.defaults?.leader, 'defaults.leader', path)
   if (leader !== undefined) config.leader = leader
+
+  const calls = raw.defaults?.toolCallsPerTurn
+  if (calls !== undefined) {
+    if (typeof calls !== 'number' || !Number.isInteger(calls) || calls <= 0) {
+      throw new WorkspaceConfigError(
+        `${path}: defaults.toolCallsPerTurn must be a positive whole number`,
+      )
+    }
+    config.toolCallsPerTurn = calls
+  }
 
   const provider = readString(raw.defaults?.provider, 'defaults.provider', path)
   const model = readString(raw.defaults?.model, 'defaults.model', path)

@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, rmdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { keepStateOutOfGit } from './state-dir.ts'
 
 export type AgentWorkspace = {
   /** The task this checkout belongs to, which several agents may share. */
@@ -220,6 +221,7 @@ export class WorkspaceManager {
     // but already registered" — and git refuses to add another at that path
     // until told to prune. An empty directory in the way is the same story
     // from the other side. Both used to fail the add silently.
+    keepStateOutOfGit(this.#root)
     await this.#git(['worktree', 'prune'])
     if (existsSync(path) && readdirSync(path).length === 0) rmdirSync(path)
 

@@ -1,6 +1,7 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { keepStateOutOfGit } from '@aidcrew/core'
 import { WorkspaceConfigError } from './workspace.ts'
 
 /**
@@ -40,7 +41,7 @@ export async function setAgentModel(
   const agents = { ...(current.agents ?? {}) }
   agents[agentId] = { ...(agents[agentId] ?? {}), ...settings }
 
-  await mkdir(join(cwd, '.aidcrew'), { recursive: true })
+  keepStateOutOfGit(cwd)
   await writeFile(path, render({ ...current, agents }), 'utf8')
 }
 
@@ -63,7 +64,7 @@ export async function setSharedMemory(cwd: string, on: boolean): Promise<void> {
   const path = join(cwd, CONFIG_PATH)
   const current = await readConfig(path)
 
-  await mkdir(join(cwd, '.aidcrew'), { recursive: true })
+  keepStateOutOfGit(cwd)
   await writeFile(
     path,
     render({ ...current, defaults: { ...current.defaults, sharedMemory: on } }),
@@ -87,7 +88,7 @@ export async function setSourcePaths(
     [kind]: [...new Set(paths.map((entry) => portable(entry, cwd, home)))],
   }
 
-  await mkdir(join(cwd, '.aidcrew'), { recursive: true })
+  keepStateOutOfGit(cwd)
   await writeFile(path, render({ ...current, sources }), 'utf8')
 }
 

@@ -739,3 +739,27 @@ describe('a team you already have', () => {
     expect(mine).toBeGreaterThan(shared)
   })
 })
+
+describe('how many tool calls one turn may make', () => {
+  test("is the project's to set, because fifty was chosen for nobody's project in particular", async () => {
+    // A coder writing a plugin with tests used sixty-two and was cut off
+    // before it committed. The bound is a backstop against a model going
+    // round in circles, and a project whose jobs are bigger than the default
+    // should be able to say so in the file everything else about its team is
+    // already in.
+    config(repo, '[defaults]\ntoolCallsPerTurn = 120\n')
+
+    expect((await loadWorkspaceConfig({ cwd: repo, home })).toolCallsPerTurn).toBe(120)
+  })
+
+  test('is absent when nothing is said, so the built-in default applies', async () => {
+    expect((await loadWorkspaceConfig({ cwd: repo, home })).toolCallsPerTurn).toBeUndefined()
+  })
+
+  test('refuses a value that is not a positive whole number', async () => {
+    for (const bad of ['0', '-5', '2.5', '"many"']) {
+      config(repo, `[defaults]\ntoolCallsPerTurn = ${bad}\n`)
+      await expect(loadWorkspaceConfig({ cwd: repo, home })).rejects.toThrow(/toolCallsPerTurn/)
+    }
+  })
+})

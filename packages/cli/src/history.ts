@@ -2,6 +2,7 @@ import { Database } from 'bun:sqlite'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { Message, Usage } from '@aidcrew/core'
+import { keepStateOutOfGit } from '@aidcrew/core'
 
 /**
  * The session record, as an earlier version kept it.
@@ -209,18 +210,5 @@ function migrate(db: Database): void {
  * decided something, and this is not the place to argue.
  */
 function protect(directory: string): void {
-  const path = join(directory, '.gitignore')
-  if (existsSync(path)) return
-
-  writeFileSync(
-    path,
-    [
-      '# Written by aidcrew. Runtime state, not project configuration.',
-      '# The config and the agents next to this file are meant to be committed.',
-      'history.db*',
-      'ui.json',
-      'wt/',
-      '',
-    ].join('\n'),
-  )
+  keepStateOutOfGit(dirname(directory))
 }

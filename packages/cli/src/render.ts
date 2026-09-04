@@ -195,7 +195,8 @@ export function createTeamRenderer({ write, color }: RendererOptions) {
 /** Why a turn stopped instead of finishing, in the words the interface uses. */
 function cutShortly(reason: string, tool?: string): string {
   if (reason === 'failed') return 'failed — the reason was printed above'
-  if (reason === 'max_turns') return 'stopped after its turn limit without finishing'
+  if (reason === 'max_turns')
+    return 'stopped at its bound of tool calls without finishing — what it wrote is in its checkout'
   if (reason === 'refusal') return 'the model refused to carry on'
   const what = tool ? `the ${tool} it had started never ran` : 'it stopped mid-sentence'
   return `ran out of room before it finished — ${what}`

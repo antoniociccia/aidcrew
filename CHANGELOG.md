@@ -11,6 +11,19 @@ the person using it, in the order it matters.
 - Side by side, `^←` and `^→` move the divider beside the pane in focus, four
   columns a press, never narrower than a pane can be read. What a drag does,
   for a keyboard — and for a recording, which has no mouse.
+- A closed terminal ends the process. Listening for the hangup so the store
+  could be closed and the screen given back had replaced the exit that used
+  to follow, leaving sessions running unseen in the background.
+
+### The project
+
+- `.aidcrew/.gitignore` is written the first time anything creates the
+  directory — the wizard, a checkout, an undo snapshot — and it covers the
+  snapshots as well as the checkouts, the layout and the transcript database.
+  The config and the agents beside it stay committable, which is the point.
+- `[defaults] toolCallsPerTurn` raises the bound on tool calls in one turn for
+  a project whose jobs are bigger than fifty allow for; a turn stopped at the
+  bound now says so, and that what it wrote is in its checkout.
 
 ## 0.1.0 — 2026-09-03
 

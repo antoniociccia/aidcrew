@@ -429,3 +429,18 @@ describe('a repository with no commits', () => {
     expect(existsSync(workspace.path)).toBe(true)
   })
 })
+
+describe('the state directory the first checkout is made under', () => {
+  test('is kept out of git before the checkout exists', async () => {
+    // `.aidcrew/wt/` is a directory of whole checkouts. Without an ignore
+    // file beside it, `git add .aidcrew` — the way a team is shared — adds
+    // every file of every worktree to the repository a second time.
+    const manager = new WorkspaceManager(repo)
+
+    await manager.create('t')
+
+    const ignore = readFileSync(join(repo, '.aidcrew', '.gitignore'), 'utf8')
+    expect(ignore).toContain('wt/')
+    expect(ignore).toContain('undo/')
+  })
+})
