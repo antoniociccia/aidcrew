@@ -29,6 +29,13 @@ the person using it, in the order it matters.
   leader is sent back with the output, twice at most, and the job stays open.
   `[defaults] mergeOnDone = false` keeps a verified branch unmerged.
 
+### Cost
+
+- When a job comes home, one line says what it cost, on which models, and
+  what the same tokens would have been on `claude-sonnet-5` and `gpt-5` — the
+  figure that makes the case for a mixed team, said when the case has just
+  been made. The list of jobs shows the same line for each.
+
 ### The project
 
 - `.aidcrew/.gitignore` is written the first time anything creates the

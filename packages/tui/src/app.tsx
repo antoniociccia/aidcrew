@@ -887,12 +887,7 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
       <Tasks
         tasks={tasks}
         current={current}
-        spentOn={(name) => {
-          const usage = team?.spentByTask().get(name)
-          if (!usage) return undefined
-          const total = tokensOf(usage)
-          return total === 0 ? undefined : `${Math.round(total / 1000)}k tokens`
-        }}
+        spentOn={(name) => team?.prices.ofJob(name)}
         onChoose={(name) => {
           void guarded(() => moveTo(name))()
           setScreen({ at: 'session', cwd: screen.cwd })

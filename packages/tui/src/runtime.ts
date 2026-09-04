@@ -59,6 +59,7 @@ import {
 } from '@aidcrew/prices'
 import { createSkillsPlugin } from '@aidcrew/tool-skills'
 import type { SessionNotice } from './components/notice.tsx'
+import { jobCostSaid } from './job-cost.ts'
 import type { Line } from './screens/session.tsx'
 import { watchDirectories } from './watch.ts'
 
@@ -341,6 +342,12 @@ export type Prices = {
   estimated(agentId: string): boolean
   /** What the whole session has spent, of the agents that can be priced. */
   total(): number | undefined
+  /**
+   * What one job cost, on which models, and what the same tokens would have
+   * been on the models people default to — one line, or nothing for a job
+   * nothing was spent on.
+   */
+  ofJob(task: string): string | undefined
   /**
    * What a payment method was charged and what came off a plan, apart.
    *
@@ -723,6 +730,9 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
   /** Set once the allowance can be asked for; does nothing before that. */
   let askAgain: () => void = () => {}
 
+  /** Set once prices are known; says nothing before that. */
+  let sayJobCost: (task: string) => string | undefined = () => undefined
+
   host = createTeamHost({
     cwd,
     // Read once when the session opens rather than per turn: it is a file
@@ -793,6 +803,16 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
       // backstop for a session where nothing is happening.
       if (event.type === 'agent_status' && event.status === 'idle') askAgain()
       if (event.type === 'agent_spawned') roster.push(event.id)
+      // The figure that makes the case for a mixed team, said when the case
+      // has just been made: what the job cost, and what it would have cost.
+      if (
+        event.type === 'job_merged' ||
+        event.type === 'job_merge_failed' ||
+        (event.type === 'job_verified' && options.mergeOnDone === false)
+      ) {
+        const said = sayJobCost(event.task)
+        if (said) record({ agentId: event.task, kind: 'note', text: said })
+      }
       if (event.type === 'agent_killed')
         roster.splice(0, roster.length, ...roster.filter((id) => id !== event.id))
       const produced = toLines(event)
@@ -923,6 +943,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
    * costs money.
    */
   const priceFor = (model: string) => priceOf(table, model) ?? bundledPriceOf(model)
+  sayJobCost = (task) => jobCostSaid(host.list(), task, priceFor)
 
   const costFor = (agentId: string): number | undefined => {
     const agent = host.list().find((one) => one.id === agentId)
@@ -1025,6 +1046,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     prices: {
       allowance: (agentId: string) => remaining.get(providerOfAgent(agentId)),
       costOf: costFor,
+      ofJob: (task) => sayJobCost(task),
       // A figure from a list in this repository is a guess about a bill, and
       // a guess drawn in the same type as a fact gets believed like one.
       estimated: estimatedFor,

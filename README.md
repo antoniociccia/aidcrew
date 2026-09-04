@@ -276,7 +276,7 @@ aidcrew plugin trust my-plugin     # a plugin that arrived with a clone runs onl
 | **MCP** | Any MCP server, over stdio or HTTP, declared in the `.mcp.json` a project already has. Its tools arrive as ordinary tools and the agent loop never learns the difference. A server is a program, so one a project declares does not start until `aidcrew mcp trust <server>` says it may |
 | **Guards** | A never-write list, an always-ask list, and a snapshot of every file before it changes. On every path, because they are registered with the host rather than by each caller — and headless has nobody to ask, so what would have been a question there is a refusal |
 | **Context** | Conversations shortened when they no longer fit, summarised by a cheaper model when the project names one |
-| **Cost** | Per agent and per session, from the provider's own price list, from the project's stated prices, or from the remaining balance on the key |
+| **Cost** | Per agent, per job and per session, from the provider's own price list, from the project's stated prices, or from the remaining balance on the key. When a job comes home the pane says what it cost, on which models, and what the same tokens would have cost on the models people default to |
 | **Images** | Pasted into the prompt and sent to models that accept them |
 | **Sessions** | Every turn written to disk; a session resumes where it was left, transcript, history and checkouts included |
 | **The screen** | The alternate screen buffer, so nothing scrolls and the shell comes back as it was; every frame exactly the window's height, so it never blinks; drag over a pane to copy what it says |
