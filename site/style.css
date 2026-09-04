@@ -99,7 +99,7 @@ section:first-child { border-top: 0; }
 .film { margin: 0; }
 .film video, .film img {
   display: block; width: 100%; height: auto; border-radius: 10px;
-  border: 1px solid var(--line); background: #000;
+  border: 1px solid var(--line); background: var(--bg);
   box-shadow: 0 30px 80px -30px rgba(86, 180, 233, 0.25);
 }
 .film figcaption { color: var(--muted); font-size: 0.95rem; margin-top: 0.9rem; max-width: 52rem; }
@@ -115,7 +115,8 @@ section:first-child { border-top: 0; }
 .how li { margin-bottom: 0.9rem; color: var(--muted); }
 .how li strong { color: var(--text); }
 
-.plugins { display: grid; grid-template-columns: 1fr 1.1fr; gap: 2.5rem; align-items: start; }
+.plugins { display: grid; grid-template-columns: 1fr 1.25fr; gap: 2.5rem; align-items: start; }
+.plugins pre.code { font-size: 0.78rem; padding: 1rem 1.1rem; }
 .plugins .text p { color: var(--muted); }
 .plugins .text pre { margin-top: 0.5rem; }
 
