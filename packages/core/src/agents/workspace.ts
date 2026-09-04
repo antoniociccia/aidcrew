@@ -65,10 +65,13 @@ export function branchOf(taskId: string): string {
 export class WorkspaceManager {
   readonly #root: string
   readonly #workspaces = new Map<string, AgentWorkspace>()
+  /** The environment git runs in; the process's own unless a test says otherwise. */
+  readonly #env: Record<string, string | undefined> | undefined
   #isRepo: boolean | undefined
 
-  constructor(root: string) {
+  constructor(root: string, options: { env?: Record<string, string | undefined> } = {}) {
     this.#root = root
+    this.#env = options.env
   }
 
   async create(taskId: string): Promise<AgentWorkspace> {
@@ -367,7 +370,15 @@ export class WorkspaceManager {
       return { result: 'no branch', detail: `${branch} does not exist` }
     }
 
-    const attempt = await this.#run(['merge', '--no-ff', '--no-edit', branch])
+    // A merge commit needs an author, and a machine that has told git
+    // nothing — a CI runner, a container — refuses with "Committer identity
+    // unknown". The harness is the one merging, so it signs as itself where
+    // there is nobody else to sign as.
+    const identity =
+      (await this.#git(['config', '--get', 'user.email'])).trim() === ''
+        ? ['-c', 'user.name=aidcrew', '-c', 'user.email=aidcrew@localhost']
+        : []
+    const attempt = await this.#run([...identity, 'merge', '--no-ff', '--no-edit', branch])
     if (attempt.code === 0) {
       if (/Already up to date/.test(attempt.out)) {
         return { result: 'up-to-date', detail: `${branch} has nothing the repository does not` }
@@ -392,7 +403,12 @@ export class WorkspaceManager {
     cwd = this.#root,
   ): Promise<{ code: number; out: string; err: string }> {
     try {
-      const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' })
+      const proc = Bun.spawn(['git', ...args], {
+        cwd,
+        stdout: 'pipe',
+        stderr: 'pipe',
+        ...(this.#env ? { env: this.#env } : {}),
+      })
       const [out, err, code] = await Promise.all([
         new Response(proc.stdout).text(),
         new Response(proc.stderr).text(),
@@ -422,7 +438,12 @@ export class WorkspaceManager {
    */
   async #git(args: string[], cwd = this.#root): Promise<string> {
     try {
-      const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' })
+      const proc = Bun.spawn(['git', ...args], {
+        cwd,
+        stdout: 'pipe',
+        stderr: 'pipe',
+        ...(this.#env ? { env: this.#env } : {}),
+      })
       const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited])
       return code === 0 ? out : ''
     } catch {

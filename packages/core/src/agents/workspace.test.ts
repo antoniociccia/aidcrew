@@ -583,3 +583,23 @@ describe('a checkout that moved to a branch of its own', () => {
     await manager.removeAll()
   })
 })
+
+describe('bringing a task home where git has no identity', () => {
+  test("still merges, under a name of the harness's own", async () => {
+    // A merge commit needs an author, and a fresh machine — a CI runner, a
+    // container, a laptop on its first day — has told git nothing. The
+    // harness merging on somebody's behalf should not fail on their behalf.
+    const nobody = { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' }
+    const manager = new WorkspaceManager(repo, { env: nobody })
+    const workspace = await manager.create('coder')
+    writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'bump'], workspace.path)
+
+    const outcome = await manager.merge('coder')
+
+    expect(outcome.result).toBe('merged')
+    expect(await git(['log', '-1', '--format=%an <%ae>'], repo)).toContain('aidcrew')
+
+    await manager.removeAll()
+  })
+})
