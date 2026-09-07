@@ -74,6 +74,23 @@ the person using it, in the order it matters.
 
 ### The project
 
+- A tool call's arguments arriving under `"name": null` — deepseek through
+  OpenCode Go, on every chunk after the first — are more of the call that
+  is open, not a nameless call per fragment. Read the old way, no fragment
+  was JSON, and the turn died; the benchmark found it on its third task.
+- Arguments that are not valid JSON no longer end the turn. The call is
+  answered with an error naming what was wrong, and the model — watched on
+  deepseek — sends it again, corrected.
+- `AIDCREW_TRACE_DIR` writes every request and the raw stream that answered
+  it to a directory, so a model's stream that broke the parser can be read
+  chunk by chunk and turned into a test. The trace holds the whole
+  conversation; the key is not in it.
+- A request to OpenCode says who it is: `User-Agent: aidcrew` and one
+  session id per conversation in `x-opencode-session`, which OpenCode Go
+  asks of a coding agent and refuses a request without. The headers named
+  in the configuration still win.
+- `AIDCREW_HOME` points a run at another home — a benchmark, a container,
+  a test from the shell — so a run is only what the project declares.
 - A benchmark, under `bench/`: ten repeatable tasks — a bug, a feature, a
   refactor, a change across files — each with tests the agents never see
   and a reference solution that proves it solvable. Four configurations run

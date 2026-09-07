@@ -1,3 +1,5 @@
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { CanonicalRequest, Provider, StreamDelta } from '@aidcrew/core'
 import { ProviderResponseError } from '@aidcrew/core'
 import type { StallTimeouts, StallWatch } from '@aidcrew/plugin-sdk'
@@ -42,7 +44,12 @@ export type OpenAiCompatConfig = {
 const RETRYABLE_STATUSES = new Set([408, 409, 429, 500, 502, 503, 504])
 
 /** A request the service answered, with the clock still running on its body. */
-type Sent = { response: Response; watch: StallWatch }
+type Sent = {
+  response: Response
+  watch: StallWatch
+  /** Where the raw stream is being written down, when a trace was asked for. */
+  trace?: string
+}
 
 /** A request the service refused, and what the refusal was about. */
 type Refused = { failure: ProviderResponseError; worthRetrying: boolean; aboutTheCaller: boolean }
@@ -102,7 +109,10 @@ export function createOpenAiCompatProvider(config: OpenAiCompatConfig): Provider
       throw networkFailure('could not reach', url, cause)
     }
 
-    if (response.ok) return { response, watch }
+    if (response.ok) {
+      const trace = traceOf(model, body)
+      return { response, watch, ...(trace ? { trace } : {}) }
+    }
 
     // The body is read because gateways explain the real cause there, but
     // never the request: it carries the key and the whole transcript.
@@ -131,6 +141,31 @@ export function createOpenAiCompatProvider(config: OpenAiCompatConfig): Provider
       // rejected there, and a second refusal on top of the first explains
       // nothing.
       aboutTheCaller: ABOUT_THE_CALLER.test(text),
+    }
+  }
+
+  /**
+   * Writes the request down and names the file the answer will go to, when
+   * AIDCREW_TRACE_DIR asks for it; nothing otherwise.
+   *
+   * A failure nobody can replay is a failure nobody can fix: a model's
+   * stream that broke the parser is only worth anything read chunk by
+   * chunk, and turned into a test. The trace holds the whole conversation
+   * — every prompt, every file the agent read — and the key is not in it.
+   */
+  function traceOf(model: string, body: unknown): string | undefined {
+    const dir = process.env.AIDCREW_TRACE_DIR?.trim()
+    if (!dir) return undefined
+    try {
+      mkdirSync(dir, { recursive: true })
+      const stamp = `${new Date().toISOString().replaceAll(/[:.]/g, '-')}-${config.id}-${model.replaceAll(/[^\w.-]/g, '_')}`
+      writeFileSync(join(dir, `${stamp}.request.json`), JSON.stringify(body, null, 2))
+      const trace = join(dir, `${stamp}.response.sse`)
+      writeFileSync(trace, '')
+      return trace
+    } catch {
+      // A trace that cannot be written is not a reason to fail the request.
+      return undefined
     }
   }
 
@@ -167,6 +202,7 @@ export function createOpenAiCompatProvider(config: OpenAiCompatConfig): Provider
     const { watch } = sent
     try {
       for await (const chunk of watch.body(sent.response.body as ReadableStream<Uint8Array>)) {
+        if (sent.trace) appendFileSync(sent.trace, chunk)
         yield chunk
       }
     } catch (cause) {

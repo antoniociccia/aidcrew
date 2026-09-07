@@ -726,3 +726,41 @@ describe('what the headers say is left of the allowance', () => {
     expect(out.some((delta) => (delta as { type: string }).type === 'meter')).toBe(false)
   })
 })
+
+describe('a trace of what went over the wire', () => {
+  // A failure nobody can replay is a failure nobody can fix. With
+  // AIDCREW_TRACE_DIR set, every request and the raw stream that answered
+  // it are written down, so a model's stream that broke the parser can be
+  // read chunk by chunk and turned into a test.
+  test('writes the request and the raw stream to the directory named', async () => {
+    const { mkdtempSync, readdirSync, readFileSync, rmSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const dir = mkdtempSync(join(tmpdir(), 'aidcrew-trace-'))
+    const before = process.env.AIDCREW_TRACE_DIR
+    process.env.AIDCREW_TRACE_DIR = dir
+    try {
+      const { fetchImpl } = respondWith(okStream)
+      const provider = createOpenAiCompatProvider({
+        id: 'test',
+        baseUrl: 'https://api.test/v1',
+        apiKey: 'k',
+        dialect: 'chat',
+        fetchImpl,
+      })
+      await drain(provider.send(request, new AbortController().signal))
+
+      const files = readdirSync(dir).sort()
+      expect(files.some((name) => name.endsWith('.request.json'))).toBe(true)
+      const sse = files.find((name) => name.endsWith('.response.sse'))
+      expect(sse).toBeDefined()
+      expect(readFileSync(join(dir, sse ?? ''), 'utf8')).toBe(okStream)
+      const requestFile = files.find((name) => name.endsWith('.request.json')) ?? ''
+      expect(readFileSync(join(dir, requestFile), 'utf8')).toContain('"test-model"')
+    } finally {
+      if (before === undefined) delete process.env.AIDCREW_TRACE_DIR
+      else process.env.AIDCREW_TRACE_DIR = before
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})

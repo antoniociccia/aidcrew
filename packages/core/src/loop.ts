@@ -251,7 +251,16 @@ async function* executeCalls(
       const call = batch[0]
       const info: ToolCallInfo = { id: call.id, name: call.name, input: call.input }
       const startedAt = performance.now()
-      const output = yield* guardedRun(info, byName.get(call.name), context, hooks, names)
+      // Arguments that were not JSON are answered, not run: nothing is
+      // handed to a tool on a guess, and the model is told what to fix.
+      const output = call.inputError
+        ? {
+            content:
+              `tool ${call.name} was not run: its arguments were not valid JSON (${call.inputError}). ` +
+              'Send the call again with valid JSON.',
+            isError: true,
+          }
+        : yield* guardedRun(info, byName.get(call.name), context, hooks, names)
       const durationMs = performance.now() - startedAt
 
       yield { type: 'tool_end', id: call.id, name: call.name, output, durationMs }
@@ -546,7 +555,8 @@ function batched(
 ): Extract<ContentBlock, { type: 'tool_use' }>[][] {
   const batches: Extract<ContentBlock, { type: 'tool_use' }>[][] = []
   for (const call of calls) {
-    const reads = byName.get(call.name)?.reads === true
+    // A call with no readable input is never batched: it is not run at all.
+    const reads = call.inputError === undefined && byName.get(call.name)?.reads === true
     const last = batches.at(-1)
     if (reads && last && byName.get(last[0]?.name ?? '')?.reads === true) last.push(call)
     else batches.push([call])

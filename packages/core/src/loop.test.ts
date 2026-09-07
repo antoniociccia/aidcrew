@@ -433,3 +433,37 @@ describe('asking for several things at once', () => {
     ])
   })
 })
+
+describe('a call whose arguments were not valid JSON', () => {
+  test('is answered with an error, not run, and the turn goes on', async () => {
+    // Thrown by the accumulator, this ended the turn with no answer to
+    // anything; a person saw "arguments that are not valid JSON" where a
+    // retry would have done. Now the model reads what was wrong and sends
+    // the call again.
+    let ran = 0
+    const counting: Tool = {
+      ...echo,
+      execute: async (input) => {
+        ran += 1
+        return { content: JSON.stringify(input) }
+      },
+    }
+    const broken: StreamDelta[] = [
+      { type: 'tool_use_start', id: 'c1', name: 'echo' },
+      { type: 'tool_use_delta', id: 'c1', partialInput: '{"text": ' },
+      { type: 'done', stopReason: 'tool_use', usage },
+    ]
+    const { events, result } = await drain(
+      run({ provider: scripted([broken, endTurn('sent it again')]), tools: [counting] }),
+    )
+
+    expect(ran).toBe(0)
+    const answered = events.find((event) => event.type === 'tool_end')
+    expect(answered && 'output' in answered ? answered.output.isError : false).toBe(true)
+    expect(answered && 'output' in answered ? answered.output.content : '').toContain(
+      'not valid JSON',
+    )
+    expect(result.stopReason).toBe('end_turn')
+    expect(result.turns).toBe(2)
+  })
+})

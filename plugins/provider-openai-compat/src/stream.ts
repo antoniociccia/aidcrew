@@ -5,9 +5,10 @@ import { notAStream, remembering } from './body.ts'
 
 type ToolCallChunk = {
   /** Standard, but some proxies leave it out and identify chunks by id alone. */
-  index?: number
-  id?: string
-  function?: { name?: string; arguments?: string }
+  index?: number | null
+  /** Absent, empty or null on a continuation, depending on who is sending. */
+  id?: string | null
+  function?: { name?: string | null; arguments?: string | null }
 }
 
 /**
@@ -206,19 +207,26 @@ function* readToolCall(
   // first call was filed under it, so every later continuation of every later
   // call resolved to the first. One call ended up holding two calls'
   // arguments, which is not JSON, and the other held none.
-  const named = call.id === undefined || call.id === '' ? undefined : call.id
+  // And a null id is no id either: deepseek through OpenCode sends
+  // `"id": null, "function": {"name": null}` on every chunk after the first.
+  const named = call.id ? call.id : undefined
+  const index = call.index ?? undefined
 
   // By id first, because an id is a name for one call and an index is only a
   // position — and a service that reuses index 0 for every call, as Gemini's
   // OpenAI-compatible endpoint does, makes the position a lie.
   const byId = named === undefined ? undefined : openCalls.get(named)
-  const byIndex = call.index === undefined ? undefined : openCalls.get(call.index)
+  const byIndex = index === undefined ? undefined : openCalls.get(index)
   let id = byId ?? byIndex
 
   // A chunk that carries a name is opening a call; one that does not is
   // continuing whichever call it belongs to. That distinction is what makes
   // the rest of this readable, because the keys alone do not say.
-  const opening = call.function?.name !== undefined
+  // A null or empty name names nothing, and opens nothing: read as a name,
+  // it opened a nameless call for every fragment of arguments, none of
+  // which was JSON, and the turn died.
+  const name = call.function?.name ? call.function.name : undefined
+  const opening = name !== undefined
 
   // An id nobody has seen, opening a call at a position that is taken, is a
   // second call rather than more of the first. Read as a continuation, the
@@ -248,13 +256,13 @@ function* readToolCall(
     // result to its call by it as usual.
     id = named ?? `${providerId}-call-${crypto.randomUUID()}`
     // Under both keys, so a later chunk finds it whichever one it carries.
-    if (call.index !== undefined) openCalls.set(call.index, id)
+    if (index !== undefined) openCalls.set(index, id)
     openCalls.set(id, id)
-    yield { type: 'tool_use_start', id, name: call.function?.name ?? '' }
+    yield { type: 'tool_use_start', id, name: name ?? '' }
   } else {
     // A call opened under one key and continued under the other: remember
     // the new key too, so the one after it needs no guessing either.
-    if (call.index !== undefined && byIndex === undefined) openCalls.set(call.index, id)
+    if (index !== undefined && byIndex === undefined) openCalls.set(index, id)
     if (named !== undefined && byId === undefined) openCalls.set(named, id)
   }
 

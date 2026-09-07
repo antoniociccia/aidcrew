@@ -618,3 +618,133 @@ describe('the cached part of the prompt under the name deepseek gives it', () =>
     })
   })
 })
+
+describe('a continuation whose name is null', () => {
+  // Read off the wire: deepseek-v4-flash through OpenCode Go opens a call
+  // with an id and a name, then sends every chunk of its arguments with
+  // `"id": null` and `"function": {"name": null, ...}`. Taken as "a name is
+  // present", null opened a nameless call per fragment; the arguments were
+  // split across them, none of which was JSON, and the turn died.
+  test('is more of the call that is open, not a call of its own', async () => {
+    const said = await deltas([
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  id: 'chatcmpl-tool-9d4',
+                  type: 'function',
+                  function: { name: 'tree', arguments: '' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  id: null,
+                  type: 'function',
+                  function: { name: null, arguments: '{"pa' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  id: null,
+                  type: 'function',
+                  function: { name: null, arguments: 'th": "."}' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+    ])
+
+    expect(said.filter((delta) => delta.type === 'tool_use_start')).toEqual([
+      { type: 'tool_use_start', id: 'chatcmpl-tool-9d4', name: 'tree' },
+    ])
+    expect(
+      said
+        .filter((delta) => delta.type === 'tool_use_delta')
+        .map((delta) => ('partialInput' in delta ? delta.partialInput : ''))
+        .join(''),
+    ).toBe('{"path": "."}')
+  })
+
+  test('two calls in one turn, each continued under null, stay two calls', async () => {
+    const said = await deltas([
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [{ index: 0, id: 'call_a', function: { name: 'read', arguments: '' } }],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                { index: 0, id: null, function: { name: null, arguments: '{"path": "a"}' } },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [{ index: 1, id: 'call_b', function: { name: 'read', arguments: '' } }],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                { index: 1, id: null, function: { name: null, arguments: '{"path": "b"}' } },
+              ],
+            },
+          },
+        ],
+      },
+      { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+    ])
+
+    expect(
+      said
+        .filter((delta) => delta.type === 'tool_use_start')
+        .map((delta) => ('id' in delta ? delta.id : '')),
+    ).toEqual(['call_a', 'call_b'])
+    const inputs = new Map<string, string>()
+    for (const delta of said) {
+      if (delta.type === 'tool_use_delta')
+        inputs.set(delta.id, (inputs.get(delta.id) ?? '') + delta.partialInput)
+    }
+    expect(inputs.get('call_a')).toBe('{"path": "a"}')
+    expect(inputs.get('call_b')).toBe('{"path": "b"}')
+  })
+})

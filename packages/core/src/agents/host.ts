@@ -1725,11 +1725,17 @@ class LiveAgent {
     const repeats = new Repeats()
     const id = this.#def.id
     const { onEvent } = this.#host.internals.options
+    /** The calls already said to be refused, so the note is written once, not per refusal. */
+    const refusedSaid = new Set<string>()
     return {
       async preToolCall(call: ToolCallInfo): Promise<ToolOutput | undefined> {
         const times = repeats.streak(call.name, call.input)
         if (times < REPEATS_REFUSED) return undefined
-        onEvent({ type: 'agent_looping', id, tool: call.name, times, refused: true })
+        const key = `${call.name}\u0000${JSON.stringify(call.input) ?? ''}`
+        if (!refusedSaid.has(key)) {
+          refusedSaid.add(key)
+          onEvent({ type: 'agent_looping', id, tool: call.name, times, refused: true })
+        }
         return { content: refusedOnRepeat(call.name, times), isError: true }
       },
       async postToolCall(call: ToolCallInfo, output: ToolOutput): Promise<ToolOutput | undefined> {

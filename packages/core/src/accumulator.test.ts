@@ -109,17 +109,22 @@ describe('accumulate', () => {
     ])
   })
 
-  test('rejects a tool input that is not valid json rather than guessing', async () => {
-    const failing = accumulate(
+  test('keeps a tool input that is not valid json as an error to answer, never as a guess', async () => {
+    // Thrown, this ended the turn: the model got no answer at all, and a
+    // person saw "arguments that are not valid JSON" where a retry would
+    // have done. The call is kept, with no input and the failure on it, for
+    // the loop to answer with an error the model can read and correct.
+    const turn = await accumulate(
       stream([
-        { type: 'tool_use_start', id: 'call_1', name: 'read' },
+        { type: 'tool_use_start', id: 'call_1', name: 'write' },
         { type: 'tool_use_delta', id: 'call_1', partialInput: '{"path": ' },
-        { type: 'tool_use_end', id: 'call_1' },
         { type: 'done', stopReason: 'tool_use', usage: { inputTokens: 1, outputTokens: 1 } },
       ]),
     )
 
-    expect(failing).rejects.toThrow(/call_1/)
+    const [call] = turn.content
+    expect(call).toMatchObject({ type: 'tool_use', id: 'call_1', name: 'write', input: {} })
+    expect(call && 'inputError' in call ? call.inputError : '').toMatch(/JSON/)
   })
 
   test('keeps a call the output cap cut off, with no arguments, rather than rejecting the turn', async () => {

@@ -10,7 +10,18 @@ export type Role = 'system' | 'user' | 'assistant'
 export type ContentBlock =
   | { type: 'text'; text: string }
   | { type: 'thinking'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: unknown }
+  | {
+      type: 'tool_use'
+      id: string
+      name: string
+      input: unknown
+      /**
+       * Why the input could not be read, when it could not: the arguments
+       * were not JSON. The call is kept, so the loop can answer it with an
+       * error the model reads and corrects, instead of the turn dying.
+       */
+      inputError?: string
+    }
   | { type: 'tool_result'; toolUseId: string; content: string; isError: boolean }
   /**
    * A picture, carried as bytes rather than as a path.

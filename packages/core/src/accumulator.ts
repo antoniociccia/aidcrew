@@ -9,7 +9,7 @@ import type { AssistantTurn, ContentBlock, StopReason, StreamDelta, Usage } from
 type PendingBlock =
   | { kind: 'text'; text: string }
   | { kind: 'thinking'; text: string }
-  | { kind: 'tool'; id: string; name: string; raw: string; input?: unknown }
+  | { kind: 'tool'; id: string; name: string; raw: string; input?: unknown; inputError?: string }
 
 /**
  * Reassembles a provider's delta stream into one assistant turn.
@@ -73,11 +73,12 @@ export async function accumulate(deltas: AsyncIterable<StreamDelta>): Promise<As
         block.input = {}
         return
       }
-      throw new ProviderProtocolError(
-        `tool call ${block.id} (${block.name}) sent arguments that are not valid JSON`,
-        { toolUseId: block.id },
-        { cause },
-      )
+      // A call the model says is complete and is not. Thrown, this ended
+      // the turn with no answer to anything; kept, with no input and the
+      // failure on it, the loop answers the call with an error the model
+      // reads and corrects — which, watched on a real model, it does.
+      block.input = {}
+      block.inputError = `${cause instanceof Error ? cause.message : String(cause)} in ${JSON.stringify(block.raw.slice(0, 120))}`
     }
   }
 
@@ -132,6 +133,12 @@ function toContentBlock(block: PendingBlock): ContentBlock {
     case 'thinking':
       return { type: 'thinking', text: block.text }
     case 'tool':
-      return { type: 'tool_use', id: block.id, name: block.name, input: block.input }
+      return {
+        type: 'tool_use',
+        id: block.id,
+        name: block.name,
+        input: block.input,
+        ...(block.inputError === undefined ? {} : { inputError: block.inputError }),
+      }
   }
 }
