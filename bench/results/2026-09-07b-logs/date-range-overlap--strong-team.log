@@ -1,0 +1,61 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/range.ts)
+architect · bash(ls -la && cat package.json 2>/dev/null; echo '---'; find . -…)
+architect · read(src/range.test.ts)
+architect · agent_send(coder)
+architect → coder Fix `overlaps` in `src/range.ts` and add tests in `src/range.test.ts`.  Current code returns `aStart <= bEnd && bStart <…
+coder · read(src/range.ts)
+coder · read(src/range.test.ts)
+architect › Plan sent to coder. I'll wait for their report that `bun test` passes with the new `overlaps` behavior and tests.
+coder › Two small files. Let me check the workspace root for a package.json/bunfig to know how to run, then make the edits.
+coder · bash(ls -a && cat package.json 2>/dev/null)
+coder · write(src/range.ts)
+coder · write(import { expect, test } from 'bun:test' import { overlaps } …)
+coder · bash(bun test 2>&1)
+coder › All 7 tests pass. Committing:
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Fix…)
+coder › Done. Committed as `2f4bef2` on `work/main`.
+
+**What changed in `src/range.ts`:**
+- Added `parseInstant(value)` — `Date.parse`s one value and throws `new TypeError(\`unparseable date: ${value}\`)` when the result is `NaN`.
+- Added `parseRange(range)` — parses `start` first, then `end`, then throws a `RangeError` if `end < start`.
+- `overlaps` now validates `a` first, then `b`, before doing anything else (so invalid input always throws, regardless of the other range). If either range is zero-length (`start === end`) it returns `false`. Otherwise it returns `aStart < bEnd && bStart < aEnd` — strict `<` on both sides, making touching ranges false and same-start ranges true.
+
+**What `src/range.test.ts` added** (keeping the existing hour-overlap test): touching ranges → `false`; same-start ranges → `true`; zero-length range against a strictly containing range (both argument orders) and against itself → `false`; unparseable start and unparseable end each throw `TypeError` with a message containing the offending value; end before start throws `RangeError`.
+
+**Check result — exact `bun test` output from repo root:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 11 expect() calls
+Ran 7 tests across 1 file. [15.00ms]
+```
+
+One thing the plan didn't pin down and I decided: the `RangeError` for `end < start` also mentions which values were before which other (`end (... ) is before start (...)`), which keeps the message helpful without changing behavior.
+coder → architect Done. Committed as `2f4bef2` on `work/main`.  **What changed in `src/range.ts`:** - Added `parseInstant(value)` — `Date.…
+architect · bash(bun test)
+architect · bash(git log --oneline -3)
+verified: bun run test passes on work/main
+merged work/main into the repository: a5a8a06 Merge branch 'work/main'
+architect › The job is done.
+
+`overlaps` in `src/range.ts` now parses and validates its inputs before comparing: unparseable start/end throws a `TypeError` including the offending value, `end < start` throws a `RangeError`, zero-length ranges return `false` (including against themselves), and overlap uses strict `<` on both sides so exclusive ends mean touching ranges don't overlap while same-start ranges do. `src/range.test.ts` now covers touching, same-start, zero-length (both argument orders and self), unparseable start/end, and end-before-start.
+
+Verified with `bun test` from the repo root: **7 pass, 0 fail**. Work is committed as `2f4bef2` on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 33966 tokens
+  coder        deepseek-v4-flash    1 turns, 51361 tokens
+
+main: done
+  bun run test passed
+  merged: a5a8a06 Merge branch 'work/main'
+  this job: 85k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a5a8a06 Merge branch 'work/main'","cost":"this job: 85k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4822,"outputTokens":3544,"cacheReadTokens":25600,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":12363,"outputTokens":3542,"cacheReadTokens":35456,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

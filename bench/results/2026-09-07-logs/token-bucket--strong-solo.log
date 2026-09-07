@@ -1,0 +1,55 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(src/**/*.ts)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current)
+coder · write(src/limiter.ts)
+coder · write(src/limiter.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short)
+coder · bash(git add src/limiter.ts src/limiter.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 7325ea0 Merge branch 'work/main'
+coder › Implemented the token bucket in `src/limiter.ts`.
+
+What changed
+- `RateLimiter` now keeps `tokens` and `lastRefill` state.
+- It starts full: `tokens = capacity`, `lastRefill = now()`.
+- `available` refills up to the current time and returns the (possibly fractional) token count.
+- `tryTake(n = 1)` refuses any `n > capacity` outright, refills to the current time, and only deducts if enough tokens are present.
+- Refill is `elapsedMs * refillPerSecond / 1000`, capped at `capacity`.
+
+Tests added in `src/limiter.test.ts`
+- starts full
+- takes exactly `n` and leaves the rest
+- takes nothing when short
+- `n > capacity` is always refused
+- continuous fractional refill
+- never refills past capacity
+
+Checks
+- `bun test`:
+```
+bun test v1.3.14 (0d9b296a)
+
+6 pass
+0 fail
+15 expect() calls
+Ran 6 tests across 1 file. [13.00ms]
+```
+
+Committed as `c157909` on `work/main`.
+
+  coder        deepseek-v4-pro      1 turns, 56965 tokens
+
+main: done
+  bun run test passed
+  merged: 7325ea0 Merge branch 'work/main'
+  this job: 57k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"7325ea0 Merge branch 'work/main'","cost":"this job: 57k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5073,"outputTokens":2996,"cacheReadTokens":48896,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,95 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(ls -la && find . -maxdepth 2 -type f -not -path './node_modu…)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · read(package.json)
+coder · bash(find . -maxdepth 3 -type f -not -path './.git/*' -not -path …)
+coder · git-log()
+coder · write(src/cache.ts)
+coder · write(src/cache.test.ts)
+coder · bash(bun test)
+coder · bash(ls node_modules 2>/dev/null | head; command -v tsc || true; …)
+coder · bash(tsc --version && ls tsconfig.json 2>/dev/null || echo "no ts…)
+coder · bash(tsc --noEmit --strict --target es2020 --module es2020 --modu…)
+coder · edit(src/cache.test.ts)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/cache.test.ts: 173 |  174 |   c.advance(600) // x has …
+coder · bash(bun -e " import { Cache } from './src/cache.ts' let current …)
+coder · read(src/cache.test.ts)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/cache.test.ts: 173 |  174 |   c.advance(600) // x has …
+coder · bash(bun -e " import { Cache } from './src/cache.ts' let current …)
+coder · edit(src/cache.test.ts)
+coder · bash(bun test)
+coder · read(src/cache.ts)
+coder · bash(tsc --noEmit --strict --target es2020 --module es2020 --modu…)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git diff --stat && git diff -- src/cache.ts)
+coder · bash(git checkout -b implement-cache && git add src/cache.ts && g…)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+verified: bun run test passes on work/main
+merged work/main into the repository: 0adbf26 Merge branch 'implement-cache'
+coder › Implemented the `Cache` class and added tests.
+
+## What changed
+
+**`src/cache.ts`**
+- Backed by a `Map<K, { value; expiresAt }>`; `Map` insertion order is used as the recency order.
+- Constructor throws `RangeError` when `capacity < 1`.
+- `get`:
+  - returns `undefined` for missing or expired entries (and removes expired ones);
+  - a successful `get` moves the entry to the most-recently-used end without changing its expiry.
+- `set`:
+  - purges expired entries first so they never count toward capacity or force a live eviction;
+  - replacing a present key updates its value and expiry in place, with no eviction (and, matching the spec's "only `get` counts as a use", does not change its recency position);
+  - inserting a new key evicts the oldest entry while over capacity.
+- `has` / `delete`: Map-like, with expired entries treated as absent (so `has` is `false` and `delete` returns `false` for them), and neither counts as a use.
+- `size`: purges expired entries and counts only live ones.
+- Expiry is checked as `expiresAt <= now()`, i.e. an entry expires once `ttlMs` have elapsed since it was set.
+
+**`src/cache.test.ts`**
+- Expanded from 1 test to 16, covering: get/set round-trip, missing keys, expiry (including the exact boundary), get refreshing recency but not expiry, LRU eviction, replace-without-evicting, `has` not counting as a use, `delete` return values, `size`, expired entries not counting toward capacity, capacity 1, and the `RangeError` for `capacity < 1`.
+
+## Checks
+
+```
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+ 16 pass
+ 0 fail
+ 45 expect() calls
+Ran 16 tests across 1 file. [15.00ms]
+```
+
+Also type-checked the implementation itself:
+
+```
+$ tsc --noEmit --strict --target es2020 --module es2020 --moduleResolution bundler src/cache.ts
+exit: 0
+```
+
+The test file can't be `tsc`-checked in this bare repo because there is no `bun:test` type declaration available, but it runs under the project's own `bun test` check. There are no other scripts in `package.json` (only `test`).
+
+## Decisions the plan didn't specify
+
+- **`set` on an existing key does not count as a use.** The spec explicitly says only a successful `get` counts as a use, and says `set` replaces value/time "without evicting anything", so I update the entry in place (keeping its LRU position) rather than moving it to MRU.
+- **Expired entries are physically purged** in `set` and `size` so they can never cause a live entry to be evicted; they are also removed when touched by `get`/`has`/`delete`.
+- **Expiry boundary:** an entry is expired once `now() >= setTime + ttlMs` (at exactly `ttlMs` it is expired).
+
+Committed on branch `implement-cache` in two commits:
+- `6fdfe6a` Implement LRU TTL cache
+- `76a7d66` Add cache tests
+
+  coder        deepseek-v4-pro      1 turns, 746993 tokens
+
+main: done
+  bun run test passed
+  merged: 0adbf26 Merge branch 'implement-cache'
+  this job: 747k tokens, 15¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 50¢, on gpt-5 ≈ 44¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"0adbf26 Merge branch 'implement-cache'","cost":"this job: 747k tokens, 15¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 50¢, on gpt-5 ≈ 44¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":9660,"outputTokens":34485,"cacheReadTokens":702848,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -70,3 +70,33 @@ across files — and dependency-free, so a run is the model's work and nothing
 else. They are for measuring, not for tuning: a prompt changed to pass one
 of them is a prompt changed to pass the benchmark, and that is not the
 product getting better.
+
+## Results
+
+Every round is a file under `results/`: the records, the table, and a log
+per run. The logs are the evidence; a task's write-up is made from them.
+
+**2026-09-07** — `results/2026-09-07.md` (before) and `results/2026-09-07b.md`
+(after). The first round found three harness bugs in its first hour, all
+fixed the same day: a cheap model's tool-call arguments split across
+nameless calls (`"name": null` on every continuation chunk); a turn ended
+by arguments that were not JSON instead of an error the model could
+correct; and a coder's report to the leader left in the ledger as
+unanswered, so a finished team was reported as stalled and never merged.
+The second round, on the fixed code:
+
+| configuration | passed | said done, failed | cost per pass | mean time |
+|---|---|---|---|---|
+| cheap-solo | 10/10 | 0 | 0.3¢ | 81s |
+| strong-solo | 9/10 | 1 | 3.9¢ | 141s |
+| cheap-team | 10/10 | 0 | 0.4¢ | 203s |
+| strong-team | 8/10 | 0 | 2.0¢ | 92s |
+
+Read with care: ten tasks, each run once, on a subscription whose cost
+column is list price. What it does say — the cheap model alone went from
+5/10 to 10/10 on the parser fix and no prompt change, the cheap team from
+4/10 to 10/10 on the ledger fix; the strong model's one failure was the
+only case of the harness saying done and the hidden tests disagreeing; the
+strong team's two were a leader that wrote its plan as text and handed it
+to nobody — is where the next work is, which is the point.
+

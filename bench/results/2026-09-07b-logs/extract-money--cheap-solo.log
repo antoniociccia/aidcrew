@@ -1,0 +1,58 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · read(package.json)
+coder › Now let me check the current behaviour with the existing test runner before I change anything.
+coder · bash(cd "$(pwd)" && bun test 2>&1 | tail -20)
+coder › I'll create the new module, then rewire both formatters.
+coder · write(src/money.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · edit(src/receipt.ts)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder › Now the tests — one file for the new module, plus a regression test for the receipt bug.
+coder · write(import { expect, test } from 'bun:test' import { formatMoney…)
+coder · edit(src/receipt.test.ts)
+coder · bash(cd "$(pwd)" && bun test 2>&1 | tail -25)
+coder › All 7 tests pass. Let me verify the wrappers and renders by hand, and check git state.
+coder · bash(cd "$(pwd)" && git status --short && git diff --stat)
+coder · bash(cd "$(pwd)" && cat > /tmp/probe.ts <<'EOF' import { formatIn…)
+coder · error: command failed with exit code 1 error: Cannot find module './src/invoice.ts' from '/private/tmp/probe.ts'  Bun v1.3.14 (…
+coder · bash(cd "$(pwd)" && cat > ./probe.tmp.ts <<'EOF' import { formatI…)
+coder › Everything works as specified — the -1250 refund now renders `-12.50 EUR` instead of `-13.-50 EUR`. Committing.
+coder · bash(cd "$(pwd)" && git add src/money.ts src/money.test.ts src/in…)
+verified: bun run test passes on work/main
+merged work/main into the repository: a40caa9 Merge branch 'work/main'
+coder › Done. Here's what changed:
+
+## Changes
+- **`src/money.ts` (new)** — exports `formatMoney(cents: number, currency: string): string` with exactly the invoice's behaviour: sign via `cents < 0`, whole/fraction computed on `Math.abs`, thousands grouped with commas, two padded decimals, then a space and the currency code.
+- **`src/invoice.ts`** — `formatInvoiceAmount` is now a thin wrapper that delegates to `formatMoney` (same output as before).
+- **`src/receipt.ts`** — `formatReceiptAmount` is now a thin wrapper that delegates to `formatMoney`. This is what fixes the bugs: the receipt no longer does its own `Math.floor(cents / 100)` / `cents % 100` on the raw signed value, so `-1250` now renders as `-12.50 EUR` instead of `-13.-50 EUR`, and it no longer drops the thousands separator.
+- **`src/money.test.ts` (new)** — covers whole euros, comma grouping, decimal padding, and negative amounts (including a negative with grouping).
+- **`src/receipt.test.ts`** — added a regression test for the negative-amount fix (`refund -12.50 EUR\nTOTAL -12.50 EUR`).
+
+Both wrappers and `renderInvoice` / `renderReceipt` stay exported, so nothing that imports them breaks.
+
+## Checks
+`bun test` — **7 pass, 0 fail** (13 `expect()` calls across 3 files). I also spot-checked by hand: `formatMoney(-1250, 'EUR')` → `-12.50 EUR`, `formatReceiptAmount(-1250, 'EUR')` → `-12.50 EUR`, and the existing positive render assertions for both `renderInvoice` and `renderReceipt` are unchanged.
+
+## One decision worth flagging
+There's a slight tension in the request: "make the receipt use `formatMoney` (which groups thousands)" vs. "keep `renderReceipt` output unchanged for positive amounts." Taken literally those conflict for positive amounts ≥ 1,000 cents, because the receipt previously *dropped* the separator (e.g. `123456` cents rendered `1234.56 EUR`, and that separator-dropping is named as one of the bugs to fix). I treated the grouping fix as the intent: both renderers now produce identical money formatting for every amount, including grouped thousands on large positives. The existing positive assertions (which use amounts that don't trigger grouping, or were already grouped) are preserved exactly — verified above. If you wanted receipts to stay ungrouped for large positive amounts, that would require `formatReceiptAmount` to *not* be a thin pass-through to `formatMoney`, and I didn't do that.
+
+  coder        deepseek-v4-flash    1 turns, 122163 tokens
+
+main: done
+  bun run test passed
+  merged: a40caa9 Merge branch 'work/main'
+  this job: 122k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a40caa9 Merge branch 'work/main'","cost":"this job: 122k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6582,"outputTokens":6653,"cacheReadTokens":108928,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

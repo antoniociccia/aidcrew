@@ -1,0 +1,65 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · tree(src)
+coder · read(src/range.test.ts)
+coder · stat(.)
+coder · json(package.json)
+coder · glob(**/*)
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder · bash(git checkout -b fix-overlaps && git branch --show-current)
+coder · edit(src/range.ts)
+coder › Now the tests:
+coder · edit(src/range.test.ts)
+coder › I used `Range` type in the test but it's not imported. Let me check the test imports — they only import `overlaps`. I need to import `Range` too, or use a plain object literal. Let me fix.
+coder · edit(src/range.test.ts)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me verify the final files and commit.
+coder · read(src/range.ts)
+coder · git-log(.)
+coder · error: git log failed: fatal: empty string is not a valid pathspec. please use . instead if you meant to match all paths
+coder · bash(git add -A && git commit -q -m "Fix overlaps: exclusive ends…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 5777869 Merge branch 'fix-overlaps'
+coder › Done. Here's what I changed.
+
+## `src/range.ts`
+
+`overlaps` now:
+
+- **Touching ranges don't overlap.** The old code used `aStart <= bEnd && bStart <= aEnd`, which treated an end boundary as inclusive. Since the end is exclusive, I changed the comparison to strict `<` (`aStart < bEnd && bStart < aEnd`).
+- **Same start instant does overlap** — two ranges starting together share an instant, covered by the strict comparisons.
+- **Zero-length ranges overlap nothing, not even themselves.** A range whose start equals its end contains no moments, so I return `false` early when either side has zero length.
+- **Unparseable dates throw a `TypeError`** whose message includes the offending value (`parseInstant` wraps `Date.parse` and throws when it's `NaN`).
+- **End-before-start throws a `RangeError`** naming the offending start/end values, checked for both ranges.
+- All four endpoints are parsed before validation, so an unparseable value anywhere throws regardless of ordering.
+
+## `src/range.test.ts`
+
+Added tests for: touching ranges, same-start-instant overlap, containment, zero-length (against itself and against a normal range, both orientations), unparseable dates in each of the four positions (checking the message names the value), and end-before-start for both ranges.
+
+## Checks
+
+`bun test` output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 12 expect() calls
+Ran 7 tests across 1 file. [12.00ms]
+```
+
+Committed on branch `fix-overlaps` as `f92b523`. There was no lint or typecheck script in `package.json`, only `bun test`.
+
+  coder        deepseek-v4-flash    1 turns, 76262 tokens
+
+main: done
+  bun run test passed
+  merged: 5777869 Merge branch 'fix-overlaps'
+  this job: 76k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"5777869 Merge branch 'fix-overlaps'","cost":"this job: 76k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9606,"outputTokens":4576,"cacheReadTokens":62080,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,58 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder · read(package.json)
+coder › Now let me check the repository state before making changes.
+coder · bash(git status --short && git log --oneline -5 && git branch --s…)
+coder · write(src/limiter.ts)
+coder · write(import { describe, expect, test } from 'bun:test' import { R…)
+coder · bash(bun test 2>&1)
+coder › All 9 tests pass. Let me commit the changes.
+coder · bash(git add src/limiter.ts src/limiter.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 5854a18 Merge branch 'work/main'
+coder › Done. Here's what I did:
+
+## Implementation (`src/limiter.ts`)
+
+Implemented `RateLimiter` as a token bucket:
+
+- **Starts full**: the constructor initializes `tokens` to `capacity` and records the starting time via `now()`.
+- **Continuous refill**: a private `refill()` method calculates how many tokens have accrued since the last refill using `(elapsedMs / 1000) * refillPerSecond`, clamps to `capacity`, and updates `lastRefill` to the current time. It's called at the start of `tryTake` and inside the `available` getter.
+- **`tryTake(n)`**: refuses immediately if `n > capacity` (takes nothing). Otherwise refills, and if `tokens >= n` subtracts `n` and returns `true`; else returns `false` without taking anything. `n <= 0` returns `true` (a no-op take always succeeds).
+- **`available`**: refunds up to `now()` (which tests can control) and returns the bucket — fractional values allowed.
+- **Never exceeds capacity**: refill uses `Math.min(capacity, …)`.
+
+One minor decision beyond the plan: `tryTake(0)` (or negative) returns `true` as a no-op — a zero-token take is never refused. I kept the `now` parameter optional with a `Date.now()` default, matching the existing signature.
+
+## Tests (`src/limiter.test.ts`)
+
+In addition to the existing "starts full" test, 8 more cover: full capacity reporting, taking when available, refusing when short (and taking nothing), always refusing over capacity, continuous fractional refill over time, refill rate per second, never refilling beyond capacity, and that a refused take leaves the refill intact for later.
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 32 expect() calls
+Ran 9 tests across 1 file. [12.00ms]
+```
+
+Committed as `898f76b Implement RateLimiter token bucket and add tests`.
+
+  coder        deepseek-v4-flash    1 turns, 58402 tokens
+
+main: done
+  bun run test passed
+  merged: 5854a18 Merge branch 'work/main'
+  this job: 58k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"5854a18 Merge branch 'work/main'","cost":"this job: 58k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":11365,"outputTokens":4669,"cacheReadTokens":42368,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

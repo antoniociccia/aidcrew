@@ -1,0 +1,66 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+coder · read(package.json)
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder · bash(which bun; bun --version 2>/dev/null; which node; node --ver…)
+coder › Now I'll implement the serial queue. The key changes: chain jobs through a tail promise so each starts only when the previous resolves, catch errors into `errors` without rejecting the chain, and have `drain` chase the tail until it settles with no new pushes.
+coder · write(src/queue.ts)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder · bash(cd /Users/antonio/.nvm/versions/node/v26.5.0/bin 2>/dev/null…)
+coder · error: refused: that would leave your checkout for /Users/antonio/.nvm/versions/node/v26.5.0/bin. Your checkout is /private/var…
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 9 tests pass. Let me verify the working directory I've been editing is the correct one.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 8a7d30c Merge branch 'work/main'
+coder › Done. Here's what I changed and the results.
+
+## What changed
+
+**`src/queue.ts`** — reworked the `Queue` so jobs run strictly one after another in push order:
+
+- Replaced the `#pending: Promise<void>[]` array with a single `#tail: Promise<void>` chain. Each `push` appends `job()` onto the tail via `.then`, so a job only starts once the one before it has finished — and never inside `push` (the `.then` callback runs on a later microtask).
+- The job's failure is caught inside the tail callback and recorded in `errors`, so a throwing job doesn't reject the chain or stop the jobs after it.
+- `push` stays synchronous and returns nothing (`void`).
+
+**`drain`** — instead of snapshotting a list (which missed jobs pushed mid-drain), it now chases the tail: it awaits the current `#tail`, and if more jobs were pushed since (the tail moved), it loops and awaits the new tail. It returns only once the tail it awaited is still the current one, so jobs pushed while draining are included.
+
+## Tests added (`src/queue.test.ts`)
+
+New tests alongside the existing one:
+- `push` doesn't start a job synchronously
+- Jobs run one at a time, in push order (verifies the second/third haven't started while the first is blocked)
+- No two jobs ever overlap (`maxRunning === 1`)
+- A throwing job is recorded in `errors` and doesn't stop later jobs
+- A thrown non-`Error` value is recorded as an `Error`
+- A throwing job doesn't stop the drain
+- `drain` waits for jobs pushed while it's already draining
+- A job that pushes another job is fully drained
+
+## Check output
+
+```
+bun test v1.3.14
+ 9 pass
+ 0 fail
+ 18 expect() calls
+Ran 9 tests across 1 file.
+```
+
+Committed as `420074c "Run queue jobs serially in push order"` on branch `work/main`.
+
+  coder        deepseek-v4-flash    1 turns, 89962 tokens
+
+main: done
+  bun run test passed
+  merged: 8a7d30c Merge branch 'work/main'
+  this job: 90k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 13¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"8a7d30c Merge branch 'work/main'","cost":"this job: 90k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 13¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":8357,"outputTokens":10693,"cacheReadTokens":70912,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

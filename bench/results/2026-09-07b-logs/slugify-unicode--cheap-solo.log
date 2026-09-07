@@ -1,0 +1,68 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/slugify.ts)
+coder · tree(.)
+coder · read(src/slugify.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder › Now I understand the setup. Let me look at the current behavior to confirm and check the environment.
+coder · bash(cd "$(pwd)" 2>/dev/null; ls; which bun; bun --version)
+coder › The fix: decompose accents with NFD, strip combining diacritical marks, then lowercase and apply the original dash logic.
+coder · edit(src/slugify.ts)
+coder › Now the tests, matching the existing style:
+coder · edit(test('joins words with dashes', () => {   expect(slugify('He…)
+coder · bash(bun test)
+coder › All 5 tests pass. Let me check the git state and commit.
+coder · bash(git rev-parse --is-inside-work-tree 2>/dev/null && git statu…)
+coder · bash(git add src/slugify.ts src/slugify.test.ts && git commit -q …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 5884348 Merge branch 'work/main'
+coder › Done.
+
+## What changed
+
+**`src/slugify.ts`** — added two steps before the existing lowercase/dash logic:
+
+```ts
+export function slugify(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+```
+
+NFD decomposition splits each accented Latin letter into its base letter plus a combining diacritical mark; the `\u0300-\u036f` range strips those combining marks, so `Crème Brûlée` becomes `creme-brulee`. The existing rules (one dash per run of non-letter/digit, leading/trailing dashes dropped, empty result for punctuation-only input) were already handled by the original two regexes.
+
+**`src/slugify.test.ts`** — kept the original test and added four covering the requested behaviors:
+- accented Latin letters reduced (`Crème Brûlée`, `ÀÉÎÕÜ`, `piñata café`)
+- runs of non-letter/digit collapsed to one dash (`Hello   World`, `a!!b`, `Hello, World!`, `version_1.2`)
+- leading/trailing dashes dropped (`  Hello World  `, `-Hello World-`, `!!Hello!!`)
+- empty / punctuation-only returns `''` (`''`, `'!!!'`, `' - - '`, `'...?!'`)
+
+## Checks
+
+```
+bun test v1.3.14
+ 5 pass
+ 0 fail
+ 15 expect() calls
+Ran 5 tests across 1 file. [14.00ms]
+```
+
+## Decisions the plan didn't spell out
+
+The spec says "anything that is not a letter or a digit become one dash," but I kept the original ASCII rule `[^a-z0-9]` rather than switching to Unicode `\p{L}`/`\p{N}`: the slug is documented as URL-safe ASCII (`a-z0-9`), and treating e.g. Cyrillic as a "letter" to keep would produce non-URL-safe output and contradicts the existing doc comment. So non-Latin letters still become dashes; only Latin accents are reduced, which is exactly what the concrete example requires. Committed as `9ee8dca`.
+
+  coder        deepseek-v4-flash    1 turns, 63274 tokens
+
+main: done
+  bun run test passed
+  merged: 5884348 Merge branch 'work/main'
+  this job: 63k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"5884348 Merge branch 'work/main'","cost":"this job: 63k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":4975,"outputTokens":3643,"cacheReadTokens":54656,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

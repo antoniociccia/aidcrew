@@ -1,0 +1,66 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(src)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · read(package.json)
+coder › The tests use `bun:test`. Now I understand the drift: `formatReceiptAmount` lacks thousands grouping and, for negatives, `Math.floor(-12.5) = -13` and `-1250 % 100 = -50`, giving `-13.-50 EUR`. Let me create the new module and rewire both files.
+coder · write(src/money.ts)
+coder · edit(src/invoice.ts)
+coder · edit(import { formatMoney } from './money.ts'  /** An item on a t…)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { formatMoney…)
+coder · write(import { expect, test } from 'bun:test' import { formatRecei…)
+coder · bash(bun test 2>&1)
+coder › All 9 tests pass. Let me verify the final files and confirm nothing else imports these functions:
+coder · read(src/money.ts)
+coder · grep(formatInvoiceAmount|formatReceiptAmount|formatMoney)
+coder · grep(formatInvoiceAmount|formatReceiptAmount|formatMoney)
+coder · bash(git status --short && git log --oneline -3)
+coder · bash(git add src/money.ts src/money.test.ts src/invoice.ts src/re…)
+verified: bun run test passes on work/main
+merged work/main into the repository: a002232 Merge branch 'work/main'
+coder › Done. Here's what I changed and why.
+
+## What changed
+
+- **New `src/money.ts`** — exports `formatMoney(cents: number, currency: string): string` with the invoice's exact behaviour: thousands grouped with commas, two decimals, a leading `-` for a negative amount, then a space and the currency code. The body is moved verbatim from `formatInvoiceAmount`.
+- **`src/invoice.ts`** — `formatInvoiceAmount` is now a one-line wrapper delegating to `formatMoney`, keeping its signature and doc comment. Output unchanged.
+- **`src/receipt.ts`** — `formatReceiptAmount` is now a thin wrapper too. This fixes both drifts: the receipt now gets thousands separators, and negative amounts no longer mangle (the old code did `Math.floor(-12.5) = -13` and kept a negative remainder `-1250 % 100 = -50`, producing `-13.-50 EUR`).
+- **Tests**
+  - New `src/money.test.ts` — grouping, two decimals, leading minus for negatives, and currency spacing, including the `-0.05 EUR` / `-12.50 EUR` edge cases.
+  - Extended `src/receipt.test.ts` — locks in thousands grouping and the clean `-12.50 EUR` refund, plus a `renderReceipt` refund case.
+
+Nothing imports the two formatter functions from outside `src` (verified via grep), so the wrappers keep the exports intact. Imports use `./money.ts` with the `.ts` extension, matching the existing test-file style.
+
+## Checks
+
+`bun test` (the project's only script) output:
+
+```
+bun test v1.3.14 (0d9b296a)
+ 9 pass
+ 0 fail
+ 20 expect() calls
+Ran 9 tests across 3 files.
+```
+
+## Notes
+
+- Per "keep output unchanged for positive amounts," both `renderInvoice` and `renderReceipt` are byte-identical for positives — `formatMoney` and the old `formatInvoiceAmount` share one code path, and the receipt's positive output always agreed with the invoice's format.
+- One thing the plan didn't say: I added a refund case through `renderReceipt` (not just the unit-level `formatReceiptAmount`) so the end-to-end fix is covered.
+
+Committed as `51dd8a4`.
+
+  coder        deepseek-v4-flash    1 turns, 92128 tokens
+
+main: done
+  bun run test passed
+  merged: a002232 Merge branch 'work/main'
+  this job: 92k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a002232 Merge branch 'work/main'","cost":"this job: 92k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6706,"outputTokens":3374,"cacheReadTokens":82048,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

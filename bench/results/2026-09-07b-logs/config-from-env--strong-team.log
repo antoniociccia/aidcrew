@@ -1,0 +1,55 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/index.ts)
+architect · read(src/config.ts)
+architect · glob(src/**/*.ts)
+architect · read(src/index.test.ts)
+architect · glob(package.json)
+architect · glob(**/*.json)
+architect · read(package.json)
+architect › Here's the plan.
+
+## Files to touch
+
+1. **`src/env.ts` (new)**
+   - Export `fromEnv(env: Record<string, string | undefined>, prefix = 'APP_'): Partial<Config>`.
+   - Read the four variables as `${prefix}PORT`, `${prefix}HOST`, `${prefix}DEBUG`, `${prefix}NAME`.
+   - Build a `Partial<Config>` object containing only the keys whose value is present **and non-empty** (`undefined` or `''` is skipped).
+   - `port`: `Number(value)`; if `Number.isNaN(...)` throw `TypeError` naming the variable (`APP_PORT`). HOST/NAME stay strings.
+   - `debug`: case-insensitive — `true`, `1`, `yes` → `true`; `false`, `0`, `no` → `false`; anything else throws `TypeError` naming the variable (`APP_DEBUG`).
+
+2. **`src/config.ts`**
+   - Add `export function validate(config: Config): Config`.
+   - Returns `config`, or throws `TypeError` naming the field:
+     - `port` when `!Number.isInteger(port) || port < 1 || port > 65535`
+     - `host` when `host === ''`
+     - `name` when `name === ''`
+
+3. **`src/index.ts`**
+   - Change signature to `resolveConfig(file: Partial<Config> = {}, env: Record<string, string | undefined> = process.env): Config`.
+   - `merge(DEFAULTS, file)` → `merge(that, fromEnv(env))` → `validate(...)`.
+   - Import `fromEnv` from `./env.ts` and `validate` from `./config.ts`.
+
+4. **Tests** (`src/env.test.ts` new; extend `src/index.test.ts` and/or add `src/config.test.ts`)
+   - `fromEnv`: prefix used; port numeric; debug case-insensitive true/false mapping; host/name as strings; absent and empty vars left out; `APP_PORT=abc` and `APP_DEBUG=maybe` throw `TypeError` naming the variable.
+   - `validate`: returns config unchanged when valid; throws naming `port` for `0`, `65536`, and `1.5`; throws naming `host` and `name` for `''`.
+   - `resolveConfig`: env overrides file, file overrides defaults, `process.env` used by default, and invalid merged result throws (e.g. `APP_PORT=0`).
+
+## Check
+
+```
+bun test
+```
+
+It must print a passing summary with no failures (existing index test still passes, new env/config tests pass).
+
+  architect    deepseek-v4-pro      1 turns, 12368 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+no agent changed any files
+{"jobs":[],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":2913,"outputTokens":1647,"cacheReadTokens":7808,"unstatedTurns":1},"turns":1},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":0,"outputTokens":0},"turns":0}],"kept":[],"exitCode":0}
+
+--- stderr ---

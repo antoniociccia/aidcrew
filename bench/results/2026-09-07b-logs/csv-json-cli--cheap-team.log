@@ -1,0 +1,121 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/cli.ts)
+architect · bash(ls -a && cat package.json 2>/dev/null)
+architect · bash(ls src && head -50 src/*.test.ts 2>/dev/null)
+architect › The project is tiny: `run()` in `src/cli.ts` plus one test file, tested with `bun test`. The plan is clear enough to hand straight over.
+
+**Plan for coder:**
+
+1. **New `src/csv.ts`** — export `parseCsv(text: string): string[][]`.
+   - Empty text returns `[]`. Otherwise split on `\n`; if the text ends with `\n`, drop the final empty element. Strip one trailing `\r` from each line (handles `\r\n`).
+   - Each line splits into fields: commas separate; a field starting with `"` is quoted and may contain commas; `""` inside a quoted field is one literal quote; closing quote ends the field. Unquoted fields are taken verbatim.
+   - Note: the spec only requires commas inside quotes, so a line-based parser is fine — you do not need to support raw newlines inside quoted fields.
+
+2. **`src/cli.ts`** — add a `--json` branch before the usage fallback:
+   - `const rows = parseCsv(input)`; if `rows.length === 0` → `{ out: '[]\n', code: 0 }`. Header is `rows[0]`; if there are no further rows → `{ out: '[]\n', code: 0 }`.
+   - Each data row at `rows[i]` is on line `i + 2` (1-based, header is line 1). If its length differs from the header's, return `{ out: 'csvtool: line N has K fields, expected M\n', code: 1 }` — one line, no JSON.
+   - Otherwise build one object per row keyed by header names, values as strings, and return `{ out: JSON.stringify(objects) + '\n', code: 0 }`.
+   - Usage line becomes `'usage: csvtool --upper | --count | --json\n'`.
+
+3. **Tests** — new `src/csv.test.ts` for `parseCsv`: plain fields; quoted field containing a comma; doubled quote inside a quoted field; `\r\n` endings; empty input → `[]`; header-only (trailing newline) → one row. Extend `src/cli.test.ts`: `--json` happy path (exact `out` string), empty input → `[]\n`, header with no rows → `[]\n`, ragged data row → `code: 1` and out is the single error line with no `[`, and the usage line mentions `--json`.
+
+**Check:** `bun test` — all existing and new tests pass.
+
+Expected back: the two new/changed source files and two test files, with `bun test` green.
+architect · agent_send(Job: add a --json flag to csvtool. Checkout is on branch wor…)
+architect → coder Job: add a --json flag to csvtool. Checkout is on branch work/main; commit as you go, small commits, no signature/traile…
+coder · tree(.)
+coder · bash(git -C . status && git -C . log --oneline -5)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · json(package.json)
+coder › Now I'll create the CSV parser module.
+coder · write(src/csv.ts)
+architect › Plan sent to coder. I expect back the two source files (`src/csv.ts` new, `src/cli.ts` with the `--json` branch and updated usage line) plus the two test files, with `bun test` fully green — then I'll verify the check before calling the job done.
+coder · write(src/cli.ts)
+coder › Now the tests.
+coder · write(import { expect, test } from 'bun:test' import { parseCsv } …)
+coder · edit(src/cli.test.ts)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/cli.test.ts: 24 |   expect(run(['--json'], 'a,b\n')).to…
+coder › The spec's formula is `line = i + 2`, so for the first data row (`i = 1`) the line is 3. My test guessed 2; the implementation follows the plan. Fixing the test.
+coder · edit(test('--json with a ragged data row errors with one line', (…)
+coder · bash(bun test 2>&1)
+coder › All pass. Let me confirm the canonical check script and typecheck if present.
+coder · json(scripts)
+coder · bash(bunx tsc --noEmit 2>&1 | head -20; echo "tsc-exit:$?")
+coder › The project's own check is `bun test` (no tsconfig/lint script). Let me review the final files and commit.
+coder · read(src/cli.ts)
+coder · read(src/csv.ts)
+coder · bash(git add -A && git commit -m "Add --json flag to csvtool" -q …)
+coder · agent_send(architect)
+coder → architect Job done, committed as b9e5832 "Add --json flag to csvtool" on work/main.  Files changed: - src/csv.ts (new): parseCsv(t…
+coder › Done. Implemented the `--json` flag per the plan and committed as `b9e5832` on `work/main`.
+
+**What I changed**
+- **`src/csv.ts`** (new): `parseCsv(text)` — empty text → `[]`; splits on `\n`, drops the final empty element from a trailing newline, strips one trailing `\r` per line; per-line splitter where a field starting with `"` is quoted, supports commas inside quotes and `""` as a literal quote.
+- **`src/cli.ts`**: added the `--json` branch before the usage fallback (`[]` for empty input and for header-only input, one object per data row keyed by header with string values, ragged row → single-line `code: 1` error, `JSON.stringify` + newline otherwise), and updated the usage line to `'usage: csvtool --upper | --count | --json\n'` (`code: 2` unchanged).
+- **`src/csv.test.ts`** (new): plain fields, quoted field with comma, doubled quote, `\r\n` endings, empty input, header-only with trailing newline, and no-trailing-newline input.
+- **`src/cli.test.ts`**: extended with the `--json` happy path (exact `out`), empty input → `'[]\n'`, header no rows → `'[]\n'`, ragged row → `code 1` with a single line and no `[` in `out`, and usage mentions `--json`.
+
+**Check output** (`bun test`, the project's only script):
+```
+ 14 pass
+  0 fail
+ 15 expect() calls
+Ran 14 tests across 2 files. [17.00ms]
+```
+
+**One decision the plan didn't pin down**: the error line number. The plan's formula "line i + 2 (header is line 1)" makes the first data row (`i = 1`) report `line 3` although it is physically the 2nd line — `run(['--json'], 'a,b\n1,2,3\n')` returns `csvtool: line 3 has 3 fields, expected 2\n`. I implemented the formula exactly as written and wrote the test to match. If physical numbering (`i + 1`, i.e. `line 2` there) was intended, it's a one-constant change plus its test. I flagged this to the architect in the handoff.
+architect › The coder caught a real bug — mine. Let me confirm what's in the code before sending the correction.
+architect · grep(src)
+architect › Confirmed — `src/cli.ts:22` has `const line = i + 2`. The data row at `rows[i]` is physically line `i + 1` (header is line 1), so the spec's "1-based line number" means `i + 1`. My formula was wrong; the coder implemented it faithfully.
+architect · agent_send(Good catch — the formula was my error, not yours. Change src…)
+architect → coder Good catch — the formula was my error, not yours. Change src/cli.ts to `const line = i + 1` so the first data row report…
+coder · edit(const line = i + 1)
+coder · edit(expect(result).toEqual({ out: 'csvtool: line 2 has 3 fields,…)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/cli.ts src/cli.test.ts && git commit -q -m "Repo…)
+coder › Fixed and committed as `045246a` ("Report ragged data row at its physical line") on `work/main`.
+
+**Changes** (nothing else touched):
+- `src/cli.ts`: `const line = i + 1` — the first data row (`i = 1`) now reports its physical 1-based line 2.
+- `src/cli.test.ts`: expectation at line 29 is now `'csvtool: line 2 has 3 fields, expected 2\n'`.
+
+**Test output** (`bun test`):
+```
+ 14 pass
+  0 fail
+ 15 expect() calls
+Ran 14 tests across 2 files. [13.00ms]
+```
+
+Working tree clean; two commits on `work/main`: `b9e5832` (the flag) and `045246a` (this fix).
+coder → architect Fixed and committed as `045246a` ("Report ragged data row at its physical line") on `work/main`.  **Changes** (nothing e…
+verified: bun run test passes on work/main
+merged work/main into the repository: 730c5e0 Merge branch 'work/main'
+architect › Correction sent to coder: `line = i + 1` in `src/cli.ts` and the matching test expectation, plus `bun test` and a single small commit on `work/main`. Waiting on their report; once `bun test` is green on the fixed line numbering, the job is done.The report says green; verify by running before calling it done.
+architect · bash(bun test 2>&1 | tail -6 && git log --oneline -2 && git statu…)
+architect › Verified by running it myself: `bun test` → 14 pass / 0 fail, and `work/main` is committed with the fix at `045246a`.
+
+**Job done.** What changed and how it was checked:
+- `src/csv.ts` (new) — `parseCsv(text): string[][]` with quoted fields, `""` escapes, and `\r\n` handling, tested in `src/csv.test.ts`.
+- `src/cli.ts` — `--json` branch: header from line 1, one object per data row keyed by header names (all string values), `[]\n` for empty input or header-only, exit code 1 with a single error line naming the physical 1-based line for ragged rows (fixed from my original off-by-one to `i + 1`), no JSON on error, and `--json` in the usage line.
+- Tests extended in `src/cli.test.ts` for all of the above, including the exact error line and that the usage mentions `--json`.
+
+Verification: `bun test` passes (14/14) on the branch, working tree clean.
+
+  architect    glm-5.3-flash        3 turns, 39245 tokens
+  coder        deepseek-v4-flash    2 turns, 183921 tokens
+
+main: done
+  bun run test passed
+  merged: 730c5e0 Merge branch 'work/main'
+  this job: 223k tokens, 0.6¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 21¢, on gpt-5 ≈ 18¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"730c5e0 Merge branch 'work/main'","cost":"this job: 223k tokens, 0.6¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 21¢, on gpt-5 ≈ 18¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":11861,"outputTokens":3320,"cacheReadTokens":24064,"unstatedTurns":3},"turns":3},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":13570,"outputTokens":9071,"cacheReadTokens":161280,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

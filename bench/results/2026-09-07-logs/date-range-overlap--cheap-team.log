@@ -1,0 +1,69 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/range.ts)
+architect · bash(ls /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect · glob(src/**/*)
+architect · read(src/range.test.ts)
+architect › Both files are small and clear. `overlaps` uses `<=` on both ends (making touching ranges overlap) and never checks `Date.parse` results. The fix is a strict comparison plus explicit validation. Plan for coder:
+architect · agent_send(Job: fix `overlaps` in src/range.ts (Bun project, `bun test`…)
+architect → coder Job: fix `overlaps` in src/range.ts (Bun project, `bun test` is the check). Current body:  ```ts const aStart = Date.par…
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · read(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · read(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · tree(.)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · error: command failed with exit code 1 {   "name": "ranges",   "type": "module",   "private": true,   "scripts": {     "test": …
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Plan sent to coder. Summary of the job as handed off:
+
+- **src/range.ts** — rewrite `overlaps`: validate each of the four parsed dates with `Date.parse`, throwing `TypeError` naming the offending string if NaN; throw `RangeError` per range when `end < start` (zero-length allowed); return `aStart < bEnd && bStart < aEnd`, which covers touching → false, equal starts → true, and zero-length overlapping nothing including itself.
+- **src/range.test.ts** — keep the existing test, add cases for each required behavior plus the two error paths.
+
+Expecting back: the final implementation, the added test list, and a passing `bun test` summary (~9–10 tests), committed on work/main.
+coder · write(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · write(import { expect, test } from 'bun:test' import { overlaps } …)
+coder › Let me make the "touching ranges" test clearly cover both orders as requested:
+coder · edit(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › The plain formula `aStart < bEnd && bStart < aEnd` fails the required "zero-length against a containing range → false" case: for a=[09:00,09:00) vs b=[08:00,10:00) it gives `09:00 < 10:00 && 08:00 < 09:00` → true. The plan's formula and its stated zero-length behavior conflict; the tests are the concrete contract, so I'll require each range to have positive length as well (that conjunct is exactly what makes zero-length ranges overlap nothing, including a containing range):
+coder · edit(return aStart < aEnd && bStart < bEnd && aStart < bEnd && bS…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 8 tests pass. Committing:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · agent_send(architect)
+coder → architect Done. Committed ee7d4c0 on work/main.  Final src/range.ts:  ```ts /** A span of time, as ISO 8601 strings. The end is ex…
+coder › Committed `ee7d4c0` on work/main and reported back to the architect with the implementation, test list, one noted deviation (positive-length conjuncts added to make the zero-length-vs-containing-range test pass, since the plan's bare formula contradicts its own requirement), and the pass output.
+
+**Check output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 11 expect() calls
+Ran 8 tests across 1 file. [12.00ms]
+```
+
+Uncommitted nothing; working tree clean after the commit.
+architect › The deviation is correct per spec — "overlaps nothing" means even when the instant sits inside the other range, so the positive-length conjuncts are needed. Verifying with the project's own check before calling it done:
+architect · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Verified on work/main: commit ee7d4c0 present, working tree clean, and `bun test` passes — 8 pass, 0 fail.
+
+**Job done.** What changed:
+- **src/range.ts** — `overlaps` now parses each of the four strings individually, throwing a `TypeError` that names the field and includes the offending value when `Date.parse` yields NaN; throws a `RangeError` when either range's end is before its start (zero-length still legal); and compares strictly (`aStart < bEnd && bStart < aEnd`, plus zero-length guard conjuncts), so touching ranges no longer overlap, equal start instants do, and a zero-length range overlaps nothing including itself.
+- **src/range.test.ts** — 8 tests covering shared overlap, touching in both orders, same start, zero-length against itself and against a containing range, unparseable start and end (TypeError with the value in the message), and end-before-start (RangeError).
+
+How it was verified: the project's own check, `bun test`, run on the job's branch — all green. The coder's one deviation (adding `aStart < aEnd && bStart < bEnd`) was required by the spec's "overlaps nothing" clause and is correct.
+
+  architect    glm-5.3-flash        2 turns, 21778 tokens
+  coder        deepseek-v4-flash    1 turns, 97944 tokens
+
+no agent changed any files
+{"jobs":[],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":8831,"outputTokens":2067,"cacheReadTokens":10880,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":14478,"outputTokens":7690,"cacheReadTokens":75776,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":1}
+
+--- stderr ---
+
+coder asked architect to "Done. Committed ee7d4c0 on work/main." and got no answer, and it never took a turn

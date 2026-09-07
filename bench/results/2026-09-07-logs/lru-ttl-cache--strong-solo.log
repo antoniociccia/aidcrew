@@ -1,0 +1,66 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · read(package.json)
+coder · write(src/cache.ts)
+coder · write(src/cache.test.ts)
+coder · bash(bun test)
+coder · bash(ls -a && bun x tsc --noEmit 2>&1 | head -50)
+coder · bash(bun x tsc --noEmit --strict --target esnext --module esnext …)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/cache.ts && git commit -m "Implement LRU cache w…)
+verified: bun run test passes on work/main
+merged work/main into the repository: a88aea6 Merge branch 'work/main'
+coder › Implemented the `Cache` class in `src/cache.ts` and expanded the tests in `src/cache.test.ts`.
+
+## What changed
+
+`src/cache.ts` — replaced the `notImplemented` stubs with a real LRU cache:
+- Backed by a `Map` in insertion order; the first key is the least recently used entry.
+- `get` returns `undefined` for missing/expired keys, removes expired entries, and moves a successfully-read entry to the most-recently-used end.
+- `set` updates an existing key's value and expiry in place (no eviction, resets its TTL, makes it MRU). For a new key it prunes expired entries first, then evicts the LRU entry if still at capacity.
+- `has` and `delete` return `Map`-like results, treating expired entries as absent.
+- `size` counts only non-expired entries.
+- Constructor throws `RangeError` when `capacity < 1`.
+
+`src/cache.test.ts` — added 11 tests covering: basic get, missing keys, expiry boundary, capacity eviction, get-counts-as-use, has-does-not-count-as-use, set updating value/expiry without eviction, expired `has`, `delete` semantics, `size` ignoring expired entries, expired entries not forcing a live eviction, and the `RangeError` case.
+
+## Checks
+
+- `bun test`:
+  ```
+  bun test v1.3.14 (0d9b296a)
+
+   12 pass
+   0 fail
+   38 expect() calls
+  Ran 12 tests across 1 file. [16.00ms]
+  ```
+- Typecheck (no `tsconfig.json` in the repo, so ran directly):
+  ```
+  bun x tsc --noEmit --strict --target esnext --module esnext --moduleResolution bundler src/cache.ts
+  ```
+  No output — clean.
+
+## Decisions worth flagging
+
+- On `set` for a new key, expired entries are pruned *before* deciding whether to evict. This follows from "expired entries counting as absent" and means an expired entry can't cause a live entry to be evicted. There's a test locking in that behavior.
+- `set` on an existing key (even one whose TTL has elapsed) updates it in place and refreshes its expiry, with no eviction — matching "replaces an existing key's value and time without evicting anything."
+- Expired entries are lazily removed from the backing map when touched (`get`/`has`/`delete`) or pruned before inserting a new key; `size` counts live entries without mutating.
+
+Committed on `work/main`:
+- `368d555` Implement LRU cache with expiry
+- `d40e866` Add tests for cache behavior
+
+  coder        deepseek-v4-pro      1 turns, 141677 tokens
+
+main: done
+  bun run test passed
+  merged: a88aea6 Merge branch 'work/main'
+  this job: 142k tokens, 5¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a88aea6 Merge branch 'work/main'","cost":"this job: 142k tokens, 5¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5608,"outputTokens":13061,"cacheReadTokens":123008,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,103 @@
+40 runs to go, 0 already in bench/results/2026-09-07.json, budget $50
+-> extract-money on cheap-solo
+-> paginate-off-by-one on cheap-solo
+-> lru-ttl-cache on cheap-solo
+   paginate-off-by-one on cheap-solo: passed, $0.001, 21s
+-> slugify-unicode on cheap-solo
+   extract-money on cheap-solo: passed, $0.002, 34s
+-> config-from-env on cheap-solo
+   config-from-env on cheap-solo: not done, $0.004, 50s
+-> csv-json-cli on cheap-solo
+   slugify-unicode on cheap-solo: not done, $0.001, 80s
+-> queue-in-order on cheap-solo
+   lru-ttl-cache on cheap-solo: passed, $0.006, 171s
+-> date-range-overlap on cheap-solo
+   queue-in-order on cheap-solo: passed, $0.004, 112s
+-> token-bucket on cheap-solo
+   date-range-overlap on cheap-solo: passed, $0.002, 50s
+-> ini-parser on cheap-solo
+   csv-json-cli on cheap-solo: not done, $0.006, 145s
+-> extract-money on strong-solo
+   token-bucket on cheap-solo: not done, $0.003, 50s
+-> paginate-off-by-one on strong-solo
+   ini-parser on cheap-solo: not done, $0.002, 70s
+-> lru-ttl-cache on strong-solo
+   paginate-off-by-one on strong-solo: passed, $0.012, 31s
+-> slugify-unicode on strong-solo
+   extract-money on strong-solo: passed, $0.023, 75s
+-> config-from-env on strong-solo
+   slugify-unicode on strong-solo: passed, $0.013, 49s
+-> csv-json-cli on strong-solo
+   config-from-env on strong-solo: passed, $0.038, 150s
+-> queue-in-order on strong-solo
+   csv-json-cli on strong-solo: passed, $0.030, 113s
+-> date-range-overlap on strong-solo
+   lru-ttl-cache on strong-solo: passed, $0.042, 228s
+-> token-bucket on strong-solo
+   date-range-overlap on strong-solo: passed, $0.025, 75s
+-> ini-parser on strong-solo
+   token-bucket on strong-solo: passed, $0.015, 56s
+-> extract-money on cheap-team
+   queue-in-order on strong-solo: passed, $0.039, 175s
+-> paginate-off-by-one on cheap-team
+   ini-parser on strong-solo: passed, $0.031, 112s
+-> lru-ttl-cache on cheap-team
+   paginate-off-by-one on cheap-team: not done, $0.002, 72s
+-> slugify-unicode on cheap-team
+   extract-money on cheap-team: passed, $0.005, 178s
+-> config-from-env on cheap-team
+   slugify-unicode on cheap-team: not done, $0.002, 67s
+-> csv-json-cli on cheap-team
+   lru-ttl-cache on cheap-team: passed, $0.004, 169s
+-> queue-in-order on cheap-team
+   config-from-env on cheap-team: not done, $0.003, 120s
+-> date-range-overlap on cheap-team
+   queue-in-order on cheap-team: not done, $0.003, 136s
+-> token-bucket on cheap-team
+   csv-json-cli on cheap-team: not done, $0.005, 207s
+-> ini-parser on cheap-team
+   date-range-overlap on cheap-team: not done, $0.005, 205s
+-> extract-money on strong-team
+   token-bucket on cheap-team: passed, $0.003, 132s
+-> paginate-off-by-one on strong-team
+   extract-money on strong-team: passed, $0.016, 56s
+-> lru-ttl-cache on strong-team
+   ini-parser on cheap-team: passed, $0.003, 162s
+-> slugify-unicode on strong-team
+   paginate-off-by-one on strong-team: passed, $0.012, 97s
+-> config-from-env on strong-team
+   slugify-unicode on strong-team: not done, $0.012, 86s
+-> csv-json-cli on strong-team
+   config-from-env on strong-team: passed, $0.021, 100s
+-> queue-in-order on strong-team
+   lru-ttl-cache on strong-team: passed, $0.016, 163s
+-> date-range-overlap on strong-team
+   queue-in-order on strong-team: passed, $0.023, 117s
+-> token-bucket on strong-team
+   csv-json-cli on strong-team: passed, $0.024, 176s
+-> ini-parser on strong-team
+   ini-parser on strong-team: passed, $0.009, 43s
+   date-range-overlap on strong-team: not done, $0.017, 157s
+   token-bucket on strong-team: passed, $0.023, 114s
+
+| configuration | passed | said done | said done, failed | total cost | cost per pass | mean time |
+|---|---|---|---|---|---|---|
+| cheap-solo | 5/10 | 5 | 0 | 3.0c | 0.6c | 78s |
+| strong-solo | 10/10 | 10 | 0 | $0.27 | 2.7c | 106s |
+| cheap-team | 4/10 | 4 | 0 | 3.5c | 0.9c | 145s |
+| strong-team | 8/10 | 8 | 0 | $0.17 | 2.2c | 111s |
+
+| task | category | cheap-solo | strong-solo | cheap-team | strong-team |
+|---|---|---|---|---|---|
+| paginate-off-by-one | bugfix | pass 0.1c 21s | pass 1.2c 31s | fail 0.2c 72s | pass 1.2c 97s |
+| extract-money | refactor | pass 0.2c 34s | pass 2.3c 75s | pass 0.5c 178s | pass 1.6c 56s |
+| config-from-env | multi-file | fail 0.4c 50s | pass 3.8c 150s | fail 0.3c 120s | pass 2.1c 100s |
+| slugify-unicode | bugfix | fail 0.1c 80s | pass 1.3c 49s | fail 0.2c 67s | fail 1.2c 86s |
+| lru-ttl-cache | feature | pass 0.6c 171s | pass 4.2c 228s | pass 0.4c 169s | pass 1.6c 163s |
+| queue-in-order | bugfix | pass 0.4c 112s | pass 3.9c 175s | fail 0.3c 136s | pass 2.3c 117s |
+| date-range-overlap | bugfix | pass 0.2c 50s | pass 2.5c 75s | fail 0.5c 205s | fail 1.7c 157s |
+| csv-json-cli | multi-file | fail 0.6c 145s | pass 3.0c 113s | fail 0.5c 207s | pass 2.4c 176s |
+| token-bucket | feature | fail 0.3c 50s | pass 1.5c 56s | pass 0.3c 132s | pass 2.3c 114s |
+| ini-parser | feature | fail 0.2c 70s | pass 3.1c 112s | pass 0.3c 162s | pass 0.9c 43s |
+
+spent $0.51 in total; results in bench/results/2026-09-07.json

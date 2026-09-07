@@ -1,0 +1,50 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/slugify.ts)
+coder · bash(ls)
+coder · read(package.json)
+coder · bash(ls src)
+coder · read(src/slugify.test.ts)
+coder · bash(bun --version)
+coder · edit(src/slugify.ts)
+coder · edit(src/slugify.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/slugify.ts && git commit -m "Strip accents from …)
+verified: bun run test passes on work/main
+merged work/main into the repository: d792a5c Merge branch 'work/main'
+coder › Fixed `slugify` in `src/slugify.ts`:
+
+- Normalizes the input with `NFKD` and strips combining diacritical marks (`\u0300-\u036f`), so accented Latin letters collapse to their base letters.
+- The existing logic then lowercases, collapses runs of non-`a-z0-9` into a single `-`, and trims leading/trailing dashes.
+
+Added tests in `src/slugify.test.ts` for:
+
+- `slugify('Crème Brûlée')` → `'creme-brulee'`
+- runs of punctuation/whitespace → one dash
+- leading/trailing dashes dropped
+- punctuation-only and empty strings → `''`
+
+Check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 6 expect() calls
+Ran 5 tests across 1 file. [14.00ms]
+```
+
+Committed on `work/main` as two commits: `6e90f12` (fix) and `66fe3d8` (tests).
+
+  coder        deepseek-v4-pro      1 turns, 54322 tokens
+
+main: done
+  bun run test passed
+  merged: d792a5c Merge branch 'work/main'
+  this job: 54k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d792a5c Merge branch 'work/main'","cost":"this job: 54k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5060,"outputTokens":2030,"cacheReadTokens":47232,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

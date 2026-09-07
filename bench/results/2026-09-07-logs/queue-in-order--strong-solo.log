@@ -1,0 +1,63 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/queue.ts)
+coder · bash(ls -la && find . -maxdepth 2 -name 'package.json' -not -path…)
+coder · read(package.json)
+coder · tree(src)
+coder · read(src/queue.test.ts)
+coder · bash(git status --short --branch && git log --oneline -5)
+coder · bash(bun --version)
+coder · edit(src/queue.ts)
+coder · edit(src/queue.test.ts)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/queue.test.ts: 42 |   await Promise.resolve() 43 |   e…
+coder · edit(src/queue.test.ts)
+coder · bash(bun test)
+coder · bash(git diff -- src/queue.ts src/queue.test.ts)
+coder · bash(git add src/queue.ts && git commit -m "Run queued jobs seque…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 72a11c6 Merge branch 'work/main'
+coder › Fixed. The queue now chains each job onto the previous one's promise instead of starting it immediately, so jobs run strictly one at a time in push order.
+
+**What changed**
+
+- `src/queue.ts`
+  - `push` now appends the job to a `#tail` promise chain via `.then(job)`. Promise `.then` callbacks are always async, so the job never starts synchronously inside `push`; `push` still returns nothing.
+  - A `#pending` counter tracks unfinished jobs; `.finally` decrements it.
+  - Errors are caught per job and recorded in `errors`, so a throwing/rejecting job doesn't block the ones behind it.
+  - `drain` loops on `#pending`, awaiting the current tail each time, so it also waits for jobs pushed while a drain is in progress.
+
+- `src/queue.test.ts`
+  - Added tests for: not starting synchronously in `push`; running one at a time in push order; recording a thrown error and continuing; and `drain` waiting for jobs pushed while draining.
+
+**Checks**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 11 expect() calls
+Ran 5 tests across 1 file. [13.00ms]
+```
+
+The project only defines `bun test` in `package.json` (no separate typecheck/lint), so that was the only check run.
+
+Committed on `work/main` in two commits:
+
+- `dee262a` Run queued jobs sequentially and asynchronously
+- `a7edb2a` Add tests for queue ordering, errors, and draining
+
+One decision worth flagging: `drain` still returns immediately when the queue is empty at the moment it's called, even if a job is pushed synchronously on the very next line. That matches the documented "every job pushed so far" semantics, but if you want a drain call to also cover jobs pushed in that same synchronous tick, I can make it yield once before checking.
+
+  coder        deepseek-v4-pro      1 turns, 152084 tokens
+
+main: done
+  bun run test passed
+  merged: 72a11c6 Merge branch 'work/main'
+  this job: 152k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 13¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"72a11c6 Merge branch 'work/main'","cost":"this job: 152k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 13¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7157,"outputTokens":10015,"cacheReadTokens":134912,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

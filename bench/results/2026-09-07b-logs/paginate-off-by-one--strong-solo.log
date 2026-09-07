@@ -1,0 +1,41 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/paginate.ts)
+coder · glob(**/*paginate*)
+coder · bash(ls -la && cat package.json 2>/dev/null)
+coder · read(src/paginate.test.ts)
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · edit(src/paginate.ts)
+coder · edit(src/paginate.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/paginate.ts src/paginate.test.ts && git commit -…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 57b0dbe Merge branch 'work/main'
+coder › Done.
+
+**What changed**
+- `src/paginate.ts`: `paginate` now computes the start as `(page - 1) * perPage`, so page 1 returns the first `perPage` items instead of skipping them. It also throws a `RangeError` when `page < 1` or `perPage < 1`. A page past the end naturally returns `[]` via `slice`.
+- `src/paginate.test.ts`: added tests covering page 1, the partial last page, a page past the end, and `RangeError` for `page` below 1 and `perPage` below 1.
+
+**Check output**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 7 expect() calls
+Ran 6 tests across 1 file. [13.00ms]
+```
+
+Committed on `work/main` as `000f7e8 Fix paginate off-by-one and validate page inputs`.
+
+  coder        deepseek-v4-pro      1 turns, 37500 tokens
+
+main: done
+  bun run test passed
+  merged: 57b0dbe Merge branch 'work/main'
+  this job: 38k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 3¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"57b0dbe Merge branch 'work/main'","cost":"this job: 38k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 3¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5011,"outputTokens":1513,"cacheReadTokens":30976,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

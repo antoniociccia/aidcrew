@@ -1,0 +1,48 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/slugify.ts)
+coder · tree(.)
+coder · read(src/slugify.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git checkout -b fix/slugify-accents)
+coder · edit(src/slugify.ts)
+coder · edit(src/slugify.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/slugify.ts src/slugify.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: dd2802a Merge branch 'fix/slugify-accents'
+coder › Done.
+
+**Changed**
+- `src/slugify.ts` — `slugify` now normalizes to NFD first, strips combining diacritical marks with `/\p{M}/gu`, then lowercases, collapses runs of non-`a-z0-9` to a single dash, and trims leading/trailing dashes:
+  - `slugify('Crème Brûlée')` → `'creme-brulee'`
+  - Empty input and punctuation-only input both return `''` (the dash-trim at the end handles the latter).
+- `src/slugify.test.ts` — added tests for accented letters, digits, collapsing punctuation runs to one dash, trimming leading/trailing dashes, empty string, and punctuation-only string.
+
+**Checks**
+Ran `bun test`:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 7 expect() calls
+Ran 7 tests across 1 file. [14.00ms]
+```
+
+**Notes / decisions**
+- I used NFD + `\p{M}` stripping rather than a hardcoded accent map, which covers canonical accented Latin letters (like `è`, `û`) generally. Letters that don't canonically decompose (e.g. `ø`, `ł`, `đ`) are left as-is; I kept the change minimal and scoped to the requested accented-Latin behavior. If you also want those transliterated, I can add a small compatibility map.
+- Work is committed on branch `fix/slugify-accents`.
+
+  coder        deepseek-v4-pro      1 turns, 51280 tokens
+
+main: done
+  bun run test passed
+  merged: dd2802a Merge branch 'fix/slugify-accents'
+  this job: 51k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"dd2802a Merge branch 'fix/slugify-accents'","cost":"this job: 51k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4896,"outputTokens":2352,"cacheReadTokens":44032,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

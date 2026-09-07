@@ -1,0 +1,60 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/range.ts)
+architect · glob(**/*test*)
+architect · read(src/range.test.ts)
+architect · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect · agent_send(In src/range.ts, rewrite `overlaps` so that (end exclusive):…)
+architect → coder In src/range.ts, rewrite `overlaps` so that (end exclusive):  - Touching ranges (a.end === b.start, or b.end === a.start…
+coder · read(src/range.ts)
+coder · read(src/range.test.ts)
+architect › Plan sent to coder. I read `src/range.ts` (5 lines: the buggy `aStart <= bEnd && bStart <= aEnd` with silent NaN) and the existing test file, then handed over the fix: strict `aStart < bEnd && bStart < aEnd` comparisons, TypeError on unparseable values with the offending string in the message, RangeError when end < start, plus new tests. Waiting for coder to report the passing `bun test` output.
+coder › The job is clear and self-contained. Let me implement it.
+coder · write(src/range.ts)
+coder · write(import { expect, test } from 'bun:test' import { overlaps } …)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/range.test.ts: 25 | }) 26 |  27 | test('a zero-length r…
+coder › The strict-comparison formula alone gives `true` for a zero-length range inside a containing range, but the spec says a zero-length range is empty and overlaps nothing. I'll special-case degenerate ranges so the stated semantics hold.
+coder · edit(src/range.ts)
+coder · bash(bun test 2>&1)
+coder › All 8 tests pass. Committing.
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Mak…)
+coder · agent_send(architect)
+coder → architect Done on work/main, commit e7186e5.  Changed src/range.ts: overlaps now parses all four bounds through a parseInstant hel…
+architect · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done and reported to the architect. Summary of what happened:
+
+**Changes (commit `e7186e5` on `work/main`):**
+- `src/range.ts` — `overlaps` parses all four bounds via a `parseInstant` helper that throws `TypeError` naming the raw value when `Date.parse` gives NaN; throws `RangeError` when an end precedes its start; returns `false` when either range is zero-length (empty interval); otherwise uses strict comparisons `aStart < bEnd && bStart < aEnd` so touching ranges don't overlap.
+- `src/range.test.ts` — added 8 tests covering the shared-hour case, touching (both directions), identical, same start, zero-length vs itself/container/non-degenerate, invalid start and invalid end throwing `TypeError` with the value in the message, and end-before-start throwing `RangeError`.
+
+**One deviation from the plan's suggestion:** the strict-comparison formula alone gives `true` for a zero-length range inside a containing range (a point start/end satisfies both strict inequalities), contradicting the spec that zero-length overlaps nothing. I added an explicit degenerate early-return to honor the stated semantics and flagged it to the architect in case point-instant semantics were intended instead.
+
+**Check output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 14 expect() calls
+Ran 8 tests across 1 file. [16.00ms]
+```
+verified: bun run test passes on work/main
+merged work/main into the repository: c1146d3 Merge branch 'work/main'
+architect › Done. The change is correct: touching ranges no longer overlap, same starts do, zero-length ranges are empty (the container test in the spec confirms that reading — coder's early-return for degenerate ranges is the right call, not a point-instant semantics), unparseable values throw TypeError naming the value, and end-before-start throws RangeError.
+
+Verified on work/main at e7186e5: `bun test` passes (8 tests, 0 fail), 14 new expectations covering both orders of touching cases, degenerate ranges, the two TypeError paths, and the RangeError. Nothing uncommitted, no hand-merging needed.
+
+  architect    glm-5.3-flash        2 turns, 18749 tokens
+  coder        deepseek-v4-flash    1 turns, 70877 tokens
+
+main: done
+  bun run test passed
+  merged: c1146d3 Merge branch 'work/main'
+  this job: 90k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"c1146d3 Merge branch 'work/main'","cost":"this job: 90k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":15417,"outputTokens":836,"cacheReadTokens":2496,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5943,"outputTokens":4646,"cacheReadTokens":60288,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

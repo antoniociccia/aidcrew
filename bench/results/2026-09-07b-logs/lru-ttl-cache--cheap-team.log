@@ -1,0 +1,64 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(src/**)
+architect · bash(wc -l src/cache.ts src/cache.test.ts)
+architect · read(src/cache.ts)
+architect · read(src/cache.test.ts)
+architect › The skeleton and test runner are clear: `src/cache.ts` has the fixed public shape (constructor `capacity, ttlMs, now`, methods `get/set/has/delete/size`), `src/cache.test.ts` uses `bun:test`. The one design decision the spec leaves implicit is capacity versus expired entries: since "size counts only entries that have not expired", "when set would exceed capacity" must mean live entries — so a fresh `set` purges expired entries before evicting the LRU. I'll spell that out with a discriminating test.
+architect · agent_send(Job: implement the LRU+TTL Cache in src/cache.ts and write i…)
+architect → coder Job: implement the LRU+TTL Cache in src/cache.ts and write its tests in src/cache.test.ts (both files exist; cache.ts is…
+coder · bash(pwd && git status && git branch --show-current)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder › The files match the described state. Now I'll write the exact replacements.
+coder · write(src/cache.ts)
+coder · write(src/cache.test.ts)
+coder · bash(bun test 2>&1 | tail -20)
+coder › All 15 tests pass. Committing both files.
+coder · bash(git add src/cache.ts src/cache.test.ts && git commit -m "Imp…)
+architect › Plan sent to coder. To recap what's in flight:
+
+- **src/cache.ts** — implement the Cache on an insertion-ordered Map, with expiry at `now() - setAt >= ttlMs`, get-bumps-recency, set replacing in place when the key is live, expired entries purged before LRU eviction, and a RangeError for capacity below 1.
+- **src/cache.test.ts** — 15 tests pinning every spec clause, including the three conventions the spec leaves open: the expiry boundary (entry is dead exactly at `setAt + ttlMs`), set refreshing recency, and capacity counting only live entries.
+- **Check:** `bun test` must report 15 pass, 0 fail; commit both files on work/main.
+
+I've asked coder to report the test summary line and commit hash, and to come back with the exact output rather than improvising if anything fails or bun is missing. I'll call the job done once that summary comes back green.
+coder › Done. Implemented the LRU+TTL cache exactly as specified and committed it.
+
+**Changes** (`020c4dd2ce04658adb038cda2804a8c70ebb587b` on work/main):
+- `src/cache.ts`: full replacement — private `Map<K, {value, setAt}>`, `RangeError` on capacity < 1, `get` drops expired and bumps recency without refreshing setAt, `set` reads now once and purges expired before evicting LRU only when the key is absent (live re-set replaces value/time and refreshes recency), `has`/`delete`/`size` treat expired as absent, boundary `now() - setAt >= ttlMs` counts as expired. `notImplemented` helper removed.
+- `src/cache.test.ts`: exact replacement with the 15 pinned tests.
+
+**Check output** (`bun test`):
+```
+ 15 pass
+ 0 fail
+ 44 expect() calls
+Ran 15 tests across 1 file. [21.00ms]
+```
+
+Nothing left over — working tree clean, everything committed.
+coder → architect Done. Implemented the LRU+TTL cache exactly as specified and committed it.  **Changes** (`020c4dd2ce04658adb038cda2804a8…
+verified: bun run test passes on work/main
+merged work/main into the repository: 562fe8a Merge branch 'work/main'
+architect › Job done.
+
+- **What changed** — `020c4dd2` on `work/main`:
+  - `src/cache.ts`: the Cache is implemented on a private insertion-ordered Map. Constructor throws `RangeError` for capacity below 1. Expiry is `now() - setAt >= ttlMs` (dead exactly at `setAt + ttlMs`). `get` returns undefined for missing/expired, drops expired entries on encounter, bumps recency on a hit without refreshing the TTL. `set` reads the clock once, replaces an existing live key's value and time in place (no eviction, recency refreshed), and for a new key purges expired entries before evicting the least recently used — so expired entries never crowd out live ones. `has`, `delete`, and `size` all treat expired entries as absent; the `notImplemented` stub is gone.
+  - `src/cache.test.ts`: 15 tests pinning every clause of the spec, including the open conventions — the expiry boundary, get-doesn't-extend-TTL, set-refreshes-recency, `has` not counting as a use, and expired entries not counting toward capacity.
+- **How it was verified** — `bun test` reports **15 pass, 0 fail** across the file, with the working tree clean and everything committed on the job branch, ready for the harness check and merge.
+
+  architect    glm-5.3-flash        2 turns, 39428 tokens
+  coder        deepseek-v4-flash    1 turns, 48781 tokens
+
+main: done
+  bun run test passed
+  merged: 562fe8a Merge branch 'work/main'
+  this job: 88k tokens, 0.7¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 25¢, on gpt-5 ≈ 24¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"562fe8a Merge branch 'work/main'","cost":"this job: 88k tokens, 0.7¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 25¢, on gpt-5 ≈ 24¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":5597,"outputTokens":18791,"cacheReadTokens":15040,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":8033,"outputTokens":2860,"cacheReadTokens":37888,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,67 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/queue.ts)
+architect · glob(**/*)
+architect · read(src/queue.test.ts)
+architect · read(package.json)
+architect › The bug is clear: `push` calls `job()` immediately, so nothing serializes, and the `#pending` snapshot in `drain` misses jobs pushed mid-drain. The fix is a chained tail promise plus a loop in `drain`. Sending the plan to coder.
+architect · agent_send(Job: make src/queue.ts actually serial, as its doc comment p…)
+architect → coder Job: make src/queue.ts actually serial, as its doc comment promises. Files: src/queue.ts, src/queue.test.ts.  src/queue.…
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+coder › Now I'll implement the new queue as specified.
+coder · write(src/queue.ts)
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Plan sent to coder. The change: `src/queue.ts` gets a `#tail` promise chain — `push` schedules `this.#tail.then(job)`, attaches the error-recording catch to that settled chain (so nothing runs synchronously, order is push order, errors land in `errors` once), and `drain` loops over `#pending` in batches so jobs pushed mid-drain are awaited too. `src/queue.test.ts` keeps its existing test and adds four: slow-then-fast exclusivity with max concurrency 1, no synchronous start in `push`, a throwing job recorded in `errors` without blocking the next job, and a job pushed during drain still being awaited.
+
+I expect back from coder: the diff summary per file, the final `bun test` summary line showing all five tests passing, and the branch it committed on.
+coder › All 5 tests pass. Let me check for any typecheck/lint scripts before committing.
+coder · json(scripts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Only a `test` script exists. Committing now.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Job done: src/queue.ts is now truly serial. Committed on branch work/main (dfe8b35 "Make queue truly serial with chained…
+coder › The work is complete and reported to the architect.
+
+**Summary of what was done:**
+
+**src/queue.ts** — Kept the public surface (`readonly errors`, `push`, `drain`) and doc comments. Replaced the implementation:
+- Added private `#tail: Promise<void> = Promise.resolve()`.
+- `push` now does `const run = this.#tail.then(job)`, attaches a single `.catch` that records `cause instanceof Error ? cause : new Error(String(cause))` into `errors`, and uses the handled promise as both the new `#tail` and the `#pending` entry. Jobs start only after the previous one settled, on a microtask — never synchronously inside push.
+- `drain` replaced the one-shot `Promise.all` with a `while (this.#pending.length > 0)` loop that snapshots the batch, resets the array, and awaits, so jobs pushed mid-drain are covered.
+
+**src/queue.test.ts** — Kept the original test and added the four requested ones: order/exclusivity, not-synchronous push, error recording without blocking later jobs, and push-during-drain.
+
+**Check output** (`bun test` on branch `work/main`):
+```
+5 pass
+0 fail
+9 expect() calls
+Ran 5 tests across 1 file. [44.00ms]
+```
+
+Committed as `dfe8b35` on branch `work/main`. No design flaw surfaced — the chained-`#tail` approach worked exactly as specified. No typecheck/lint script exists; `bun test` is the project's only check.
+architect · bash(git log --oneline -3 && git status --porcelain && bun test)
+architect › Job done. The commit dfe8b35 is on work/main with a clean working tree, and I re-ran the project's check myself: `bun test` → 5 pass, 0 fail, 9 expect() calls.
+
+What changed:
+- **src/queue.ts** — jobs now run one after another in push order. `push` stays synchronous and returns nothing; it chains each job as `this.#tail.then(job)`, so a job starts on a microtask only after the previous one settled, never inside `push`. The one `.catch` on that chain records the rejection in `errors` (Error as-is, otherwise `new Error(String(cause))`), and the handled promise becomes both the new `#tail` and the `#pending` entry — no unhandled rejections, errors recorded once. `drain` loops over `#pending` in batches, so it resolves only after every job pushed so far — including ones pushed while draining — and never rejects.
+- **src/queue.test.ts** — original test kept, plus four new ones: slow-then-fast runs in order with max concurrency 1; nothing starts synchronously during `push`; a throwing job lands in `errors` with its message and later jobs still run; and a job pushed during `drain` is still awaited before it resolves.
+
+Verified by running `bun test` on the committed branch — it passes.
+
+  architect    glm-5.3-flash        2 turns, 20832 tokens
+  coder        deepseek-v4-flash    1 turns, 56034 tokens
+
+no agent changed any files
+{"jobs":[],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":5564,"outputTokens":3684,"cacheReadTokens":11584,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6040,"outputTokens":2890,"cacheReadTokens":47104,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":1}
+
+--- stderr ---
+
+coder asked architect to "Job done: src/queue.ts is now truly serial. Committed on ..." and got no answer, and it never took a turn

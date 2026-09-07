@@ -1,0 +1,72 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/limiter.ts)
+architect · glob(src/**/*.ts)
+architect · glob(**/*.test.ts)
+architect · bash(cat package.json 2>/dev/null; echo ---; ls -la)
+architect · read(src/limiter.test.ts)
+architect · agent_send(coder)
+architect → coder Implement the token-bucket RateLimiter in `src/limiter.ts` and add tests in `src/limiter.test.ts`. Keep the existing cla…
+architect › Plan sent to coder. I'll wait for their report that `bun test` passes, then confirm the job is done.
+coder · bash(ls -la && git status && git branch --show-current)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · bash(cat package.json && ls src)
+coder › Now I'll implement the limiter and add the tests.
+coder · write(src/limiter.ts)
+coder · write(src/limiter.test.ts)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/limiter.test.ts: 33 |   expect(limiter.tryTake(3)).toBe…
+coder › One test fails: at `t = 2500` the bucket has only accrued 2.5s of refill since it was drained at `t = 0` (and 2.0s since the `t = 500` peek latched `lastRefill`), so `available` is `2.5`, not the capped `3`. The plan's own algorithm (accumulate `elapsedSeconds * refillPerSecond` from `lastRefill`, cap at capacity) can't produce `3` at `t = 2500` — the cap is reached at `t = 3000`. I'll keep the plan's intent (drain, peek `0.5`, then cap at `3`) and fix the timing to `3000`, which is mathematically consistent with the specified algorithm.
+coder · edit(src/limiter.test.ts)
+coder · bash(bun test 2>&1)
+coder › All pass. Committing now.
+coder · bash(git add src/limiter.ts src/limiter.test.ts && git commit -m …)
+coder · agent_send(architect)
+coder → architect Implemented the token-bucket RateLimiter in src/limiter.ts exactly per your spec: constructor initializes tokens = capac…
+coder › Done. Summary:
+
+**Changed** (committed as `dfafa5b` on `work/main`, working tree clean):
+- `src/limiter.ts` — implemented `RateLimiter` per spec: `tokens = capacity` and `lastRefill = now()` set in the constructor; private `refill()` reads `now()` once, adds `elapsedSeconds * refillPerSecond` capped at `capacity`, updates `lastRefill`; `tryTake(n = 1)` refills first, returns `false` for `n > capacity` even when full, `false` for `n > tokens`, else subtracts and returns `true`; `available` refills and returns `tokens` (possibly fractional).
+- `src/limiter.test.ts` — kept the original `starts full` test unchanged and added the 5 planned tests.
+
+**One deviation from the plan**: in test 4, `t = 2500` gives `available` of `2.5`, not `3`. Under the specified algorithm the bucket was drained at `t = 0`, the `t = 500` `available` read latches `lastRefill = 500`, and the remaining 2000 ms at rate 1/s only adds 2.0 to the 0.5 already present — the cap of 3 is first reached at `t = 3000`. I set the final check to `t = 3000` so the assertions (0 → 0.5 → 3 capped) hold; everything else is exactly as planned. Notified the architect of this.
+
+**Verification** — `bun test` output:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 15 expect() calls
+Ran 6 tests across 1 file. [13.00ms]
+```
+Exits 0.
+architect · bash(bun test 2>&1; echo "exit=$?"; git log --oneline -3; git sta…)
+architect · read(src/limiter.ts)
+architect · read(src/limiter.test.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: d20ca89 Merge branch 'work/main'
+architect › The job is done and verified. `bun test` passes (6 tests, 0 fail, exit 0), the implementation is correct, and the work is committed as `dfafa5b` on `work/main` with a clean tree.
+
+What changed:
+- `src/limiter.ts` — token bucket implemented per spec: starts full, refills continuously via elapsed time since last refill, capped at capacity; `tryTake(n)` refills first, refuses `n > capacity` even when full, refuses when insufficient, otherwise subtracts; `available` refills and returns the (possibly fractional) token count.
+- `src/limiter.test.ts` — added 5 tests covering taking available tokens, taking nothing when insufficient, refusing `n > capacity`, continuous refill with cap, and never exceeding capacity while idle (the original `starts full` test is untouched).
+
+The coder's one deviation from my plan was a correction of my error, not a bug: in the refill/cap test, `t = 3000` is used instead of `t = 2500`. Since `available` latches `lastRefill` on each read, at `t = 2500` the drained bucket holds 0.5 + 2.0 = 2.5, and the cap of 3 is reached at `t = 3000`. Their assertion is the correct behavior.
+
+Verified by running `bun test` myself: 6 pass, 0 fail. Done.
+
+  architect    deepseek-v4-pro      2 turns, 25807 tokens
+  coder        deepseek-v4-flash    1 turns, 88460 tokens
+
+main: done
+  bun run test passed
+  merged: d20ca89 Merge branch 'work/main'
+  this job: 114k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d20ca89 Merge branch 'work/main'","cost":"this job: 114k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7824,"outputTokens":3391,"cacheReadTokens":14592,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6683,"outputTokens":7537,"cacheReadTokens":74240,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

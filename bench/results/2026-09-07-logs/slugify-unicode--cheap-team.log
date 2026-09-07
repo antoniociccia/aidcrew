@@ -1,0 +1,57 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/slugify.ts)
+architect · glob(**/*.test.ts)
+architect · read(package.json)
+architect · read(src/slugify.test.ts)
+architect › The bug is clear: the current regex `[^a-z0-9]+` replaces accented characters (which aren't in `a-z`) with dashes instead of reducing them to their base letter. Plan below goes to coder.
+architect · agent_send(Job: fix slugify so accented Latin letters fold to their bas…)
+architect → coder Job: fix slugify so accented Latin letters fold to their base letter.  Current src/slugify.ts (whole file): ```ts export…
+coder · read(src/slugify.ts)
+coder · read(src/slugify.test.ts)
+coder · bash(git branch --show-current && git status --short)
+coder · write(src/slugify.ts)
+coder · write(src/slugify.test.ts)
+coder · bash(bun test 2>&1)
+architect › Plan sent to coder. The fix is a single normalize-and-strip step (NFD + removing combining marks U+0300–U+036F) before the existing lowercasing and dash-collapsing pipeline, plus five new test cases in `src/slugify.test.ts`. I expect back the `bun test` output showing 5 passing tests and a commit hash; once reported, I'll confirm the job is done.
+coder › 6 tests pass, 0 failures — that's the existing test plus the five new cases (the brief's "5 passing" undercounts its own list by one). Committing.
+coder · bash(git add src/slugify.ts src/slugify.test.ts && git commit -m …)
+coder › Done. Report to architect:
+coder · agent_send(architect)
+coder → architect Fixed. src/slugify.ts now normalizes to NFD, strips combining marks [\u0300-\u036f], then runs the existing lower/dash p…
+coder › Done. Summary:
+
+- **src/slugify.ts** — added `.normalize('NFD')` and `.replace(/[\u0300-\u036f]/g, '')` before the existing `.toLowerCase()` pipeline; kept the doc comment.
+- **src/slugify.test.ts** — kept the existing `'joins words with dashes'` test and added the five cases from the plan (accented Latin, accents with punctuation, empty string, punctuation-only, digits).
+
+**Check output** (`bun test`, bun v1.3.14):
+```
+6 pass
+0 fail
+6 expect() calls
+Ran 6 tests across 1 file.
+```
+
+**Commit:** `44b2a80a49321d2bbb8f7503f587f67eb0308b6b` on `work/main`, clean tree.
+
+**Note:** the brief's check said "5 passing tests", but the requested cases (1 kept + 5 added) total 6, and bun reports 6 pass / 0 fail — matching the actual content, so nothing was trimmed. Flagged this to the architect.
+architect › Job done. Coder's count is right and my "5" was a miscount: the file holds the original test plus five new cases, so 6 passing is the correct total — no case was trimmed.
+
+What changed on `work/main` (commit 44b2a80, tree clean):
+- **src/slugify.ts** — `slugify` now normalizes to NFD and strips combining marks `[\u0300-\u036f]` before the existing lowercase/dash-collapse/trim pipeline, so accented Latin letters fold to their base letter. Punctuation runs still collapse to one dash, leading/trailing dashes are dropped, and empty or punctuation-only input returns `''`.
+- **src/slugify.test.ts** — kept the original test and added the five cases: `Crème Brûlée` → `creme-brulee`, `Ångström — café!` → `angstrom-cafe`, `''` → `''`, `'!!! ???'` → `''`, `'Route 66'` → `route-66`.
+
+Verified by the project's own check: `bun test` reports 6 pass, 0 fail. The harness can run the check on the branch and merge.
+
+  architect    glm-5.3-flash        2 turns, 13091 tokens
+  coder        deepseek-v4-flash    1 turns, 34974 tokens
+
+no agent changed any files
+{"jobs":[],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":4018,"outputTokens":1329,"cacheReadTokens":7744,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5464,"outputTokens":1478,"cacheReadTokens":28032,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":1}
+
+--- stderr ---
+
+coder asked architect to "Fixed. src/slugify.ts now normalizes to NFD, strips combi..." and got no answer, and it never took a turn

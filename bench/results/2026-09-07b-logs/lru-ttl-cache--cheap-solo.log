@@ -1,0 +1,67 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree()
+coder · glob(**/*)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · json(.)
+coder · read(.aidcrew/agents/coder.md)
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · glob(**/tsconfig*.json)
+coder · glob(**/*.{json,toml})
+coder · bash(bun --version && bun test 2>&1 | tail -20)
+coder · bash(git checkout -b cache-impl && git branch --show-current)
+coder · write(src/cache.ts)
+coder · write(import { expect, test } from 'bun:test' import { Cache } fro…)
+coder · bash(bun test 2>&1 | tail -40)
+coder › All tests pass. Let me commit the implementation and tests as separate small commits.
+coder · bash(git add src/cache.ts && git commit -q -m "Implement LRU cach…)
+coder · bash(bun test 2>&1)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9695579 Merge branch 'cache-impl'
+coder › Implemented and committed on branch `cache-impl` (two commits: the implementation, then the tests).
+
+## What changed
+
+**`src/cache.ts`** — a single internal `Map<K, { value, expiresAt }>` whose iteration order is recency order (oldest = least recently used first):
+
+- **Constructor** throws `RangeError` when `capacity < 1`; keeps `capacity`, `ttlMs`, and the injected `now` clock as `readonly` properties (default `Date.now` preserved).
+- **`get`** returns `undefined` for missing or expired entries (an expired one is deleted on the way out). A successful read moves the key to the most-recent end, so it counts as a use. Expiry is checked as `now() >= expiresAt`, so an entry is gone exactly `ttlMs` after being set.
+- **`set`** computes a fresh `expiresAt` from `now() + ttlMs`. Replacing an existing key deletes then re-adds it — refreshing value and expiry without evicting anything — then a `while (size > capacity)` loop evicts from the front, i.e. the least recently used entry first. Physical size is therefore never above `capacity`.
+- **`has`** / **`delete`** behave like `Map`'s with expired entries treated as absent: `has` is false and `delete` returns false for an expired key (and still removes it as cleanup).
+- **`size`** is a getter that sweeps expired entries while counting live ones, so it only counts entries that haven't expired.
+
+**`src/cache.test.ts`** — 16 new tests on top of the existing one, using a controllable clock: set/get round-trip, missing/expired `get`, expiry at exactly `ttlMs`, `get` counting as a use, expired `get` not counting, LRU eviction order, replacing without evicting and resetting expiry, Map-like `has`/`delete` (including expired-as-absent), `size` counting only live entries (bulk and staggered expiry), expired entries not blocking new sets, `RangeError` for `capacity < 1` (0, −1, 0.5), and the default real clock.
+
+## Checks
+
+`bun test` (the project's only script) output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 17 pass
+ 0 fail
+ 42 expect() calls
+Ran 17 tests across 1 file. [16.00ms]
+```
+
+There is no tsconfig, linter, or typecheck target in the repo, so tests are the project's whole check suite.
+
+## Decisions the plan didn't spell out
+
+- **Expiry boundary**: an entry is considered expired when `now() >= setTime + ttlMs`, so at exactly `ttlMs` after setting it is gone (a `get` at that instant returns `undefined`).
+- **Eviction happens from the recency front only** (lazy deletion). Expired entries are dropped when they are accessed, swept by `size`, or reach the front during eviction; they never make the physical map exceed `capacity`. I chose this over eagerly purging expired entries mid-map because it keeps every operation amortized O(1) under plain LRU churn, which matches the literal "least recently used entry is evicted first" wording.
+- **`delete` of an expired entry returns `false`**, since "expired entries counting as absent" makes them behave like a key the `Map` never had.
+- `set`/`get` refresh recency only; expiry time is refreshed by `set` alone, never by `get` (per "expiring ttlMs after it was set").
+
+  coder        deepseek-v4-flash    1 turns, 199868 tokens
+
+main: done
+  bun run test passed
+  merged: 9695579 Merge branch 'cache-impl'
+  this job: 200k tokens, 0.5¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 23¢, on gpt-5 ≈ 21¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9695579 Merge branch 'cache-impl'","cost":"this job: 200k tokens, 0.5¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 23¢, on gpt-5 ≈ 21¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6170,"outputTokens":18210,"cacheReadTokens":175488,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

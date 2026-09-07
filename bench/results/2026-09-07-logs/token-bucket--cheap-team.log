@@ -1,0 +1,77 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+architect · glob(**/*.ts)
+architect · read(src/limiter.ts)
+architect · read(src/limiter.test.ts)
+architect › The skeleton is a class with `capacity`, `refillPerSecond`, `now` parameter properties and two stubs; tests run with `bun test`. The design is clear — a token bucket with lazy refill on each access. Sending the plan to coder.
+architect · agent_send(Job: implement the token-bucket RateLimiter in src/limiter.t…)
+architect → coder Job: implement the token-bucket RateLimiter in src/limiter.ts and add tests. Workspace root is the checkout; tests run w…
+coder · tree(.)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder · write(src/limiter.ts)
+coder · write(import { expect, test } from 'bun:test' import { RateLimiter…)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/limiter.test.ts: 21 |     } 22 |   } 23 |  24 |   /** T…
+architect › Plan sent to coder. What I did and what's next:
+
+**Decided** (from reading `src/limiter.ts`, its test stub, and `package.json`):
+- `src/limiter.ts` is a bare class skeleton (parameter properties `capacity`, `refillPerSecond`, `now`, two throwing members); tests run via `bun test`.
+- Design: lazy continuous refill — store `tokens` and `last` (ms); a private `refill()` clamps tokens at capacity using elapsed seconds; `tryTake(n)` refuses `n > capacity` (and negative) up front, otherwise takes all-or-nothing; `available` refills then returns the raw fractional count. No rounding anywhere.
+
+**Handed off** the implementation plus 8 test cases (drain/refill at controlled times, capacity clamp, all-or-nothing, fractional take and refill, n > capacity refused when full, default-clock smoke test) with the check to prove it: `bun test` printing all pass / 0 fail, committed in small steps.
+
+**Expecting back** from coder: the diff summary, the final `bun test` output lines, and any deviations from the plan. When their report says the check passes I'll confirm the job done.
+coder › Parameter properties need `this.`:
+coder · edit(src/limiter.ts)
+coder · edit(src/limiter.ts)
+coder · bash(bun test 2>&1)
+coder › All 9 tests pass. Committing in two small commits:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Committed in two commits.
+
+**What I changed:**
+- `src/limiter.ts` — Implemented the class: private `tokens`/`last` state initialized in the constructor body (`tokens = capacity`, `last = this.now()`), a private continuous `refill()` clamped at capacity, `tryTake(n)` that refuses `n < 0 || n > capacity` up front then refills and takes all-or-nothing, and the lazy `available` getter that refills and returns the (possibly fractional) `tokens`. No rounding anywhere.
+- `src/limiter.test.ts` — Kept the existing "starts full" test and added the 8 requested tests, all using a controllable `let t` clock.
+
+**Check output — `bun test`:**
+```
+ 9 pass
+ 0 fail
+ 39 expect() calls
+Ran 9 tests across 1 file. [13.00ms]
+```
+
+**Deviation:** none from the plan. One implementation detail I had to fix during the run: parameter properties (`capacity`, `refillPerSecond`) are accessed as `this.capacity` / `this.refillPerSecond`, not bare `capacity` / `refillPerSecond` — the first test run failed with `ReferenceError` until I corrected those two references.
+
+Committed as `64038b7` (implementation) and `bc83473` (tests).
+coder → architect Done. Committed in two commits.  **What I changed:** - `src/limiter.ts` — Implemented the class: private `tokens`/`last`…
+verified: bun run test passes on work/main
+merged work/main into the repository: aac6af0 Merge branch 'work/main'
+architect › Job done.
+
+**What changed:**
+- `src/limiter.ts` — Token-bucket `RateLimiter`: private `tokens`/`last` state seeded full at construction time from the injected `now()`, a private continuous `refill()` (elapsed ms ÷ 1000 × refillPerSecond, clamped at capacity), `tryTake(n)` refusing `n > capacity` (and negative) before touching the bucket and otherwise taking all-or-nothing, and a lazy `available` getter that refills to the current time and returns the raw fractional count. No rounding anywhere.
+- `src/limiter.test.ts` — 9 tests total: the original "starts full" plus drain/refill against a controlled clock, capacity clamp on long waits, `n > capacity` refused even when full, all-or-nothing behavior, fractional take, continuous refill across successive takes, and a default-clock smoke test.
+
+**How it was verified:** the project's own check, `bun test`, run on the branch — 9 pass, 0 fail (39 expect calls). The one in-flight fix coder hit (bare `capacity`/`refillPerSecond` references needing `this.`) was caught by that failing run and corrected before the passing one.
+
+Committed as `64038b7` (implementation) and `bc83473` (tests) on the job branch; ready for the harness check and merge.
+
+  architect    glm-5.3-flash        2 turns, 17109 tokens
+  coder        deepseek-v4-flash    1 turns, 76232 tokens
+
+main: done
+  bun run test passed
+  merged: aac6af0 Merge branch 'work/main'
+  this job: 93k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"aac6af0 Merge branch 'work/main'","cost":"this job: 93k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":3494,"outputTokens":2991,"cacheReadTokens":10624,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":14134,"outputTokens":2706,"cacheReadTokens":59392,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

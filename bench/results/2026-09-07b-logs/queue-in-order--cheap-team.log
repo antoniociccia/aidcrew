@@ -1,0 +1,62 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/queue.ts)
+architect · glob(**/*.test.ts)
+architect · read(src/queue.test.ts)
+architect · read(package.json)
+architect · wc(src)
+architect · bash(bun test 2>&1 | tail -5)
+architect · agent_send(Job: make Queue in src/queue.ts truly sequential. (You are o…)
+architect → coder Job: make Queue in src/queue.ts truly sequential. (You are on branch work/main; commit small as you go, no signature/tra…
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+coder · tree(.)
+coder · json(package.json)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Plan sent to coder. Summary of what I decided after reading `src/queue.ts`, its test file, and `package.json`:
+
+**Diagnosis:** `push()` calls `job()` immediately, so jobs run concurrently despite the documented "one after another" contract. `drain()` also resets `#pending` in a way that breaks if jobs are pushed during a drain.
+
+**Plan (now with coder):**
+- Rewrite `src/queue.ts` as a single promise chain: `push` attaches `job` via `#tail.then(job)` with the existing error-wrapping in a `.catch` (non-Errors wrapped via `new Error(String(cause))`), incrementing a running counter; `drain` awaits the tail in a loop while the counter is above zero, so pushes that happen mid-drain are also waited for. `push` stays synchronous, returns void, and never invokes the job synchronously.
+- Extend `src/queue.test.ts` (keeping the existing test) with cases for: strict start/finish ordering with a logged sequence, no synchronous start, error recording (Error and non-Error) without blocking later jobs, drain resolving only after jobs pushed during drain finish, and re-draining after a completed drain.
+
+**Expected back:** coder's report with the actual `bun test` output line (all tests passing, 0 fail) and the diffs of the two files. I'll call the job done only when the test run passes on the branch.
+coder › Now I understand the current state. Let me look at the sketch's subtle bug before writing: `#running` is only ever incremented in the sketch, never decremented, so `drain()` would loop forever. I'll add the decrement in a `finally` inside the chain element. Let me write the new queue.ts:
+coder · write(src/queue.ts)
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 7 pass. Let me verify the tests genuinely catch the old buggy behavior by running them against the original implementation:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › The new tests catch the old bug (3 fail against the original: sync start, concurrency/order, and drain-with-pushes). File restored to the new version. Final verification and commit:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done and committed. Reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Job done, branch work/main, committed as ede90d1 "Make Queue run jobs strictly sequentially".  What I changed:  src/queu…
+coder › Done. The queue is now strictly sequential, all 7 tests pass (`7 pass, 0 fail`), the branch is committed, and I've handed off to the architect with the check output and the one deviation from the sketch (adding the `#running` decrement that the sketch omitted).
+architect · bash(bun test 2>&1 | tail -5 && git -C . log --oneline -1 && git …)
+verified: bun run test passes on work/main
+merged work/main into the repository: d1617e5 Merge branch 'work/main'
+architect › Job done — verified on my checkout of `work/main`:
+
+**What changed (commit `ede90d1`, "Make Queue run jobs strictly sequentially"):**
+- `src/queue.ts`: `push` no longer calls `job()` synchronously; it chains onto a single internal promise chain (`#tail`) so each job starts only after the previous one settles, in push order. Throws are recorded in `errors` with the existing wrap rule (`Error` kept, anything else wrapped via `new Error(String(cause))`), and a failing job doesn't stop the rest. `drain` loops while a `#running` count is above zero, so it resolves once every job pushed so far — including jobs pushed while draining — has finished. `push` remains synchronous and returns nothing. (Coder's one deviation from my sketch — decrementing `#running` in a `finally` — was necessary and correct; my sketch would have hung `drain` forever.)
+- `src/queue.test.ts`: kept the original test, added 6 covering order/one-at-a-time, no synchronous start, error recording for both `Error` and non-`Error` throws, pushes during drain plus concurrent drains, push-during-push ordering, and re-drain after a completed drain.
+
+**How it was verified:** `bun test` passes on the branch — `7 pass, 0 fail` (16 expect calls) — and the working tree is clean at commit `ede90d1`. Coder additionally confirmed the new tests fail against the old implementation (4 pass, 3 fail), so they genuinely pin the sequential behavior. Nothing left open.
+
+  architect    glm-5.3-flash        2 turns, 33664 tokens
+  coder        deepseek-v4-flash    1 turns, 143403 tokens
+
+main: done
+  bun run test passed
+  merged: d1617e5 Merge branch 'work/main'
+  this job: 177k tokens, 0.8¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 31¢, on gpt-5 ≈ 29¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d1617e5 Merge branch 'work/main'","cost":"this job: 177k tokens, 0.8¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 31¢, on gpt-5 ≈ 29¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":8371,"outputTokens":11341,"cacheReadTokens":13952,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":12041,"outputTokens":13090,"cacheReadTokens":118272,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

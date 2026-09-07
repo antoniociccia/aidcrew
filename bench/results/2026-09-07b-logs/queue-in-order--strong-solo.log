@@ -1,0 +1,71 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/queue.ts)
+coder · bash(ls)
+coder · bash(find . -maxdepth 3 -not -path './node_modules/*' -not -path …)
+coder · read(package.json)
+coder · read(src/queue.test.ts)
+coder · edit(src/queue.ts)
+coder · edit(src/queue.test.ts)
+coder · bash(bun test)
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+coder · edit(src/queue.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · git-log()
+coder · bash(git diff)
+coder · bash(git checkout -b fix/queue-serial-execution && git add src/qu…)
+coder · bash(bun test && git log --oneline -3)
+verified: bun run test passes on work/main
+merged work/main into the repository: 356697f Merge branch 'fix/queue-serial-execution'
+coder › Implemented and committed on branch `fix/queue-serial-execution`.
+
+## What changed
+
+**`src/queue.ts`**
+- Replaced the "start every job immediately" implementation with a promise chain: each job is chained off `#tail`, so it starts only after the previous job's promise has settled.
+- `push` is still synchronous and returns `void`; the job is invoked inside `.then(...)`, so it never runs synchronously inside `push`.
+- A rejected job is recorded in `errors` (wrapping non-`Error` causes as before), and the chain continues to the next job.
+- `drain` now loops on a pending-job count and re-awaits the tail, so it keeps waiting for jobs pushed while draining (including jobs pushed by other jobs).
+
+**`src/queue.test.ts`**
+Added tests covering:
+- jobs run one at a time, in push order (second does not start until the first finishes),
+- push does not run the job synchronously and returns `undefined`,
+- a thrown error is recorded and later jobs still run,
+- non-`Error` rejections are recorded as `Error`s,
+- drain waits for jobs pushed while it is already draining,
+- drain waits for jobs pushed by other jobs.
+
+## Checks
+
+```
+bun test
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 16 expect() calls
+Ran 7 tests across 1 file. [17.00ms]
+```
+
+There is no typecheck/lint script in `package.json`, so `bun test` is the only project check.
+
+## Commits
+
+- `f4cc5ff` Run queued jobs one after another
+- `15960fa` Add tests for queue serial execution and drain
+
+One note beyond the request: I changed the internal `#pending` bookkeeping from an array of promises to a count plus the tail promise, because the array alone could not distinguish "all pending drained" from "a new job arrived while draining" without extra coordination. The public API is unchanged.
+
+  coder        deepseek-v4-pro      1 turns, 230229 tokens
+
+main: done
+  bun run test passed
+  merged: 356697f Merge branch 'fix/queue-serial-execution'
+  this job: 230k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 20¢, on gpt-5 ≈ 18¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"356697f Merge branch 'fix/queue-serial-execution'","cost":"this job: 230k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 20¢, on gpt-5 ≈ 18¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":8402,"outputTokens":14211,"cacheReadTokens":207616,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

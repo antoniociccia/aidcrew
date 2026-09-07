@@ -1,0 +1,75 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+coder · read(package.json)
+coder · bash(bun --version 2>&1; ls -la)
+coder · bash(cd /workspace 2>/dev/null; pwd; git status --short 2>&1 | he…)
+coder · error: refused: that would leave your checkout for /workspace. Your checkout is /private/var/folders/n0/s619yhq953bdp1k85z3bhc6…
+coder · bash(git status --short; git branch --show-current; git log --one…)
+coder › Now I'll implement the fix:
+coder · write(src/queue.ts)
+coder › Now the tests:
+coder · write(src/queue.test.ts)
+coder · bash(bun test 2>&1)
+coder › All pass. Let me verify the tests actually catch the original bug by running them against the old implementation in a scratch copy:
+coder · bash(mkdir -p /tmp/qcheck && cp src/queue.ts /tmp/qcheck/queue.ts…)
+coder › The old implementation fails the new ordering, non-synchronous-push, and drain tests — the new tests catch the bug. Cleaning up and committing:
+coder · bash(rm -rf /tmp/qcheck && git add src/queue.ts src/queue.test.ts…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 344a101 Merge branch 'work/main'
+coder › Done. Here's what I changed and why.
+
+## The fix (`src/queue.ts`)
+
+The old queue started every job eagerly at `push` by calling `job()` immediately and storing each returned promise. I replaced the `#pending: Promise<void>[]` with a single tail promise:
+
+```ts
+export class Queue {
+  readonly errors: Error[] = []
+  #tail: Promise<void> = Promise.resolve()
+
+  push(job: () => Promise<void>): void {
+    this.#tail = this.#tail.then(job).catch((cause: unknown) => {
+      this.errors.push(cause instanceof Error ? cause : new Error(String(cause)))
+    })
+  }
+
+  async drain(): Promise<void> {
+    let tail: Promise<void>
+    do {
+      tail = this.#tail
+      await tail
+    } while (tail !== this.#tail)
+  }
+}
+```
+
+- **Serial / in push order / not synchronous:** each job is chained onto `#tail` with `.then`, so a job only runs once the previous one's segment settled, and `.then` always fires on a later microtask — `push` never invokes `job()` itself, stays synchronous, and returns nothing.
+- **Throwing jobs:** the trailing `.catch` records the failure (wrapping non-`Error` throws, as before) and resolves the chain, so later jobs still run.
+- **`drain`:** it snapshots the current tail, awaits it, and loops if a new job was pushed (externally or from inside a running job) while it was waiting, so jobs pushed during a drain are included. `push` can stay synchronous because `drain` re-checks after each settle rather than capturing a one-off promise.
+
+## Tests (`src/queue.test.ts`)
+
+Kept the original test and added: no synchronous start in `push`; strict one-at-a-time ordering with no overlap; a throwing job recorded in `errors` while later jobs still run (async and synchronous throws, plus a non-`Error` throw); `drain` waiting for jobs pushed externally while draining; and `drain` waiting for a job pushed from inside a running job while draining.
+
+## Check output
+
+- `bun test`: **8 pass, 0 fail** (17 `expect()` calls).
+- I also ran the new tests against the original implementation in a scratch copy: **4 of the key tests failed** (ordering/overlap, no-sync-start, and both drain-while-pushing cases), confirming they catch the bug. Scratch files were removed.
+
+One decision the task didn't spell out: since `push` must stay synchronous and a pusher can keep pushing indefinitely, `drain` resolves once it observes an idle pass — i.e. after the last job finishes and no new job was enqueued as of that settle. A job pushed in a strictly later turn than that has, by definition, been pushed after `drain` already resolved.
+
+Committed as `233f412` on `work/main`.
+
+  coder        deepseek-v4-flash    1 turns, 155553 tokens
+
+main: done
+  bun run test passed
+  merged: 344a101 Merge branch 'work/main'
+  this job: 156k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 18¢, on gpt-5 ≈ 16¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"344a101 Merge branch 'work/main'","cost":"this job: 156k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 18¢, on gpt-5 ≈ 16¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5692,"outputTokens":13797,"cacheReadTokens":136064,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

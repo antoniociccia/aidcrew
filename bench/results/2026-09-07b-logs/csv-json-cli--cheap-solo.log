@@ -1,0 +1,79 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder · json(package.json)
+coder · git-log()
+coder · glob(**/*)
+coder · toml(.aidcrew/config.toml)
+coder · read(.aidcrew/agents/coder.md)
+coder · toml(.)
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder · bash(cd "$(git rev-parse --show-toplevel)" && bun test 2>&1 | tai…)
+coder › Now I understand the repo. Let me check the git commit and baseline, then implement: a `src/csv.ts` module with `parseCsv`, `--json` handling in `cli.ts`, usage text update, and tests.
+
+Let me first create the branch structure and check what exists.
+coder · bash(cd "$(git rev-parse --show-toplevel)" && ls -la src && wc -l…)
+coder · write(src/csv.ts)
+coder · write(import { parseCsv } from './csv.ts'  /** What a run of csvto…)
+coder › Now the tests:
+coder · edit(src/cli.test.ts)
+coder · edit(test('anything else is usage', () => {   expect(run([], '').…)
+coder · bash(cd "$(git rev-parse --show-toplevel)" && bun test 2>&1 | tai…)
+coder › All tests pass. Let me verify there's no typecheck step configured.
+coder · json(scripts)
+coder · bash(cd "$(git rev-parse --show-toplevel)" && ls tsconfig.json 2>…)
+coder › There's no TypeScript set up (no tsconfig, no typescript dependency), so `bun test` is the project's only check. All tests pass. Let me review my csv.ts for edge cases once more — particularly the quoted field handling when field has content then a quote in the middle of an unquoted field is treated as literal, which is correct behavior.
+
+Let me verify the line-number reporting requirement: "naming the 1-based line number". The header is line 1, data rows start at line 2. My message reports `i+1` where i is the data row index starting at 1 — so row at index 1 is line 2. That matches. My test confirms `line 3` for the third input line.
+
+Let me commit these changes in logical commits.
+coder · bash(cd "$(git rev-parse --show-toplevel)" && git add src/csv.ts …)
+coder › I'll split into logical commits: first the parser module, then the cli change with tests.
+coder · bash(cd "$(git rev-parse --show-toplevel)" && git reset -q && git…)
+coder › Both commits are in. Let me run the full test suite once more to confirm the final state.
+coder · bash(cd "$(git rev-parse --show-toplevel)" && bun test 2>&1 | tai…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 11584d7 Merge branch 'work/main'
+coder › Done. Here's a summary of what I changed:
+
+## Changes
+
+**`src/csv.ts` (new)** — exports `parseCsv(text: string): string[][]`. It splits the input into lines (dropping a single trailing newline so an empty record isn't produced), strips a trailing `\r` from each line to support `\r\n` endings, and parses each line into fields. Fields that start with a `"` are quoted: commas are literal, `""` inside a quoted field becomes one `"`, and a lone `"` closes the field. Empty input returns `[]`. Trailing empty fields (e.g. `a,b,`) are preserved.
+
+**`src/cli.ts`** — added a `--json` branch that calls a new `toJson` helper. It parses the CSV, uses the first row as the header, and maps each remaining row to an object keyed by header names (all values strings), printing `JSON.stringify(objects)` plus a newline. Empty input, or a header with no data rows, prints `[]\n`. A data row whose field count differs from the header exits `code 1` and prints one line naming the 1-based line number (the error message includes both expected and actual counts). Updated the usage line to `usage: csvtool --upper | --count | --json`.
+
+**`src/cli.test.ts`** — added tests for `--json` (empty input, header-only, basic objects, quoted fields with commas/doubled quotes, `\r\n` endings, too-few and too-many fields with code 1) and standalone tests for `parseCsv` (unquoted split, trailing empty fields, quoted fields, empty input).
+
+## Checks
+
+The project's only check is `bun test` (there's no tsconfig or TypeScript linted build configured):
+```
+bun test v1.3.14 (0d9b296a)
+ 14 pass
+ 0 fail
+ 16 expect() calls
+Ran 14 tests across 1 file. [12.00ms]
+```
+
+## Decisions not spelled out in the plan
+
+- The error message for a mismatched row prints both the expected and actual field counts (e.g. `line 3: expected 2 fields, got 1`) — the plan only required naming the line number and exiting 1, so I included `code: 1` with no JSON but enriched the single line with the counts.
+- `parseCsv` treats a trailing blank line as just line termination, not an extra empty row, matching how the header-only input `a,b\n` yields a single header row.
+- Fields outside quotes containing a `"` are treated as literal text (matching the common minimal-CSV convention), and the parser preserves trailing empty fields.
+
+Created on branch `work/main` as two commits: `9a70ee0` (parser module) and `231b611` (the `--json` flag, usage update, and tests).
+
+  coder        deepseek-v4-flash    1 turns, 151697 tokens
+
+main: done
+  bun run test passed
+  merged: 11584d7 Merge branch 'work/main'
+  this job: 152k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 16¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"11584d7 Merge branch 'work/main'","cost":"this job: 152k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 16¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":11814,"outputTokens":12523,"cacheReadTokens":127360,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

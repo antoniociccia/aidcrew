@@ -1,0 +1,52 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · bash(ls -la && find . -maxdepth 2 -name 'package.json' -not -path…)
+coder · glob(**/*.test.ts)
+coder · glob(**/*.{ts,tsx,js,json})
+coder · read(package.json)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · write(src/money.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · write(src/money.test.ts)
+coder · edit(src/receipt.test.ts)
+coder · bash(bun test)
+coder · bash(git add -A && git commit -q -m "Extract shared formatMoney; …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 4312b72 Merge branch 'work/main'
+coder › Done. Here's what I changed:
+
+**New `src/money.ts`** — exports `formatMoney(cents, currency)` with the invoice's behaviour: thousands grouped with commas, two decimals (padded), leading `-` for negatives, then a space and the currency code.
+
+**`src/invoice.ts`** — `formatInvoiceAmount` is now a thin wrapper around `formatMoney`. Behaviour unchanged.
+
+**`src/receipt.ts`** — `formatReceiptAmount` is now a thin wrapper around `formatMoney`, so the receipt picks up thousands separators and correct negative handling (a −1250 refund now renders as `-12.50 EUR`, not `-13.-50 EUR`).
+
+Both wrapper functions remain exported, so nothing importing them breaks.
+
+**Tests** — added `src/money.test.ts` (thousands grouping, negative, single-digit fraction) and a receipt test covering negative refunds and thousands grouping.
+
+**Check output** (`bun test`):
+
+```
+6 pass
+0 fail
+8 expect() calls
+Ran 6 tests across 3 files. [14.00ms]
+```
+
+One note: the existing receipt test asserted `12.50 EUR` (no separator) for a positive amount, which still holds; the only behavioural change to positive outputs is that amounts ≥ 1000 now gain commas, which matches the invoice and fixes the drift.
+
+  coder        deepseek-v4-pro      1 turns, 61680 tokens
+
+main: done
+  bun run test passed
+  merged: 4312b72 Merge branch 'work/main'
+  this job: 62k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"4312b72 Merge branch 'work/main'","cost":"this job: 62k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":12903,"outputTokens":2441,"cacheReadTokens":46336,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

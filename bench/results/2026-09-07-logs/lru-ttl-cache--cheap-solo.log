@@ -1,0 +1,67 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · bash(ls -la && cat package.json 2>/dev/null)
+coder · tree(.)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · stat(.aidcrew)
+coder · bash(git status && git log --oneline -5)
+coder · bash(find .aidcrew -type f | head -50)
+coder · bash(cat package.json && cat src/cache.ts && cat src/cache.test.t…)
+coder › Let me verify the test file contents are as shown (the annotation looks like tool output, not file content):
+coder · read(src/cache.test.ts)
+coder › Now I'll implement the cache:
+coder · write(src/cache.ts)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { Cache } fro…)
+coder · bash(bun test 2>&1)
+coder › All 15 tests pass. Let me commit in two small commits:
+coder · bash(git add src/cache.ts && git commit -q -m "Implement LRU cach…)
+verified: bun run test passes on work/main
+merged work/main into the repository: be92309 Merge branch 'work/main'
+coder › Done. Here's a summary.
+
+## What I changed
+
+**`src/cache.ts`** — implemented the `Cache<K, V>` class:
+- Internal storage is a `Map<K, Entry>` whose insertion order doubles as recency order (least-recently-used first).
+- `get`: returns `undefined` for missing/expired keys; on a live hit it moves the key to the most-recent end (a hit counts as a use) and returns the value.
+- `set`: reads the clock once, computes `expiresAt = now + ttlMs`; replacing an existing key (live or expired) updates value and time in place and never evicts. For a new key it drops expired entries first, and only if still at capacity evicts the least-recently-used entry (so expired entries are evicted before live ones, keeping maximum live data).
+- `has` / `delete`: behave like a `Map`, with expired entries counting as absent (`has` → false, `delete` → false but still frees the slot).
+- `size`: counts only unexpired entries.
+- Constructor throws `RangeError` when `capacity < 1`.
+
+**`src/cache.test.ts`** — added 14 tests on top of the existing one, all driving a fake clock passed as the `now` argument: basic get/set, expiry at exactly `ttlMs`, that `get` refreshes recency but **not** the TTL, LRU eviction on overflow, updating an existing key making it recently used, expired-before-live eviction, refreshing an expired existing key without eviction, `has`, `delete`, `size`, and the `RangeError`.
+
+## Checks
+
+`bun test` output:
+
+```
+15 pass
+0 fail
+43 expect() calls
+Ran 15 tests across 1 file. [24.00ms]
+```
+
+## Decisions the spec didn't spell out
+
+- **Expiry boundary**: an entry is expired at `setTime + ttlMs` (i.e. `now() >= expiresAt`), not just after it — "each expiring ttlMs after it was set".
+- **`get` refreshes LRU recency but not the TTL**, since expiry is anchored to "when it was set".
+- **`set` of an existing key counts as a use** for LRU (a refresh moves it to most-recent).
+- **Expired entries are evicted before live ones** when a new key arrives at capacity, since expired ones count as absent.
+- **`delete` of an expired key** returns `false` (it counts as absent) while still freeing its slot.
+- No iteration API exists, so recency/expiry state is maintained lazily per operation; physical storage never exceeds `capacity`.
+
+There are no other project checks (no lint/typecheck script; `bun test` is the only script).
+
+  coder        deepseek-v4-flash    1 turns, 193395 tokens
+
+main: done
+  bun run test passed
+  merged: be92309 Merge branch 'work/main'
+  this job: 193k tokens, 0.6¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 27¢, on gpt-5 ≈ 25¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"be92309 Merge branch 'work/main'","cost":"this job: 193k tokens, 0.6¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 27¢, on gpt-5 ≈ 25¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5924,"outputTokens":22223,"cacheReadTokens":165248,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

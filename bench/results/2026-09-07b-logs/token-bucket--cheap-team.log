@@ -1,0 +1,75 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(src/**)
+architect · read(src/limiter.ts)
+architect · read(src/limiter.test.ts)
+architect › The skeleton is clear: `src/limiter.ts` has the class shape and a `bun test` suite (`src/limiter.test.ts`) with one test. I'll send the plan to coder.
+architect · agent_send(Job: implement the token-bucket RateLimiter in src/limiter.t…)
+architect → coder Job: implement the token-bucket RateLimiter in src/limiter.ts and add tests to src/limiter.test.ts (bun test, ESM, packa…
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder › The job is clear. Let me check the project setup quickly, then implement.
+coder · json(package.json)
+coder · tree(.)
+coder · edit(src/limiter.ts)
+architect › Plan sent to coder. Summary of what I decided after reading `src/limiter.ts`, `src/limiter.test.ts`, and `package.json`:
+
+- **`src/limiter.ts`**: fill in the skeleton — private `tokens`/`last` state updated by a `refill()` helper that clamps backwards time, refills continuously (`elapsed/1000 * refillPerSecond`), and caps at capacity; `available` returns refilled tokens (fractional); `tryTake(n)` refuses `n > capacity` outright, otherwise refills and only debits when `tokens >= n`.
+- **`src/limiter.test.ts`**: keep the existing test, add six fully time-controlled cases (draining, failed take leaves state untouched, fractional refill, cap at capacity, oversized refusal when full, continuous refill across multiple takes).
+
+Expected back from coder: a commit on `work/main` with both files and `bun test` output showing all 7 tests passing. Once they report, I'll verify and call the job done.
+coder › Now the test file, keeping the existing test and adding the six scenarios from the plan:
+coder · write(src/limiter.test.ts)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/limiter.test.ts: 2 | export class RateLimiter { 3 |   p…
+coder › Field initializers run before the parameter properties are assigned in this transpiler, so `this.now`/`this.capacity` aren't set yet when `last`/`tokens` initialise. The fix that keeps the parameter-property constructor shape is to declare the private fields and assign them in the constructor body, which runs after parameter properties are bound:
+coder · edit(src/limiter.ts)
+coder · bash(bun test 2>&1)
+coder › All green. Let me review the final files and commit.
+coder · read(src/limiter.ts)
+coder · bash(git add src/limiter.ts src/limiter.test.ts && git commit -m …)
+coder › Done — implemented and committed on work/main as `f5234d1`.
+
+**What changed**
+- `src/limiter.ts`: added private `tokens` and `last` state, a private `refill()` that clamps backwards elapsed time to 0 and refills `elapsed / 1000 * refillPerSecond` capped at `capacity`; `tryTake(n = 1)` refuses `n > capacity` up front, then refills and only subtracts when `tokens >= n`; `get available` refills and returns the (possibly fractional) token count.
+- `src/limiter.test.ts`: kept the existing "starts full" test and added six injected-`now` tests covering drain, no-take-on-failure, fractional refill (0.5 at 500 ms), capping at capacity, refusing `n > capacity` when full, and continuous refill between takes — 7 tests total.
+
+**One decision the plan didn't state**: the plan said to initialise `tokens`/`last` as field initializers (`private tokens = this.capacity`), but under bun's transpiler class-field initializers run before parameter-property assignments, so `this.now`/`this.capacity` were still undefined at that point (first run failed with `TypeError: this.now is not a function`). I kept the readonly parameter-property constructor shape and instead declared the private fields and assigned them in the constructor body, which runs after parameter properties are bound. Everything else follows the spec exactly.
+
+**Check output** (`bun test`):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 19 expect() calls
+Ran 7 tests across 1 file. [13.00ms]
+```
+
+Nothing left; the commit is ready to merge.
+coder → architect Done — implemented and committed on work/main as `f5234d1`.  **What changed** - `src/limiter.ts`: added private `tokens`…
+architect › Coder reports the check passes. Verifying in my own checkout before calling it done.
+architect · bash(git log --oneline -3 && git status --short)
+architect · bash(bun test 2>&1 | tail -8)
+verified: bun run test passes on work/main
+merged work/main into the repository: b004a0c Merge branch 'work/main'
+architect › Verified on my side — the job is done.
+
+- **Commit**: `f5234d1 Implement token-bucket RateLimiter with tests` on `work/main`, working tree clean.
+- **What changed**: `src/limiter.ts` now implements the token bucket — private `tokens`/`last` state with a `refill()` helper (backwards time clamped to zero, continuous refill at `refillPerSecond`, capped at `capacity`), `available` returning the refilled fractional count, and `tryTake(n)` refusing `n > capacity` outright and otherwise debiting only when tokens suffice. `src/limiter.test.ts` grew from 1 to 7 tests, all using injected `now` — no real clock or sleeps. Coder's deviation from the plan (assigning private fields in the constructor body rather than as field initializers, because bun's transpiler initializes fields before parameter properties) was the correct call; I checked and it preserves the required constructor shape.
+- **How it was verified**: I ran `bun test` myself in my checkout — 7 pass, 0 fail, 19 expect() calls.
+
+  architect    glm-5.3-flash        2 turns, 19486 tokens
+  coder        deepseek-v4-flash    1 turns, 102831 tokens
+
+main: done
+  bun run test passed
+  merged: b004a0c Merge branch 'work/main'
+  this job: 122k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 12¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"b004a0c Merge branch 'work/main'","cost":"this job: 122k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 12¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":3974,"outputTokens":2200,"cacheReadTokens":13312,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":7959,"outputTokens":6808,"cacheReadTokens":88064,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

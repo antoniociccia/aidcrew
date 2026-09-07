@@ -1,0 +1,81 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/invoice.ts)
+architect · read(src/receipt.ts)
+architect · bash(ls -la && echo '---' && cat package.json)
+architect · glob(**/*.{test,spec}.{ts,js})
+architect · read(src/invoice.test.ts)
+architect · read(src/receipt.test.ts)
+architect · bash(ls -la src && bun --version)
+architect · grep(formatInvoiceAmount|formatReceiptAmount|formatMoney)
+architect › The plan is clear. Sending it to coder.
+architect · agent_send(coder)
+architect → coder Extract one money formatter into src/money.ts and have invoice and receipt use it. Files to touch:  1. Create src/money.…
+coder · tree()
+coder · bash(git status && git branch --show-current)
+architect › Plan sent to coder. I expect back the list of changed files and the exact `bun test` result (exit 0, all tests passing) before I call this done.
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/receipt.test.ts)
+coder · read(src/invoice.test.ts)
+coder · json(package.json)
+coder › The plan is clear and matches the code. Creating the money module and tests, then rewiring the wrappers.
+coder · write(src/money.ts)
+coder · write(src/money.test.ts)
+coder › Now rewire the two wrappers and add the receipt tests:
+coder · edit(src/invoice.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · edit(src/receipt.test.ts)
+coder · bash(cat package.json && bun test)
+coder › All tests pass. Verifying the final files and committing:
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder › The imports landed between the JSDoc comments and their declarations. Let me move them to the top so the comments stay attached to what they document:
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · bash(bun test && git add -A && git commit -q -m "Extract money fo…)
+coder › Done. Committed as `74011f3` on `work/main`, working tree clean.
+
+**Files changed:**
+- `src/money.ts` (new) — `formatMoney(cents, currency)`, copied verbatim from the invoice's logic, JSDoc retained.
+- `src/invoice.ts` — imports `formatMoney`, `formatInvoiceAmount` is now a thin wrapper. `invoiceTotal`/`renderInvoice` unchanged.
+- `src/receipt.ts` — imports `formatMoney`, `formatReceiptAmount` is now a thin wrapper. `renderReceipt` unchanged. Kept the original "12.50 EUR" JSDoc (I left it as the plan offered; the wrapper itself is what matters).
+- `src/money.test.ts` (new) — all six specified cases with bun:test.
+- `src/receipt.test.ts` — existing positive test untouched; added refund (`-12.50 EUR`) and thousands (`1,234.50 EUR`) tests.
+
+**`bun test` result:**
+```
+bun test v1.3.14 (0d9b296a)
+ 10 pass
+ 0 fail
+ 10 expect() calls
+Ran 10 tests across 3 files. [15.00ms]
+```
+Exit 0. `package.json` untouched.
+
+One minor deviation from the letter of the plan: I placed the `import` at the top of each file rather than directly before the type declaration, so each file's JSDoc comment stays attached to the symbol it documents — a cosmetic choice, no behaviour change.
+coder → architect Done. Committed as `74011f3` on `work/main`, working tree clean.  **Files changed:** - `src/money.ts` (new) — `formatMon…
+architect · bash(bun test)
+architect · read(src/money.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: df1f8fa Merge branch 'work/main'
+architect › Job done. 
+
+What changed: the money formatting logic was extracted into a new `src/money.ts` exporting `formatMoney(cents, currency)` with the invoice's behaviour (thousands grouped with commas, two decimals, leading minus for negatives, space then currency code). `src/invoice.ts`'s `formatInvoiceAmount` and `src/receipt.ts`'s `formatReceiptAmount` are now thin wrappers over it, so the receipt no longer drops the thousands separator or mangles negative amounts (a refund of -1250 cents now renders as `-12.50 EUR`). Tests were added in `src/money.test.ts` and the refund/thousands cases in `src/receipt.test.ts`.
+
+Verified: `bun test` passes — 10 pass, 0 fail, across 3 files, exit 0.
+
+  architect    deepseek-v4-pro      2 turns, 36003 tokens
+  coder        deepseek-v4-flash    1 turns, 67184 tokens
+
+main: done
+  bun run test passed
+  merged: df1f8fa Merge branch 'work/main'
+  this job: 103k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"df1f8fa Merge branch 'work/main'","cost":"this job: 103k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7135,"outputTokens":2756,"cacheReadTokens":26112,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":14143,"outputTokens":2865,"cacheReadTokens":50176,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

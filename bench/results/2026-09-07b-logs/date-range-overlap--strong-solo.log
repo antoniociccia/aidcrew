@@ -1,0 +1,37 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · read(src/range.test.ts)
+coder · bash(cat package.json)
+coder · edit(src/range.ts)
+coder · edit(src/range.test.ts)
+coder · bash(bun test)
+not done: work not committed (rc/range.test.ts, src/range.ts) — the leader is sent back
+coder › All 7 tests pass. Here's what I changed.
+
+**`src/range.ts`** — rewrote `overlaps` with two helpers:
+- `endpoint(value)` parses each endpoint and throws `TypeError: not a valid date: <value>` when `Date.parse` returns `NaN` (instead of the old silent `false`).
+- `parse(range)` parses both endpoints and throws `RangeError` if the end is before the start.
+- `overlaps` now uses strict `<` on both sides, so touching ranges (one's end equal to the other's start) don't overlap, while same-start ranges do, and a zero-length range overlaps nothing — including itself, since `start === end` fails the `<` test.
+
+**`src/range.test.ts`** — added six tests covering: touching ranges don't overlap, same-start ranges do overlap, zero-length range overlaps nothing (including itself), unparseable start throws `TypeError` naming the value, unparseable end throws `TypeError` naming it, and end-before-start throws `RangeError`.
+
+One note: I dropped the `aStart <= bEnd`/`bStart <= aEnd` inclusive comparisons in favor of strict `<`, which is the core fix — the end being exclusive means equality on the touching side is no longer overlap.
+coder · bash(git status && git branch --show-current && git diff --stat)
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Fix…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9eaf4f1 Merge branch 'work/main'
+coder › The changes are now committed on `work/main` (commit `bae7750`), working tree clean. Tests still pass: 7 pass, 0 fail.
+
+  coder        deepseek-v4-pro      2 turns, 58099 tokens
+
+main: done
+  bun run test passed
+  merged: 9eaf4f1 Merge branch 'work/main'
+  sent back once
+  this job: 58k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"9eaf4f1 Merge branch 'work/main'","cost":"this job: 58k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4547,"outputTokens":2096,"cacheReadTokens":51456,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

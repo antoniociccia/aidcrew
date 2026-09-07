@@ -1,0 +1,52 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · tree(.)
+coder · read(src/range.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder › The task is clear. Let me look at how the tests run and check the environment before changing anything.
+coder · bash(bun --version && git status --short && git log --oneline -3)
+coder › Now I'll implement the fix in `src/range.ts`:
+coder · write(src/range.ts)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { overlaps } …)
+coder · bash(bun test 2>&1)
+coder › All 6 tests pass. Let me commit — implementation first, then tests:
+coder · bash(git add src/range.ts && git commit -q -m "Treat range end as…)
+verified: bun run test passes on work/main
+merged work/main into the repository: e62baaf Merge branch 'work/main'
+coder › Done. `overlaps` in `src/range.ts` now:
+
+- **Exclusive ends** — compares with strict `<` (`aStart < bEnd && bStart < aEnd`), so two ranges that merely touch (one ending exactly when the other starts) no longer overlap, while ranges sharing an instant (including those that start at the same instant) still do.
+- **Zero-length ranges overlap nothing** — a range whose start equals its end returns `false` up front, against anything, including itself. (Without this, the strict-interval formula would wrongly report a point overlapping a range that strictly contains it.)
+- **TypeError on unparseable values** — parsing is done through a `parseTime` helper that throws `TypeError: Could not parse start "not-a-date" of a range` (message includes the offending value).
+- **RangeError when end precedes start** — each range is validated by `timeOf`, which throws a `RangeError` if its end instant is before its start.
+
+Decisions the task didn't spell out: a single-argument parse error takes precedence within a range (start parsed before end), and each range is fully validated (parse then ordering) before the other is considered, so error behavior is deterministic. The existing comment on `Range` ("The end is exclusive") already matched the intent.
+
+Tests in `src/range.test.ts` cover: shared-hour overlap (kept), same-instant starts, touching ranges not overlapping, zero-length overlapping nothing (including itself, both argument positions), TypeErrors naming `not-a-date`/`sometime`, and the reversed-range RangeError.
+
+Check output — the project's only check is `bun test`:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 9 expect() calls
+Ran 6 tests across 1 file. [16.00ms]
+```
+
+Committed as two commits: `9e04a68` (implementation) and `4632b70` (tests).
+
+  coder        deepseek-v4-flash    1 turns, 72564 tokens
+
+main: done
+  bun run test passed
+  merged: e62baaf Merge branch 'work/main'
+  this job: 73k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e62baaf Merge branch 'work/main'","cost":"this job: 73k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5058,"outputTokens":6450,"cacheReadTokens":61056,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

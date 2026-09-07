@@ -1,0 +1,56 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(src/**/*.ts)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+coder · bash(git status --short --branch && git log --oneline -5)
+coder · bash(git checkout -b env-config && git status --short --branch)
+coder · write(src/env.ts)
+coder · edit(src/config.ts)
+coder · write(src/index.ts)
+coder · write(src/env.test.ts)
+coder · write(src/config.test.ts)
+coder · write(src/index.test.ts)
+coder · bash(bun test)
+coder · bash(ls -a && ls node_modules 2>/dev/null | head -5)
+coder · bash(git status --short && git diff)
+coder · bash(printf '\n' >> src/index.ts && tail -c 20 src/index.ts | od …)
+coder · read(src/index.ts)
+coder · bash(git add src/env.ts src/env.test.ts && git commit -m "Add fro…)
+coder · bash(bun test && git status --short --branch)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9459dd2 Merge branch 'env-config'
+coder › Done. Work is on branch `env-config`.
+
+What I changed
+- `src/env.ts` (new): `fromEnv(env, prefix = 'APP_')` reads `${prefix}PORT`, `${prefix}HOST`, `${prefix}DEBUG`, `${prefix}NAME`. Absent or `''` values are skipped. Port is parsed with `Number` and must be finite, otherwise `TypeError` naming `${prefix}PORT`; debug accepts `true/1/yes` and `false/0/no` case-insensitively, otherwise `TypeError` naming `${prefix}DEBUG`; host and name stay strings.
+- `src/config.ts`: added `validate(config)` — throws `TypeError` naming the field when port isn't an integer in `[1, 65535]`, or host/name is empty; otherwise returns the config.
+- `src/index.ts`: `resolveConfig(file, env)` now layers `fromEnv(env)` over `merge(DEFAULTS, file)`, then validates; `env` defaults to `process.env`.
+- Tests: new `src/env.test.ts` and `src/config.test.ts`, extended `src/index.test.ts`.
+
+Checks
+```
+bun test v1.3.14 (0d9b296a)
+16 pass
+0 fail
+33 expect() calls
+Ran 16 tests across 3 files. [15.00ms]
+```
+
+Decisions not spelled out in the plan
+- “Empty” is treated as `''` exactly (no trimming), for both env skipping and host/name validation.
+- Port parsing uses `Number(...)` plus `Number.isFinite`, so `NaN` and `Infinity` are rejected in `fromEnv` as not-a-number.
+
+  coder        deepseek-v4-pro      1 turns, 174805 tokens
+
+main: done
+  bun run test passed
+  merged: 9459dd2 Merge branch 'env-config'
+  this job: 175k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 12¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9459dd2 Merge branch 'env-config'","cost":"this job: 175k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 12¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6854,"outputTokens":8719,"cacheReadTokens":159232,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

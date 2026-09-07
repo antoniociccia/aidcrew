@@ -1,0 +1,75 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/invoice.ts)
+architect · read(src/receipt.ts)
+architect · read(package.json)
+architect · glob(**/*.test.ts)
+architect · glob(src/*)
+architect · read(src/invoice.test.ts)
+architect · read(src/receipt.test.ts)
+architect › I have enough to plan. Here's what I'll hand to the coder.
+architect · agent_send(coder)
+architect → coder Extract a single money formatter in src/money.ts and make src/invoice.ts and src/receipt.ts both use it. Current files f…
+coder · tree(.)
+architect › The plan is with the coder. I'll wait for their report that `bun test` passes, then confirm the job done.
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · json(package.json)
+coder · write(src/money.ts)
+coder · write(src/money.test.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · edit(src/receipt.test.ts)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me check the git status and commit.
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/money.ts src/money.test.ts src/invoice.ts src/re…)
+coder · agent_send(architect)
+coder → architect Done. Extracted a shared money formatter and fixed the receipt bug.  Changed: - NEW src/money.ts — exports `formatMoney(…
+coder › Done. I've completed the extraction and reported to the architect.
+
+**Summary of changes:**
+- **New `src/money.ts`** — exports `formatMoney(cents, currency)` with the invoice's exact formatting logic.
+- **`src/invoice.ts`** — `formatInvoiceAmount` is now a thin wrapper around `formatMoney`; only an import + wrapper change, `renderInvoice`/`invoiceTotal` untouched.
+- **`src/receipt.ts`** — `formatReceiptAmount` is now a thin wrapper around `formatMoney`, fixing the mangled negatives and dropped grouping; `renderReceipt` untouched.
+- **New `src/money.test.ts`** — 4 direct tests on `formatMoney` (positive grouping, negative minus, zero, large value).
+- **`src/receipt.test.ts`** — kept the existing positive test, added the negative-refund regression test.
+- **`src/invoice.test.ts`** — unchanged.
+
+**`bun test` result (workspace root):**
+```
+bun test v1.3.14 (0d9b296a)
+ 7 pass
+ 0 fail
+ 7 expect() calls
+Ran 7 tests across 3 files. [15.00ms]
+```
+
+All committed on `work/main` as `625a640`.
+architect · bash(bun test)
+architect · bash(git log --oneline -3 && git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9c4bc1b Merge branch 'work/main'
+architect › The job is done.
+
+**What changed:** Extracted a shared `formatMoney(cents, currency)` into the new `src/money.ts` with the invoice's exact behaviour (comma-grouped thousands, two decimals, leading minus for negatives, then a space and the currency code). Both `src/invoice.ts` and `src/receipt.ts` now import it, keeping `formatInvoiceAmount` and `formatReceiptAmount` exported as thin wrappers, with `renderInvoice` and `renderReceipt` untouched. This fixes the receipt's dropped thousands separator and mangled negatives (a -1250 cent refund now renders `-12.50 EUR`).
+
+**Tests added:** `src/money.test.ts` covers the formatter directly (grouping, negative, zero, large amount), and `src/receipt.test.ts` gained a negative-refund case; `src/invoice.test.ts` was left unchanged.
+
+**Verified:** `bun test` passes — 7 pass / 0 fail across 3 files. Work is committed on `work/main` (625a640), working tree clean.
+
+  architect    deepseek-v4-pro      2 turns, 32045 tokens
+  coder        deepseek-v4-flash    1 turns, 69602 tokens
+
+main: done
+  bun run test passed
+  merged: 9c4bc1b Merge branch 'work/main'
+  this job: 102k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9c4bc1b Merge branch 'work/main'","cost":"this job: 102k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7946,"outputTokens":2211,"cacheReadTokens":21888,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":10915,"outputTokens":2367,"cacheReadTokens":56320,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

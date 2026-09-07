@@ -1,0 +1,57 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · bash(ls && cat package.json)
+coder · bash(find src -type f -maxdepth 3 -print)
+coder · glob(**/*.test.*)
+coder · read(src/range.test.ts)
+coder · edit(src/range.ts)
+coder · edit(src/range.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 7 tests pass. Let me double-check there are no other issues in my test file (I noticed a typo `2026-01-01T` split oddly in one place, but it was a deliberate-looking `2026-01-01T09` prefixed — let me verify I didn't leave a malformed string).
+coder · read(src/range.test.ts)
+coder › The file is clean. Now let me verify the range detection logic for the case where two ranges share only a boundary on the *start* side (e.g. b.end === a.start). That's the "touch" case too, covered by `aStart < bEnd` being false when equal. Good. And equal-start case covered. And zero-length covered.
+
+Let me also add a test for `b.end === a.start` touch going the other direction and for a zero-length `b` — but my existing tests already cover both directions of touch. The zero-length test covers point being either argument. It's solid.
+
+Let me commit.
+coder · bash(git status --short && git add -A && git commit -q -m "Fix ov…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 42923c3 Merge branch 'work/main'
+coder › Done. Here's what I changed and why.
+
+## Changes
+
+**`src/range.ts`**
+- The comparison is now strict: `aStart < bEnd && bStart < aEnd`. Since the end is exclusive, two ranges that merely touch (one ends exactly when the other starts) no longer count as overlapping.
+- Two ranges starting at the same instant still overlap, because their shared instant falls before each range's exclusive end.
+- A zero-length range (`start === end`) contains no moment, so it returns `false` early — it overlaps nothing, not even itself. This also avoids the strict comparison producing a false positive for two identical zero-length points.
+- Parsing goes through a `parse` helper that throws `TypeError` with the offending value in the message when `Date.parse` yields `NaN` (e.g. `"cannot parse range value: not-a-date"`), instead of silently returning `false`.
+- A range whose end is before its start throws `RangeError`, also naming the range.
+
+**`src/range.test.ts`**
+Added tests for: touching ranges (both argument orders), same-instant starts, zero-length ranges (as either argument and against itself), unparseable start → `TypeError` naming the value, unparseable end → `TypeError` naming the value, and end-before-start → `RangeError`.
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 12 expect() calls
+Ran 7 tests across 1 file. [8.00ms]
+```
+
+One thing worth flagging: `Date.parse` is fairly lenient, so "cannot parse" here is defined by what `Date.parse` rejects, not by strict ISO 8601 validation. If you want stricter parsing than the platform provides, that'd be a follow-up — I kept it to the `NaN` check the plan implied.
+
+  coder        deepseek-v4-pro      1 turns, 57084 tokens
+
+main: done
+  bun run test passed
+  merged: 42923c3 Merge branch 'work/main'
+  this job: 57k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"42923c3 Merge branch 'work/main'","cost":"this job: 57k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":12974,"outputTokens":4558,"cacheReadTokens":39552,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

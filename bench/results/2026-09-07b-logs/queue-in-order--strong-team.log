@@ -1,0 +1,60 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/queue.ts)
+architect · bash(ls src/ test tests 2>/dev/null; echo ---; cat package.json)
+architect · read(src/queue.test.ts)
+architect · agent_send(coder)
+architect → coder Fix the Queue in this repo (checkout is on branch work/main; run everything from the repo root). The bug: `src/queue.ts`…
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+architect › Plan sent to coder. I'll wait for their report that `bun test` passes before calling the job done.
+coder › The state matches the description. Now I'll apply the changes to both files.
+coder · write(src/queue.ts)
+coder · write(src/queue.test.ts)
+coder › Now run the tests:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 6 tests pass. Now commit:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · agent_send(architect)
+coder → architect Done. Rewrote src/queue.ts exactly as specified (sequential #tail promise chain, job never starts synchronously inside p…
+coder › Done. Implemented the fix and reported back to the architect.
+
+**What changed** (both committed as `32ff0ca` on `work/main`):
+- `src/queue.ts` — replaced the `#pending` array / synchronous-`job()`-in-`push` class body with the specified sequential `#tail` promise-chain implementation: each job starts only after the previous link settles (never synchronously inside `push`), per-job `try/catch` records errors without rejecting the chain, and `drain` loops re-reading `#tail` until it stops changing so pushes made while draining are waited on.
+- `src/queue.test.ts` — kept the existing drain test and added the five specified tests (ordering, no sync start, error capture, non-Error throws, drain-while-draining).
+
+**Check output** — `bun test` from the repo root, exit 0:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 17 expect() calls
+Ran 6 tests across 1 file. [17.00ms]
+EXIT: 0
+```
+
+No deviations from the plan; the implementation matches the provided replacement verbatim.
+architect · bash(bun test 2>&1)
+verified: bun run test passes on work/main
+merged work/main into the repository: e030686 Merge branch 'work/main'
+architect › The job is done.
+
+**What changed:** `src/queue.ts` now runs jobs strictly one after another in push order via a chained `#tail` promise — each job starts only after the previous one settles, never synchronously inside `push` (which stays synchronous and returns nothing). Thrown errors are caught per job and recorded in `errors` without stopping later jobs. `drain` re-reads `#tail` after each await so it also waits for jobs pushed while draining.
+
+**How it was verified:** `bun test` from the repo root — 6 pass, 0 fail (exit 0). I ran it myself after the coder's report and it passes. Tests cover ordering, no synchronous start, error capture (Error and non-Error), and nested pushes during drain. Committed on `work/main` as `32ff0ca`.
+
+  architect    deepseek-v4-pro      2 turns, 37457 tokens
+  coder        deepseek-v4-flash    1 turns, 44258 tokens
+
+main: done
+  bun run test passed
+  merged: e030686 Merge branch 'work/main'
+  this job: 82k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e030686 Merge branch 'work/main'","cost":"this job: 82k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7157,"outputTokens":9692,"cacheReadTokens":20608,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6496,"outputTokens":2050,"cacheReadTokens":35712,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

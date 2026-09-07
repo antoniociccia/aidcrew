@@ -1,0 +1,68 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/config.ts)
+architect · read(src/index.ts)
+architect · glob(**/*.test.*)
+architect · read(src/index.test.ts)
+architect · read(package.json)
+architect › Plan is clear — the pieces are small and the shape is fixed by the existing code. Sending it to coder.
+architect · agent_send(Add environment-variable config on top of the file layer. Pr…)
+architect → coder Add environment-variable config on top of the file layer. Project is Bun (`bun test` is the check). Files:  1. NEW src/e…
+coder · tree(.)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+architect › Plan sent to coder. I read `src/config.ts`, `src/index.ts`, the existing test, and `package.json`, then specified:
+
+- **New `src/env.ts`** — `fromEnv(env, prefix = 'APP_'): Partial<Config>` reading PORT/HOST/DEBUG/NAME off the prefix; absent or empty variables omitted; PORT → number, DEBUG → boolean with case-insensitive true/1/yes and false/0/no; bad values throw a `TypeError` naming the variable.
+- **`src/config.ts`** — `validate(config): Config` throwing on port outside 1–65535/non-integer, empty host, empty name.
+- **`src/index.ts`** — `resolveConfig(file, env = process.env)` layering defaults < file < env, then validate.
+- **Tests** in `src/env.test.ts` and extended `src/index.test.ts`, with explicit env objects so nothing depends on real `process.env`.
+
+I expect back a report of the files changed and the tail of `bun test` showing all tests passing; when that comes in I'll confirm the job done, and the harness's check run proves it on the branch.
+coder › Now let me create the files. First `src/env.ts`:
+coder · write(src/env.ts)
+coder · edit(src/config.ts)
+coder · edit(src/index.ts)
+coder › Now the tests. Create `src/env.test.ts`:
+coder · write(import { expect, test } from 'bun:test' import { fromEnv } f…)
+coder › Wait — the last line of the second-to-last test asserts the error does NOT contain 'ABC_PORT', but the actual variable is APP_PORT. Let me fix that — the appendage reads a bit confusingly. Let me simplify it to test the prefix in the message too.
+coder · edit(test('a non-numeric port throws TypeError naming the variabl…)
+coder › Now extend the index tests:
+coder · edit(import { expect, test } from 'bun:test' import { resolveConf…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 11 tests pass. Let me also run to confirm the port edge cases with `Number('12.5')` and debug forms work as expected with a quick sanity check, then commit.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › One failure in my sanity check. Let me see the detail.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › The failure was just my import path (`src/env.ts` instead of `./env.ts`), not actual logic. Let me redo with proper relative imports.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All sanity checks pass. Now let me run the full suite to confirm clean, then commit in small commits.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 11 pass, 0 fail. Now commit. Let me commit the implementation and tests separately as small commits.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Let me report back to the architect.
+coder · agent_send(architect)
+coder → architect Done. Added environment-variable config on top of the file layer.  Files changed: - NEW src/env.ts — `fromEnv(env, prefi…
+coder › Done. The work is complete, committed on `work/main`, and all checks pass: 11 tests, 0 failures. Sent the handoff summary to the architect.
+verified: bun run test passes on work/main
+merged work/main into the repository: 02d00ae Merge branch 'work/main'
+architect › Job done. `src/env.ts` adds `fromEnv(env, prefix = 'APP_'): Partial<Config>` — absent or empty variables left out, `APP_PORT` as a number, `APP_DEBUG` as a case-insensitive true/1/yes and false/0/no boolean, other values as strings, and a `TypeError` naming the variable on a non-numeric port or unknown debug word. `src/config.ts` gains `validate(config): Config`, throwing a field-naming `TypeError` when port isn't an integer in 1–65535 or host/name is empty. `src/index.ts` now has `resolveConfig(file, env = process.env)` layering defaults < file < environment, then validating.
+
+Verified with the project's own check: `bun test` — 11 pass, 0 fail, across `src/env.test.ts` and the extended `src/index.test.ts`, covering parsing, omission of absent/empty vars, the custom prefix, error cases, and the env-beats-file-beats-defaults order. Work is committed on the branch in two commits, ready for the harness to run the check and merge.
+
+  architect    glm-5.3-flash        2 turns, 18421 tokens
+  coder        deepseek-v4-flash    1 turns, 132621 tokens
+
+main: done
+  bun run test passed
+  merged: 02d00ae Merge branch 'work/main'
+  this job: 151k tokens, 0.5¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 12¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"02d00ae Merge branch 'work/main'","cost":"this job: 151k tokens, 0.5¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 12¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":7865,"outputTokens":2172,"cacheReadTokens":8384,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":23901,"outputTokens":4528,"cacheReadTokens":104192,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

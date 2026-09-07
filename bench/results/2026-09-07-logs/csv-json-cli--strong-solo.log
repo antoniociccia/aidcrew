@@ -1,0 +1,51 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · write(src/csv.ts)
+coder · edit(src/cli.ts)
+coder · write(import { expect, test } from 'bun:test' import { parseCsv } …)
+coder · edit(src/cli.test.ts)
+coder · bash(bun test)
+coder · bash(git diff -- src/cli.ts src/csv.ts src/csv.test.ts src/cli.te…)
+coder · bash(git add src/csv.ts src/csv.test.ts && git commit -m "Add CSV…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 1b4e625 Merge branch 'work/main'
+coder › Done. Summary of what changed:
+
+- **`src/csv.ts`** (new): exports `parseCsv(text: string): string[][]`. It splits input on `\r?\n`, drops the empty line produced by a trailing newline, and parses each line into fields. Parsing supports double-quoted fields (which may contain commas) and doubled quotes (`""` → `"`).
+- **`src/cli.ts`**: added a `--json` branch that uses `parseCsv`, takes the first row as the header, builds an array of string-keyed objects, and prints `JSON.stringify` + `\n`. Empty input / header-only input prints `[]\n`. A row with a field-count mismatch returns code `1` with a message naming the 1-based line number and prints no JSON. The usage line now reads `usage: csvtool --upper | --count | --json`.
+- **`src/csv.test.ts`** (new): tests for unquoted fields, CRLF endings, empty input, header-only, quoted commas, doubled quotes, and empty fields.
+- **`src/cli.test.ts`**: added tests for `--json` output, quoted/CRLF handling, empty and header-only inputs, field-count mismatch, and that usage mentions `--json`.
+
+Checks:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 16 pass
+ 0 fail
+ 18 expect() calls
+Ran 16 tests across 2 files. [16.00ms]
+```
+
+Committed on `work/main` as:
+- `a8b9db0` Add CSV parser module
+- `fb6dd92` Add --json flag to csvtool
+
+One decision not spelled out in the request: the mismatch error message says `line N: expected X fields, got Y`. It names the 1-based line number as required; adjust the wording if you'd like something else.
+
+  coder        deepseek-v4-pro      1 turns, 116341 tokens
+
+main: done
+  bun run test passed
+  merged: 1b4e625 Merge branch 'work/main'
+  this job: 116k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"1b4e625 Merge branch 'work/main'","cost":"this job: 116k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6754,"outputTokens":7059,"cacheReadTokens":102528,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---
