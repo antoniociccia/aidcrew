@@ -88,6 +88,28 @@ aidcrew -p "make the failing test pass"
 aidcrew                               # the interface: the whole team, one screen
 ```
 
+## Measured, not claimed
+
+Thirty tasks — bugs, features, refactors, changes across files — each with
+tests the agents never see and a reference solution that proves it solvable.
+Four team shapes, every one run three times, headless, the way a pipeline
+would run it. What the harness said and what the hidden tests said are both
+recorded, with every cent of every attempt.
+
+| configuration | tasks solved | cost per solved task |
+|---|---|---|
+| **cheap team** — `glm-5.3-flash` plans, `deepseek-v4-flash` writes | **94%** | **0.4¢** |
+| strong, alone — `deepseek-v4-pro` | 91% | 3.1¢ |
+| strong plans, cheap writes | 89% | 2.1¢ |
+| cheap, alone — `deepseek-v4-flash` | 63% | 0.3¢ |
+
+Two cheap models with distinct roles solve more than the strong model alone,
+at an eighth of the cost per solved task. The cheap model alone gives up a
+third of the time, and the harness says so instead of calling it done. In
+its first hour the benchmark found four harness bugs, fixed the same day.
+One family of models, small tasks, list prices: read it with that in mind.
+The runner, the tasks and every run's log are in [`bench/`](bench/README.md).
+
 ## The team
 
 Agents come from the files a project already has — `.claude/agents/*.md` by
