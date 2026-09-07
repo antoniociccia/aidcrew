@@ -15,44 +15,47 @@ export type Configuration = {
   agents: { id: string; model: string }[]
 }
 
+/** The provider every configuration runs on: OpenCode Go, a flat-rate subscription. */
+export const PROVIDER = 'opencode-go'
+
 /**
- * The configurations compared, on OpenRouter model ids.
+ * The configurations compared, on OpenCode Go model ids.
  *
- * Solo runs are the baselines a mixed team has to beat: the same cheap model
- * alone, and a strong model alone. The two teams test the hypothesis the
- * product is built on — that a planner and a cheap coder solve as much as
- * the strong model alone, for a fraction of the bill — and the cheap team
- * tests whether the planner has to be strong at all.
+ * Solo runs are the baselines a team has to beat: the cheap model alone,
+ * and the strong model of the same family alone. The two teams test the
+ * hypothesis the product is built on — that a planner and a cheap coder
+ * solve as much as the strong model alone, for a fraction of the bill —
+ * and the cheap team tests whether the planner has to be strong at all.
  */
 export const CONFIGURATIONS: Configuration[] = [
   {
     name: 'cheap-solo',
     description: 'one coder on deepseek-v4-flash',
     leader: 'coder',
-    agents: [{ id: 'coder', model: 'deepseek/deepseek-v4-flash' }],
+    agents: [{ id: 'coder', model: 'deepseek-v4-flash' }],
   },
   {
     name: 'strong-solo',
-    description: 'one coder on claude-sonnet-5',
+    description: 'one coder on deepseek-v4-pro',
     leader: 'coder',
-    agents: [{ id: 'coder', model: 'anthropic/claude-sonnet-5' }],
+    agents: [{ id: 'coder', model: 'deepseek-v4-pro' }],
   },
   {
     name: 'cheap-team',
     description: 'architect on glm-5.3-flash, coder on deepseek-v4-flash',
     leader: 'architect',
     agents: [
-      { id: 'architect', model: 'z-ai/glm-5.3-flash' },
-      { id: 'coder', model: 'deepseek/deepseek-v4-flash' },
+      { id: 'architect', model: 'glm-5.3-flash' },
+      { id: 'coder', model: 'deepseek-v4-flash' },
     ],
   },
   {
     name: 'strong-team',
-    description: 'architect on claude-sonnet-5, coder on deepseek-v4-flash',
+    description: 'architect on deepseek-v4-pro, coder on deepseek-v4-flash',
     leader: 'architect',
     agents: [
-      { id: 'architect', model: 'anthropic/claude-sonnet-5' },
-      { id: 'coder', model: 'deepseek/deepseek-v4-flash' },
+      { id: 'architect', model: 'deepseek-v4-pro' },
+      { id: 'coder', model: 'deepseek-v4-flash' },
     ],
   },
 ]
@@ -63,25 +66,29 @@ export function configToml(config: Configuration): string {
     '# Written by the benchmark.',
     '',
     '[defaults]',
-    'provider = "openrouter"',
+    `provider = "${PROVIDER}"`,
     `model = "${config.agents[0]?.model ?? ''}"`,
     `leader = "${config.leader}"`,
   ]
   for (const agent of config.agents) {
-    lines.push('', `[agents.${agent.id}]`, 'provider = "openrouter"', `model = "${agent.model}"`)
+    lines.push('', `[agents.${agent.id}]`, `provider = "${PROVIDER}"`, `model = "${agent.model}"`)
   }
   return `${lines.join('\n')}\n`
 }
 
 /**
- * OpenRouter's list prices on 2026-09-07, in USD per token, for the models
- * compared. The fallback when a run's usage carries no charged amount; a run
- * that says what it was charged is believed over this.
+ * What the same tokens cost at list price, in USD per token — OpenRouter's
+ * prices for these models on 2026-09-07. A flat-rate subscription charges
+ * nothing per request, so this is what a run would have cost on a metered
+ * provider: the figure the configurations are compared on. A run that says
+ * what it was charged is believed over this.
  */
 export const PRICES: Record<string, { input: number; output: number }> = {
-  'deepseek/deepseek-v4-flash': { input: 0.089e-6, output: 0.177e-6 },
-  'z-ai/glm-5.3-flash': { input: 0.075e-6, output: 0.25e-6 },
-  'anthropic/claude-sonnet-5': { input: 2e-6, output: 10e-6 },
+  'deepseek-v4-flash': { input: 0.089e-6, output: 0.177e-6 },
+  'deepseek-v4-pro': { input: 0.955e-6, output: 1.911e-6 },
+  'glm-5.3-flash': { input: 0.075e-6, output: 0.25e-6 },
+  'glm-5.3': { input: 1.4e-6, output: 4.4e-6 },
+  'kimi-k3': { input: 3e-6, output: 15e-6 },
 }
 
 /** What `aidcrew team --json` prints on its last line, as far as the benchmark reads it. */
@@ -103,6 +110,8 @@ export type Verdict = {
     usage: {
       inputTokens: number
       outputTokens: number
+      /** Input served from the provider's cache, which every provider prices far below fresh input. */
+      cacheReadTokens?: number
       chargedUsd?: number
       listedUsd?: number
     }
@@ -129,6 +138,9 @@ export function parseVerdict(stdout: string): Verdict | undefined {
 
 export type Cost = { usd: number; source: 'charged' | 'listed' | 'priced' | 'unknown' }
 
+/** What a cached input token costs as a share of a fresh one: a tenth, DeepSeek's and OpenRouter's rate for these models. */
+export const CACHE_READ_SHARE = 0.1
+
 /**
  * What a run cost, in the most trustworthy figure available: what the
  * provider said it charged, else what it listed, else the list price times
@@ -150,7 +162,10 @@ export function costOf(agents: Verdict['agents']): Cost {
     const price = PRICES[agent.model]
     if (!price) continue
     priced = true
-    usd += agent.usage.inputTokens * price.input + agent.usage.outputTokens * price.output
+    usd +=
+      agent.usage.inputTokens * price.input +
+      (agent.usage.cacheReadTokens ?? 0) * price.input * CACHE_READ_SHARE +
+      agent.usage.outputTokens * price.output
   }
   return { usd, source: priced ? 'priced' : 'unknown' }
 }

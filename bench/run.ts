@@ -5,10 +5,13 @@
  *   bun bench/run.ts [--configurations a,b] [--tasks x,y] [--budget 20]
  *                    [--parallel 3] [--timeout-minutes 20] [--out file.json]
  *
- * The credentials are aidcrew's own: the key saved in Settings, or
- * AIDCREW_API_KEY_OPENROUTER in the environment. Results are written after
- * every run, so a run that is stopped keeps what it has, and a results file
- * passed with --out is picked up where it was left.
+ * The credentials are aidcrew's own: the key saved in Settings, or the
+ * provider's AIDCREW_API_KEY_* variable in the environment. Every run gets a
+ * home of its own, holding nothing but a copy of the settings database, so
+ * the crew and config a person keeps in their own home stay out of it.
+ * Results are written after every run, so a run that is stopped keeps what
+ * it has, and a results file passed with --out is picked up where it was
+ * left.
  */
 import {
   cpSync,
@@ -17,10 +20,11 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
 import {
@@ -93,7 +97,9 @@ async function git(args: string[], cwd: string): Promise<void> {
 
 /** A fresh repository holding the task, with the configuration's team declared in it. */
 async function prepare(task: Task, config: Configuration): Promise<string> {
-  const dir = mkdtempSync(join(tmpdir(), `aidcrew-bench-${task.name}-${config.name}-`))
+  const dir = realpathSync(
+    mkdtempSync(join(tmpdir(), `aidcrew-bench-${task.name}-${config.name}-`)),
+  )
   materialise(join(task.dir, 'project'), dir)
   mkdirSync(join(dir, '.aidcrew/agents'), { recursive: true })
   writeFileSync(join(dir, '.aidcrew/config.toml'), configToml(config))
@@ -120,15 +126,35 @@ export async function grade(task: Task, dir: string): Promise<boolean> {
   return (await proc.exited) === 0
 }
 
-async function runOne(task: Task, config: Configuration, timeoutMs: number): Promise<RunRecord> {
+/**
+ * A home for the run, holding a copy of the settings database and nothing
+ * else: the saved keys come along, the person's own crew and config do not.
+ */
+function cleanHome(): string {
+  const home = mkdtempSync(join(tmpdir(), 'aidcrew-bench-home-'))
+  mkdirSync(join(home, '.aidcrew'), { recursive: true })
+  for (const name of ['aidcrew.db', 'aidcrew.db-wal', 'aidcrew.db-shm']) {
+    const source = join(homedir(), '.aidcrew', name)
+    if (existsSync(source)) cpSync(source, join(home, '.aidcrew', name))
+  }
+  return home
+}
+
+async function runOne(
+  task: Task,
+  config: Configuration,
+  timeoutMs: number,
+  logs: string,
+): Promise<RunRecord> {
   const dir = await prepare(task, config)
+  const home = cleanHome()
   const started = Date.now()
   const proc = Bun.spawn(['bun', BIN, 'team', '-p', task.instruction, '-C', dir, '--json'], {
     cwd: dir,
     stdout: 'pipe',
     stderr: 'pipe',
     timeout: timeoutMs,
-    env: { ...process.env },
+    env: { ...process.env, AIDCREW_HOME: home },
   })
   const [out, err, code] = await Promise.all([
     new Response(proc.stdout).text(),
@@ -136,9 +162,14 @@ async function runOne(task: Task, config: Configuration, timeoutMs: number): Pro
     proc.exited,
   ])
   const seconds = (Date.now() - started) / 1000
+  // Everything the run printed, kept: a failure nobody can read is a failure
+  // nobody can fix, and the log is what a task's write-up is made from.
+  mkdirSync(logs, { recursive: true })
+  writeFileSync(join(logs, `${task.name}--${config.name}.log`), `${out}\n--- stderr ---\n${err}`)
   const verdict = parseVerdict(out)
   const passed = await grade(task, dir)
   rmSync(dir, { recursive: true, force: true })
+  rmSync(home, { recursive: true, force: true })
   const base = {
     task: task.name,
     category: task.category,
@@ -234,7 +265,7 @@ async function main(): Promise<number> {
       const config = configs.find((one) => one.name === next.configuration)
       if (!task || !config) continue
       console.log(`-> ${task.name} on ${config.name}`)
-      const record = await runOne(task, config, timeoutMs)
+      const record = await runOne(task, config, timeoutMs, out.replace(/\.json$/, '-logs'))
       records.push(record)
       spent += record.usd
       save()

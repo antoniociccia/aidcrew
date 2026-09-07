@@ -54,8 +54,9 @@ export async function main(
   env: Record<string, string | undefined>,
   io: MainIo,
   signal: AbortSignal,
-  options: MainOptions = {},
+  given: MainOptions = {},
 ): Promise<number> {
+  const options = withHome(env, given)
   try {
     const args = parseCliArgs(argv)
     if (args.help) {
@@ -503,4 +504,20 @@ async function runDemo(
   // The demo is a claim about the harness, so a demo that did not work is a
   // failure of the harness and says so with its exit code too.
   return code === 0 && fixed ? 0 : 1
+}
+
+/**
+ * The home directory a run uses, which AIDCREW_HOME may point elsewhere.
+ *
+ * For a benchmark, a container, a test from the shell: somewhere with no
+ * crew of one's own and no settings, so a run is only what the project
+ * declares. The option given in code still wins, as it always did.
+ */
+export function withHome(
+  env: Record<string, string | undefined>,
+  options: MainOptions,
+): MainOptions {
+  const home = env.AIDCREW_HOME?.trim()
+  if (options.home !== undefined || !home) return options
+  return { ...options, home }
 }

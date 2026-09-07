@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import plugin, { PRESETS } from './plugin.ts'
+import plugin, { headersFor, PRESETS } from './plugin.ts'
 
 function provider(id: string) {
   const definition = plugin.providers?.find((p) => p.id === id)
@@ -72,5 +72,32 @@ describe('provider-openai-compat plugin', () => {
     expect(() =>
       provider('openrouter').create({ apiKey: 'k', headers: { 'HTTP-Referer': 'https://x.test' } }),
     ).not.toThrow()
+  })
+})
+
+describe('the headers a request carries', () => {
+  test('say who is calling, by name', () => {
+    expect(headersFor('https://openrouter.ai/api/v1')['User-Agent']).toMatch(/^aidcrew/)
+  })
+
+  test('carry one session id per provider to OpenCode, which refuses a request without one', () => {
+    const go = headersFor('https://opencode.ai/zen/go/v1')
+    const zen = headersFor('https://opencode.ai/zen/v1')
+    expect(go['x-opencode-session']).toMatch(/^[0-9a-f-]{36}$/)
+    expect(zen['x-opencode-session']).toMatch(/^[0-9a-f-]{36}$/)
+    expect(go['x-opencode-session']).not.toBe(zen['x-opencode-session'])
+  })
+
+  test('send no session id anywhere else', () => {
+    expect(headersFor('https://api.deepseek.com/v1')['x-opencode-session']).toBeUndefined()
+  })
+
+  test('let the configuration have the last word', () => {
+    const headers = headersFor('https://opencode.ai/zen/go/v1', {
+      'User-Agent': 'mine/2',
+      'x-opencode-session': 'fixed',
+    })
+    expect(headers['User-Agent']).toBe('mine/2')
+    expect(headers['x-opencode-session']).toBe('fixed')
   })
 })

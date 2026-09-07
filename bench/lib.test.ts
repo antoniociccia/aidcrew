@@ -32,10 +32,10 @@ describe('the configurations compared', () => {
     if (!team) throw new Error('no cheap-team configuration')
     const toml = configToml(team)
 
-    expect(toml).toContain('provider = "openrouter"')
+    expect(toml).toContain('provider = "opencode-go"')
     expect(toml).toContain('leader = "architect"')
     expect(toml).toContain('[agents.architect]')
-    expect(toml).toContain('model = "z-ai/glm-5.3-flash"')
+    expect(toml).toContain('model = "glm-5.3-flash"')
     expect(toml).toContain('[agents.coder]')
   })
 })
@@ -80,14 +80,27 @@ describe('what a run cost', () => {
     const cost = costOf([
       {
         id: 'coder',
-        model: 'anthropic/claude-sonnet-5',
+        model: 'deepseek-v4-pro',
         turns: 1,
-        usage: { inputTokens: 1_000_000, outputTokens: 100_000 },
+        usage: { inputTokens: 1_000_000, outputTokens: 1_000_000 },
       },
     ])
 
     expect(cost.source).toBe('priced')
-    expect(cost.usd).toBeCloseTo(2 + 1, 6)
+    expect(cost.usd).toBeCloseTo(0.955 + 1.911, 6)
+  })
+
+  test('prices cached input at a tenth of fresh input', () => {
+    const cost = costOf([
+      {
+        id: 'coder',
+        model: 'deepseek-v4-flash',
+        turns: 1,
+        usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 1_000_000 },
+      },
+    ])
+
+    expect(cost.usd).toBeCloseTo(0.0089, 6)
   })
 
   test('says so when it cannot tell', () => {

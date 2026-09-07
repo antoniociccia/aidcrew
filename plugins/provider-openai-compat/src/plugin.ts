@@ -52,6 +52,30 @@ function timeoutsIn(config: z.infer<typeof baseConfig>) {
   }
 }
 
+/**
+ * The headers a request carries besides the key.
+ *
+ * A gateway wants to know who is calling: OpenCode's asks a coding agent to
+ * say so in its user agent rather than arrive as a generic HTTP library,
+ * and to send one stable session id per conversation in
+ * `x-opencode-session`, for routing and prompt caching — and refuses a
+ * request without one as one it "cannot route efficiently". A provider is
+ * made once per agent, so the id made here lasts a conversation. Anything
+ * the configuration names on top wins.
+ */
+export function headersFor(
+  baseUrl: string,
+  given?: Record<string, string>,
+): Record<string, string> {
+  const version = process.env.AIDCREW_VERSION
+  const onOpenCode = /^https:\/\/opencode\.ai\//.test(baseUrl)
+  return {
+    'User-Agent': version ? `aidcrew/${version}` : 'aidcrew',
+    ...(onOpenCode ? { 'x-opencode-session': crypto.randomUUID() } : {}),
+    ...given,
+  }
+}
+
 /** Wraps the provider in prompted tool calling when the config asks for it. */
 function build(id: string, baseUrl: string, config: z.infer<typeof baseConfig>) {
   const provider = createOpenAiCompatProvider({
@@ -60,7 +84,7 @@ function build(id: string, baseUrl: string, config: z.infer<typeof baseConfig>) 
     apiKey: config.apiKey,
     dialect: config.dialect,
     timeouts: timeoutsIn(config),
-    ...(config.headers ? { headers: config.headers } : {}),
+    headers: headersFor(baseUrl, config.headers),
   })
   return config.promptedTools ? withPromptedTools(provider) : provider
 }

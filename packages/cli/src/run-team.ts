@@ -156,14 +156,18 @@ export async function runTeam(
     agents = host.list()
     io.write(`\n${summarise(agents)}\n`)
 
-    const changed = await reportDiffs(host, team, io)
-    if (changed === 0) io.write('\nno agent changed any files\n')
-
     // What became of each job, in the harness's own words: checked, merged,
     // sent back, and what it cost beside what it would have cost. A run that
     // says "done" and exits 0 having done half the work is a green tick on a
     // branch nobody reads again, so the exit code follows the verdict.
     const outcomes = outcomeOf(seen)
+
+    const changed = await reportDiffs(host, team, io)
+    // A branch that has come home shows no diff against the repository it
+    // came home to; saying nobody changed anything beside "merged" is a lie.
+    if (changed === 0 && !outcomes.some((job) => job.merged)) {
+      io.write('\nno agent changed any files\n')
+    }
     if (outcomes.length > 0) io.write(`\n${summaryOf(outcomes, costOf).join('\n')}\n`)
 
     // `idle()` returns the instant nobody is busy, which on a stall is

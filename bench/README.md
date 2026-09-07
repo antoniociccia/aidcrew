@@ -14,22 +14,28 @@ bun bench/run.ts --configurations cheap-solo,cheap-team --tasks paginate-off-by-
 bun bench/run.ts --budget 10 --parallel 2 --out bench/results/2026-09-07.json
 ```
 
-The key is aidcrew's own: saved in Settings, or `AIDCREW_API_KEY_OPENROUTER`
-in the environment. Results are written after every run and a results file
-is picked up where it was left, so a run stopped for the budget or for the
-evening loses nothing.
+The key is aidcrew's own: saved in Settings, or the provider's
+`AIDCREW_API_KEY_*` variable in the environment. Every run gets a home of its
+own with a copy of the settings database and nothing else, so the crew and
+config you keep in your own home stay out of the measurement. Results are
+written after every run and a results file is picked up where it was left,
+so a run stopped for the budget or for the evening loses nothing.
 
 ## What is compared
 
+Every configuration runs on OpenCode Go, a flat-rate subscription, so the
+cost column is what the same tokens would have cost at list price on a
+metered provider — the figure a team is judged on.
+
 | configuration | team |
 |---|---|
-| `cheap-solo` | one coder on `deepseek/deepseek-v4-flash` |
-| `strong-solo` | one coder on `anthropic/claude-sonnet-5` |
-| `cheap-team` | architect on `z-ai/glm-5.3-flash`, coder on `deepseek/deepseek-v4-flash` |
-| `strong-team` | architect on `anthropic/claude-sonnet-5`, coder on `deepseek/deepseek-v4-flash` |
+| `cheap-solo` | one coder on `deepseek-v4-flash` |
+| `strong-solo` | one coder on `deepseek-v4-pro` |
+| `cheap-team` | architect on `glm-5.3-flash`, coder on `deepseek-v4-flash` |
+| `strong-team` | architect on `deepseek-v4-pro`, coder on `deepseek-v4-flash` |
 
 The solo runs are the baselines. The teams test the hypothesis the product
-rests on: that a planner and a cheap coder solve as much as a strong model
+rests on: that a planner and a cheap coder solve as much as the strong model
 alone, for a fraction of the bill — and whether the planner has to be strong.
 
 ## What is measured
