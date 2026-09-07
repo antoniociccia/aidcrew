@@ -21,8 +21,12 @@ export type PulseLine = {
   text: string
 }
 
-export function pulseOf(agent: AgentSnapshot, lines: PulseLine[]): Pulse {
+export function pulseOf(agent: AgentSnapshot, lines: PulseLine[], now = Date.now()): Pulse {
   if (agent.status === 'working') {
+    // A planner can think for a minute with nothing on screen, which reads
+    // exactly like a planner that has died. The seconds say which it is.
+    const seconds = agent.since === undefined ? 0 : Math.floor((now - agent.since) / 1000)
+    const forHowLong = seconds >= 3 ? ` · ${seconds}s` : ''
     // What is waiting comes first while it is running: three instructions and
     // one status reads exactly like three instructions and two of them lost.
     if (agent.queued > 0) {
@@ -31,8 +35,10 @@ export function pulseOf(agent: AgentSnapshot, lines: PulseLine[]): Pulse {
     // What it is doing beats what it last said: while it is running, the tool
     // in flight is the thing you are waiting on.
     const doing = lines.at(-1)
-    if (doing && doing.kind !== 'say') return { text: oneLine(doing.text), kind: 'working' }
-    return { text: 'thinking', kind: 'working' }
+    if (doing && doing.kind !== 'say') {
+      return { text: `${oneLine(doing.text)}${forHowLong}`, kind: 'working' }
+    }
+    return { text: `thinking${forHowLong}`, kind: 'working' }
   }
 
   const failed = lines.at(-1)?.kind === 'error' ? lines.at(-1) : undefined

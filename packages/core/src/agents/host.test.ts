@@ -3764,3 +3764,35 @@ describe('a job is done when the harness says so', () => {
     }
   })
 })
+
+describe('where an agent is told it is', () => {
+  test('the briefing names the checkout and its branch', () => {
+    // A model that is not told guesses — /workspace, /home/user, the
+    // repository root — and every guess is a turn spent on a refusal.
+    const briefing = teamBriefing({
+      agents: [
+        { id: 'architect', description: 'plans' },
+        { id: 'coder', description: 'writes' },
+      ],
+      from: 'coder',
+      checkout: { path: '/repos/app/.aidcrew/wt/main', branch: 'work/main' },
+    })
+
+    expect(briefing).toContain('/repos/app/.aidcrew/wt/main')
+    expect(briefing).toContain('work/main')
+  })
+
+  test('says so when the directory is shared and there is no branch of its own', () => {
+    const briefing = teamBriefing({
+      agents: [
+        { id: 'architect', description: 'plans' },
+        { id: 'coder', description: 'writes' },
+      ],
+      from: 'coder',
+      checkout: { path: '/repos/app', branch: undefined },
+    })
+
+    expect(briefing).toContain('/repos/app')
+    expect(briefing).toContain('shared')
+  })
+})

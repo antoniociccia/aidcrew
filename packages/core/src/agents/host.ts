@@ -11,7 +11,7 @@ import { Governor } from './governor.ts'
 import type { Note, SharedMemory } from './shared.ts'
 import { asMessage, EMPTY_MEMORY, olderThanKept, remember, shorten, tooLong } from './shared.ts'
 import type { MergeOutcome } from './workspace.ts'
-import { type RemoveOutcome, WorkspaceManager } from './workspace.ts'
+import { branchOf, type RemoveOutcome, WorkspaceManager } from './workspace.ts'
 
 export type AgentStatus = 'idle' | 'working' | 'stopped'
 
@@ -25,6 +25,8 @@ export type AgentSnapshot = {
   isolated: boolean
   /** The agent's last visible answer, which is what a pane shows. */
   lastText?: string
+  /** When the turn in flight began, so a pane can say how long it has been thinking. */
+  since?: number
   /** Recent activity, oldest first: one sample per turn, for the trace. */
   activity: number[]
   /** Whether this agent acts without asking. Shown, because it is not the default. */
@@ -1090,6 +1092,8 @@ class LiveAgent {
   /** Who the current turn's work ultimately belongs to. */
   #origin: string | undefined
   #status: AgentStatus = 'idle'
+  /** When the turn in flight began; nothing between turns. */
+  #since: number | undefined
   #turns = 0
   #lastText: string | undefined
   readonly #activity: number[] = []
@@ -1245,6 +1249,7 @@ class LiveAgent {
       workspace: this.#path,
       isolated: this.#isolated,
       yolo: this.#yolo,
+      ...(this.#since !== undefined ? { since: this.#since } : {}),
       role: roleOf(this.#def),
       task: taskOf(this.#def),
       // What is waiting either way: behind this turn, or held for the next
@@ -1790,6 +1795,10 @@ class LiveAgent {
       from: this.#def.id,
       sharedMemory: options.sharedMemory === true,
       ...(options.orchestration ? { instructions: options.orchestration } : {}),
+      checkout: {
+        path: this.#path,
+        branch: this.#isolated ? branchOf(taskOf(this.#def)) : undefined,
+      },
     })
 
     return briefing === undefined
@@ -1896,6 +1905,7 @@ class LiveAgent {
   #setStatus(status: AgentStatus): void {
     if (this.#status === 'stopped' || this.#status === status) return
     this.#status = status
+    this.#since = status === 'working' ? Date.now() : undefined
     this.#host.internals.options.onEvent({ type: 'agent_status', id: this.#def.id, status })
   }
 }
@@ -2126,13 +2136,24 @@ export function teamBriefing(options: {
    * file therefore cannot accidentally leave an agent with no idea who is here.
    */
   instructions?: string | undefined
+  /**
+   * Where this agent's files are. Said, because a model that is not told
+   * guesses — /workspace, /home/user, the repository root — and every guess
+   * is a turn spent on a refusal.
+   */
+  checkout?: { path: string; branch: string | undefined }
 }): string | undefined {
   const others = options.agents.filter((agent) => agent.id !== options.from)
   if (others.length === 0) return undefined
 
+  const where = options.checkout
+    ? options.checkout.branch
+      ? ` Your checkout is ${options.checkout.path}, on the branch ${options.checkout.branch}; every command you run runs there.`
+      : ` You work in ${options.checkout.path}, the project directory itself, shared with everybody.`
+    : ''
   const roster =
     `You are one of several agents working on this together, not an assistant answering a ` +
-    `person. ${describeTeam(options.agents, options.from)}`
+    `person. ${describeTeam(options.agents, options.from)}${where}`
 
   const said = options.instructions?.trim()
   return `${roster}\n\n${said !== undefined && said !== '' ? said : ORCHESTRATION.trim()}${

@@ -99,3 +99,19 @@ describe('running a long line through a short row', () => {
     expect(marquee('abcdefghij', 4, 22)).toBe('abcd')
   })
 })
+
+describe('how long it has been thinking', () => {
+  test('is said in seconds once it is long enough to wonder', () => {
+    const now = 1_700_000_000_000
+    const pulse = pulseOf(agent({ status: 'working', since: now - 42_000 }), [], now)
+
+    expect(pulse.text).toBe('thinking · 42s')
+  })
+
+  test('is left off in the first moments, and when nothing says when it began', () => {
+    const now = 1_700_000_000_000
+
+    expect(pulseOf(agent({ status: 'working', since: now - 1_000 }), [], now).text).toBe('thinking')
+    expect(pulseOf(agent({ status: 'working' }), [], now).text).toBe('thinking')
+  })
+})
