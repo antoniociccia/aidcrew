@@ -10,6 +10,7 @@ import type { AgentMessage, Limits } from './governor.ts'
 import { Governor } from './governor.ts'
 import type { Note, SharedMemory } from './shared.ts'
 import { asMessage, EMPTY_MEMORY, olderThanKept, remember, shorten, tooLong } from './shared.ts'
+import { shortcutsIn } from './shortcuts.ts'
 import type { MergeOutcome } from './workspace.ts'
 import { branchOf, type RemoveOutcome, WorkspaceManager } from './workspace.ts'
 
@@ -121,7 +122,15 @@ export type TeamEvent =
    */
   | { type: 'agent_continued'; id: string; round: number; of: number }
   /** The job's check passed on its branch, run by the harness. */
-  | { type: 'job_verified'; task: string; command: string }
+  | {
+      type: 'job_verified'
+      task: string
+      command: string
+      /** What the branch did to the verification itself — a test deleted, an assertion removed — for the review to see. */
+      warnings?: string[]
+    }
+  /** No check to run: the job is left on its branch, unverified, unless the config says to merge it anyway. */
+  | { type: 'job_unverified'; task: string; detail: string }
   /**
    * The job is not done: the check failed, or the work was never committed.
    * `again` says whether the leader was sent back to fix it.
@@ -129,7 +138,8 @@ export type TeamEvent =
   | {
       type: 'job_check_failed'
       task: string
-      reason: 'failed' | 'uncommitted'
+      /** `conflict`: the repository moved on since the job forked, and merging it into the branch conflicts. */
+      reason: 'failed' | 'uncommitted' | 'conflict'
       command?: string
       detail: string
       again: boolean
@@ -221,6 +231,17 @@ export type HostOptions = {
    */
   check?: string
   /** Whether a verified job's branch is merged into the repository. On unless said otherwise. */
+
+  /**
+
+   * What becomes of a job's branch when the leader says it is done: left
+
+   * alone (`false`), merged when the check passes (unset), or merged even
+
+   * where there is no check to run (`true`).
+
+   */
+
   mergeOnDone?: boolean
   /**
    * Asked when one agent sends work to another that is already busy.
@@ -915,8 +936,38 @@ export class InProcessHost {
 
       const path =
         this.#workspaces.list().find((one) => one.taskId === task)?.path ?? this.#options.cwd
+
+      // The repository into the branch first: two branches each pass on
+      // their own and break together, so what is checked is what will be
+      // merged. A conflict is the agents' to resolve, where their tools are.
+      const caught = await this.#workspaces.catchUp(task)
+      if (caught.result === 'conflict') {
+        await sendBack(
+          {
+            type: 'job_check_failed',
+            task,
+            reason: 'conflict',
+            detail: caught.detail,
+            again: false,
+          },
+          `This is the harness, not a colleague: the repository has moved on since this job forked, and merging it into the job's branch conflicts in ${caught.detail}. ` +
+            "In your checkout, merge the repository's newest commit into your branch, resolve those files, commit, then report again.",
+        )
+        return
+      }
+
       const command = this.#options.check ?? detectCheck(path)
-      if (command !== undefined) {
+      if (command === undefined) {
+        // Unverified is a state, not a pass. A branch nothing has checked is
+        // left where it is, said so, and merged only where the config says
+        // an unchecked branch may be.
+        onEvent({
+          type: 'job_unverified',
+          task,
+          detail: 'no check to run — name one with [defaults] check, or merge with /merge',
+        })
+        if (this.#options.mergeOnDone !== true) return
+      } else {
         const verdict = await runCheck(command, path)
         if (!verdict.passed) {
           await sendBack(
@@ -933,7 +984,13 @@ export class InProcessHost {
           )
           return
         }
-        onEvent({ type: 'job_verified', task, command })
+        const warnings = shortcutsIn(await this.#workspaces.changesOf(task))
+        onEvent({
+          type: 'job_verified',
+          task,
+          command,
+          ...(warnings.length > 0 ? { warnings } : {}),
+        })
       }
 
       if (this.#options.mergeOnDone === false) return

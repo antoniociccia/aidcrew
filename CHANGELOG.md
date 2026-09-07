@@ -31,6 +31,22 @@ the person using it, in the order it matters.
   branch if it passes. If it fails, or the work was never committed, the
   leader is sent back with the output, twice at most, and the job stays open.
   `[defaults] mergeOnDone = false` keeps a verified branch unmerged.
+- Unverified is a state, not a pass. A project with no check to run leaves
+  the job on its branch and says so, in the pane and in the verdict; it is
+  merged only where `[defaults] mergeOnDone = true` says an unchecked branch
+  may be. Before this, a branch nothing had checked was merged all the same.
+- What is checked is what will be merged: the repository's newest commit is
+  merged into the job's branch before the check runs, so two branches that
+  each pass on their own and break together are caught on the branch, not
+  on `main`. A conflict sends the leader back with the files named.
+- The check is the project's own `test` script, run through the package
+  manager its lockfile names — `bun run test`, `pnpm test`, `yarn test`,
+  `npm test`. `bun test` is bun's own runner, and a script that says vitest
+  was being proved by the wrong one.
+- Beside every pass, what the branch did to the verification itself: a test
+  file deleted, assertions removed, a test skipped, the test script or the
+  check changed. A green suite proves the suite, not the request; a pass
+  bought by weakening it is not refused, it is said where the review sees it.
 - A headless run ends with one verdict per job — what was checked, whether
   the branch came home, how many times the leader was sent back, what it
   cost — and its exit code follows the verdict: `0` only when every job it

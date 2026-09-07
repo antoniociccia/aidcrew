@@ -392,6 +392,73 @@ export class WorkspaceManager {
     return { result: 'conflict', detail: `${attempt.out}${attempt.err}`.trim() }
   }
 
+  /**
+   * Brings the repository's newest commit into a task's branch, before the
+   * branch is checked.
+   *
+   * Two branches each pass on their own and break together, so what is
+   * checked has to be what will be merged. The merge goes the other way
+   * first — the repository into the branch, in the checkout — and a check
+   * that passes there passes on exactly what the merge home will contain. A
+   * conflict is backed out in the checkout, with the files named, for the
+   * agents in it to resolve where their tools are.
+   */
+  async catchUp(taskId: string): Promise<MergeOutcome> {
+    const workspace = this.#workspaces.get(taskId)
+    if (!workspace?.isolated) {
+      return {
+        result: 'not isolated',
+        detail: 'this task shares the project directory, so there is nothing to catch up',
+      }
+    }
+    const branch = await this.#branchOn(taskId)
+    if (branch === undefined) return { result: 'no branch', detail: 'the checkout is on no branch' }
+
+    const newest = (await this.#git(['rev-parse', 'HEAD'])).trim()
+    const has = await this.#run(['merge-base', '--is-ancestor', newest, 'HEAD'], workspace.path)
+    if (has.code === 0) {
+      return {
+        result: 'up-to-date',
+        detail: `${branch} already has the repository's newest commit`,
+      }
+    }
+
+    const identity =
+      (await this.#git(['config', '--get', 'user.email'], workspace.path)).trim() === ''
+        ? ['-c', 'user.name=aidcrew', '-c', 'user.email=aidcrew@localhost']
+        : []
+    const attempt = await this.#run(
+      [...identity, 'merge', '--no-edit', '-m', `Merge the repository into ${branch}`, newest],
+      workspace.path,
+    )
+    if (attempt.code === 0) {
+      return { result: 'merged', detail: `${branch} now has the repository's newest commit` }
+    }
+    const conflicted = (
+      await this.#git(['diff', '--name-only', '--diff-filter=U'], workspace.path)
+    ).trim()
+    await this.#run(['merge', '--abort'], workspace.path)
+    return {
+      result: 'conflict',
+      detail:
+        conflicted === '' ? `${attempt.out}${attempt.err}`.trim() : conflicted.replace(/\n/g, ', '),
+    }
+  }
+
+  /**
+   * Everything a task's branch changed since it forked from the repository:
+   * the diff a review reads, and the one the verification is judged on.
+   */
+  async changesOf(taskId: string): Promise<string> {
+    const workspace = this.#workspaces.get(taskId)
+    if (!workspace?.isolated) return ''
+    const branch = await this.#branchOn(taskId)
+    if (branch === undefined) return ''
+    const base = (await this.#git(['merge-base', 'HEAD', branch])).trim()
+    if (base === '') return ''
+    return this.#git(['diff', base, branch])
+  }
+
   async #branchExists(branch: string): Promise<boolean> {
     const found = await this.#run(['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`])
     return found.code === 0

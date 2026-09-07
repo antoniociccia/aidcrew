@@ -102,6 +102,7 @@ export type WorkspaceConfig = {
   /** The command a job is proved by before it is called done; read off the project's files when absent. */
   check?: string
   /** Whether a verified job's branch is merged into the repository. On unless said otherwise. */
+  /** Unset: merge a job when its check passes. `true`: merge even with no check to run. `false`: never merge by itself. */
   mergeOnDone?: boolean
   agents: Record<string, AgentOverride>
   /**

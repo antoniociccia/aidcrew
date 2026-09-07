@@ -153,12 +153,22 @@ branch into the repository, and backs out at once if it conflicts. `aidcrew
 undo` takes back the last change any of them made.
 
 Done is checked, not said. When the leader ends a turn with a job that has
-changes, the harness runs the project's check on the job's branch — `bun
-test`, `pytest`, `go test`, `cargo test`, read off the project's files, or
-whatever `[defaults] check` names — and merges the branch if it passes. If it
-fails, or the work was never committed, the leader is sent back with the
-output, twice at most, and the job stays open. `mergeOnDone = false` keeps a
-verified branch unmerged, for you to look at first.
+changes, the harness first merges the repository's newest commit into the
+job's branch — two branches each pass on their own and break together, so
+what is checked is what will be merged — then runs the project's check on it:
+the `test` script through the package manager the lockfile names, `pytest`,
+`go test`, `cargo test`, read off the project's files, or whatever
+`[defaults] check` names. It merges the branch if the check passes. If it
+fails, if the work was never committed, or if the repository conflicts with
+the branch, the leader is sent back with the output, twice at most, and the
+job stays open. A project with no check to run leaves the job *unverified*,
+on its branch: `mergeOnDone = true` merges it anyway, `mergeOnDone = false`
+keeps even a verified branch unmerged, for you to look at first.
+
+A green suite proves the suite, not the request. Beside every pass, the
+harness says what the branch did to the verification itself — a test file
+deleted, assertions removed, a test skipped, the test script or the check
+changed — so a pass bought that way is a pass the review sees.
 
 A checkout with uncommitted work in it outlives the session. Close the
 terminal with files changed and not committed and the worktree stays under

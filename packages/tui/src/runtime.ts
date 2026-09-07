@@ -1369,7 +1369,14 @@ export function toLines(event: TeamEvent): Line[] {
           kind: 'note',
           text: `verified: \`${event.command}\` passes on work/${event.task}`,
         },
+        ...(event.warnings ?? []).map((warning) => ({
+          agentId: event.task,
+          kind: 'note' as const,
+          text: `but the verification itself changed: ${warning}`,
+        })),
       ]
+    case 'job_unverified':
+      return [{ agentId: event.task, kind: 'note', text: `unverified: ${event.detail}` }]
     case 'job_check_failed':
       return [
         {
@@ -1378,7 +1385,9 @@ export function toLines(event: TeamEvent): Line[] {
           text:
             event.reason === 'uncommitted'
               ? `not done: work not committed (${event.detail})${event.again ? ' — the leader is sent back' : ''}`
-              : `not done: \`${event.command}\` failed on work/${event.task}${event.again ? ' — the leader is sent back' : ' — left as it is'}`,
+              : event.reason === 'conflict'
+                ? `not done: the repository conflicts with the branch in ${event.detail}${event.again ? ' — the leader is sent back' : ' — left as it is'}`
+                : `not done: \`${event.command}\` failed on work/${event.task}${event.again ? ' — the leader is sent back' : ' — left as it is'}`,
         },
       ]
     case 'job_merged':

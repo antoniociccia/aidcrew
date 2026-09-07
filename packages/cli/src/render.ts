@@ -177,13 +177,22 @@ export function createTeamRenderer({ write, color }: RendererOptions) {
       }
       if (event.type === 'job_verified') {
         write(paint(event.task, `verified: ${event.command} passes on work/${event.task}\n`))
+        for (const warning of event.warnings ?? []) {
+          write(paint(event.task, `  but the verification itself changed: ${warning}\n`))
+        }
+        return
+      }
+      if (event.type === 'job_unverified') {
+        write(paint(event.task, `unverified: ${event.detail}\n`))
         return
       }
       if (event.type === 'job_check_failed') {
         const why =
           event.reason === 'uncommitted'
             ? `work not committed (${event.detail})`
-            : `${event.command} failed`
+            : event.reason === 'conflict'
+              ? `the repository conflicts with the branch in ${event.detail}`
+              : `${event.command} failed`
         write(
           paint(
             event.task,

@@ -3615,7 +3615,12 @@ describe('a job is done when the harness says so', () => {
     await git(['commit', '-qm', `add ${file}`], dir)
   }
 
-  function verifiedHost(cwd: string, scripts: Record<string, StreamDelta[][]>, check: string) {
+  function verifiedHost(
+    cwd: string,
+    scripts: Record<string, StreamDelta[][]>,
+    check: string | undefined,
+    extra: { mergeOnDone?: boolean } = {},
+  ) {
     const events: TeamEvent[] = []
     const host = new InProcessHost({
       cwd,
@@ -3624,7 +3629,8 @@ describe('a job is done when the harness says so', () => {
       limits: { maxHops: 3 },
       isolate: true,
       leader: 'architect',
-      check,
+      ...(check !== undefined ? { check } : {}),
+      ...extra,
       onEvent: (event) => events.push(event),
     })
     return { host, events }
@@ -3758,6 +3764,125 @@ describe('a job is done when the harness says so', () => {
       )
       expect(verified).toBeGreaterThan(reported)
       expect(events.filter((event) => event.type === 'job_verified')).toHaveLength(1)
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+  test('leaves a job unverified, and unmerged, where there is no check to run', async () => {
+    // Unverified is a state, not a pass. A branch nothing has checked used to
+    // be merged all the same, which made "done is checked" true only where
+    // there happened to be a check.
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(repo, { m: [text('done')] }, undefined)
+      const architect = await host.spawn(def('architect', 'm'))
+      await committed(architect.workspace, 'new.ts', 'export const fresh = true\n')
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      expect(events.find((event) => event.type === 'job_unverified')).toMatchObject({
+        task: 'main',
+      })
+      expect(events.some((event) => event.type === 'job_merged')).toBe(false)
+      expect(existsSync(join(repo, 'new.ts'))).toBe(false)
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('merges an unverified job only where the config says an unchecked branch may be', async () => {
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(repo, { m: [text('done')] }, undefined, {
+        mergeOnDone: true,
+      })
+      const architect = await host.spawn(def('architect', 'm'))
+      await committed(architect.workspace, 'new.ts', 'export const fresh = true\n')
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      expect(events.some((event) => event.type === 'job_unverified')).toBe(true)
+      expect(events.find((event) => event.type === 'job_merged')).toMatchObject({ task: 'main' })
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('brings the repository into the branch before the check, so what passes is what is merged', async () => {
+    // Two branches each pass on their own and break together.
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(
+        repo,
+        { m: [text('done')] },
+        'test -f other.ts && test -f new.ts',
+      )
+      const architect = await host.spawn(def('architect', 'm'))
+      await committed(architect.workspace, 'new.ts', 'export const fresh = true\n')
+      await committed(repo, 'other.ts', 'export const other = 1\n')
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      expect(events.find((event) => event.type === 'job_verified')).toMatchObject({ task: 'main' })
+      expect(events.find((event) => event.type === 'job_merged')).toMatchObject({ task: 'main' })
+      expect(existsSync(join(repo, 'new.ts'))).toBe(true)
+      expect(existsSync(join(repo, 'other.ts'))).toBe(true)
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('sends the leader back, naming the files, when the repository conflicts with the branch', async () => {
+    const repo = await repository()
+    try {
+      const { host, events } = verifiedHost(
+        repo,
+        { m: [text('done'), text('resolved'), text('resolved')] },
+        'exit 0',
+      )
+      const architect = await host.spawn(def('architect', 'm'))
+      await committed(architect.workspace, 'app.ts', 'export const version = 2\n')
+      await committed(repo, 'app.ts', 'export const version = 3\n')
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      const failed = events.find((event) => event.type === 'job_check_failed')
+      expect(failed).toMatchObject({ task: 'main', reason: 'conflict' })
+      expect(failed && 'detail' in failed ? failed.detail : '').toContain('app.ts')
+      expect(events.some((event) => event.type === 'job_merged')).toBe(false)
+      expect(readFileSync(join(repo, 'app.ts'), 'utf8')).toContain('version = 3')
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
+
+  test('says, beside a pass, what the branch did to the verification itself', async () => {
+    // A green suite proves the suite, not the request: a test deleted is a
+    // pass too. It is not refused; it is said where the review will see it.
+    const repo = await repository()
+    try {
+      await committed(repo, 'app.test.ts', 'expect(1).toBe(1)\n')
+      const { host, events } = verifiedHost(repo, { m: [text('done')] }, 'exit 0')
+      const architect = await host.spawn(def('architect', 'm'))
+      await git(['rm', '-q', 'app.test.ts'], architect.workspace)
+      await git(['commit', '-qm', 'drop the test'], architect.workspace)
+
+      await host.tell('architect', 'ship it')
+      await host.idle()
+
+      expect(events.find((event) => event.type === 'job_verified')).toMatchObject({
+        task: 'main',
+        warnings: ['deleted app.test.ts'],
+      })
       await host.shutdown()
     } finally {
       rmSync(repo, { recursive: true, force: true })

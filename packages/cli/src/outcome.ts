@@ -22,6 +22,8 @@ export type JobOutcome = {
   sentBack: number
   /** What was left undone, in the harness's words, when the job is not done. */
   left?: string
+  /** What the branch did to the verification itself, for the review to see. */
+  warnings?: string[]
   done: boolean
 }
 
@@ -40,6 +42,7 @@ export function outcomeOf(events: TeamEvent[]): JobOutcome[] {
     if (event.type === 'job_verified') {
       const job = of(event.task)
       job.verified = event.command
+      if (event.warnings && event.warnings.length > 0) job.warnings = event.warnings
       delete job.left
     } else if (event.type === 'job_merged') {
       const job = of(event.task)
@@ -54,8 +57,14 @@ export function outcomeOf(events: TeamEvent[]): JobOutcome[] {
       const what =
         event.reason === 'uncommitted'
           ? `work not committed: ${event.detail}`
-          : `${event.command ?? 'the check'} failed: ${event.detail}`
+          : event.reason === 'conflict'
+            ? `the repository conflicts with the branch in ${event.detail}`
+            : `${event.command ?? 'the check'} failed: ${event.detail}`
       job.left = event.again ? `${what} (sent back)` : what
+    } else if (event.type === 'job_unverified') {
+      const job = of(event.task)
+      job.done = false
+      job.left = `unverified: ${event.detail}`
     } else if (event.type === 'job_merge_failed') {
       const job = of(event.task)
       job.done = false
@@ -82,6 +91,8 @@ export function summaryOf(
   return outcomes.flatMap((job) => {
     const lines = [`${job.task}: ${job.done ? 'done' : 'not done'}`]
     if (job.verified) lines.push(`  ${job.verified} passed`)
+    for (const warning of job.warnings ?? [])
+      lines.push(`  but the verification itself changed: ${warning}`)
     if (job.merged) lines.push(`  merged: ${job.merged}`)
     if (job.sentBack > 0) {
       lines.push(

@@ -112,3 +112,54 @@ describe('the summary at the end', () => {
     expect(lines.join('\n')).toContain('1 fail')
   })
 })
+
+describe('what the verdict says about the verification itself', () => {
+  test('a job with no check to run is not done, and says what to do', () => {
+    const [main] = outcomeOf([
+      {
+        type: 'job_unverified',
+        task: 'main',
+        detail: 'no check to run — name one with [defaults] check',
+      },
+    ])
+
+    expect(main?.done).toBe(false)
+    expect(main?.left).toContain('[defaults] check')
+    expect(
+      exitCodeOf(outcomeOf([{ type: 'job_unverified', task: 'main', detail: 'no check to run' }])),
+    ).toBe(2)
+  })
+
+  test('a pass that weakened the suite is done, and says so beside the pass', () => {
+    const lines = summaryOf(
+      outcomeOf([
+        {
+          type: 'job_verified',
+          task: 'main',
+          command: 'bun test',
+          warnings: ['deleted app.test.ts'],
+        },
+        merged,
+      ]),
+      () => undefined,
+    )
+
+    expect(lines.join('\n')).toContain('main: done')
+    expect(lines.join('\n')).toContain('deleted app.test.ts')
+  })
+
+  test('a conflict with the repository is named as what was left', () => {
+    const [main] = outcomeOf([
+      {
+        type: 'job_check_failed',
+        task: 'main',
+        reason: 'conflict',
+        detail: 'app.ts',
+        again: false,
+      },
+    ])
+
+    expect(main?.done).toBe(false)
+    expect(main?.left).toContain('app.ts')
+  })
+})

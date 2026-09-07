@@ -603,3 +603,87 @@ describe('bringing a task home where git has no identity', () => {
     await manager.removeAll()
   })
 })
+
+describe('bringing the repository into a task before it comes home', () => {
+  // Two branches each pass on their own and break together; what is checked
+  // has to be what will be merged. So the repository's newest commit is
+  // merged into the job's branch first, and the check runs on that.
+  test('merges the newest commit into the branch and says so', async () => {
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    writeFileSync(join(workspace.path, 'new.ts'), 'export const fresh = true\n')
+    await git(['add', '.'], workspace.path)
+    await git(['commit', '-qm', 'theirs'], workspace.path)
+    writeFileSync(join(repo, 'app.ts'), 'export const version = 3\n')
+    await git(['commit', '-qam', 'ours'])
+
+    const outcome = await manager.catchUp('coder')
+
+    expect(outcome.result).toBe('merged')
+    expect(readFileSync(join(workspace.path, 'app.ts'), 'utf8')).toContain('version = 3')
+    expect(readFileSync(join(workspace.path, 'new.ts'), 'utf8')).toContain('fresh')
+    // And the merge home is then nothing but the branch's own commits.
+    expect((await manager.merge('coder')).result).toBe('merged')
+
+    await manager.removeAll()
+  })
+
+  test('has nothing to do when the branch already has it', async () => {
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    writeFileSync(join(workspace.path, 'new.ts'), 'export const fresh = true\n')
+    await git(['add', '.'], workspace.path)
+    await git(['commit', '-qm', 'theirs'], workspace.path)
+
+    expect((await manager.catchUp('coder')).result).toBe('up-to-date')
+
+    await manager.removeAll()
+  })
+
+  test('backs out of a conflict, naming the files, and leaves the branch as it was', async () => {
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'theirs'], workspace.path)
+    writeFileSync(join(repo, 'app.ts'), 'export const version = 3\n')
+    await git(['commit', '-qam', 'ours'])
+
+    const outcome = await manager.catchUp('coder')
+
+    expect(outcome.result).toBe('conflict')
+    expect(outcome.detail).toContain('app.ts')
+    expect(readFileSync(join(workspace.path, 'app.ts'), 'utf8')).toContain('version = 2')
+    expect(await git(['status', '--porcelain'], workspace.path)).toBe('')
+
+    await manager.removeAll()
+  })
+
+  test('has nothing to catch up for a task that shares the project directory', async () => {
+    const plain = mkdtempSync(join(tmpdir(), 'aidcrew-plain-'))
+    const manager = new WorkspaceManager(plain)
+    await manager.create('coder')
+
+    expect((await manager.catchUp('coder')).result).toBe('not isolated')
+  })
+})
+
+describe('what a task changed since it forked', () => {
+  test('is the diff of its branch against where it left the repository', async () => {
+    const manager = new WorkspaceManager(repo)
+    const workspace = await manager.create('coder')
+    writeFileSync(join(workspace.path, 'app.ts'), 'export const version = 2\n')
+    await git(['commit', '-qam', 'bump'], workspace.path)
+    // A commit the repository made meanwhile is not the task's doing.
+    writeFileSync(join(repo, 'other.ts'), 'export const other = 1\n')
+    await git(['add', '.'])
+    await git(['commit', '-qm', 'elsewhere'])
+
+    const diff = await manager.changesOf('coder')
+
+    expect(diff).toContain('-export const version = 1')
+    expect(diff).toContain('+export const version = 2')
+    expect(diff).not.toContain('other.ts')
+
+    await manager.removeAll()
+  })
+})
