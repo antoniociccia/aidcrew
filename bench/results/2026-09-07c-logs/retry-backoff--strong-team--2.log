@@ -1,0 +1,89 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/retry.ts)
+architect · bash(cat package.json 2>/dev/null; echo '---'; ls)
+architect · bash(ls -R src; echo '---'; find . -name '*.test.ts' -o -name '*.…)
+architect › The task is clear. Here's my plan:
+
+**Files to touch**
+1. `src/retry.ts` — replace the stub with the real implementation.
+2. `src/retry.test.ts` — new test file (bun test picks up `*.test.ts`).
+
+**What `src/retry.ts` should do when done**
+- Default `sleep` to `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`.
+- At the very top, before calling anything, if `attempts < 1`, throw a `RangeError`.
+- Loop `attempt` from 1 to `attempts`:
+  - `try { return await fn() }` — return the first success immediately.
+  - On error, remember it as `lastError`.
+  - If this was the last attempt, break out to throw.
+  - Otherwise `await sleep(baseMs * 2 ** (attempt - 1))`, so the waits are `baseMs`, `2*baseMs`, `4*baseMs`, …
+- After the loop, throw `new Error('gave up after ' + attempts + ' attempts: ' + <last error's message>, { cause: lastError })`. Message must start exactly with `gave up after N attempts:` followed by the last error's message; `cause` must be that same error object.
+
+**What `src/retry.test.ts` should cover**
+Use a recording `sleep` that pushes each requested `ms` into an array and resolves immediately.
+1. `attempts < 1` throws `RangeError` and `fn`/`sleep` are never called.
+2. Success on first try: returns the value, `sleep` called 0 times.
+3. Succeeds after failures: `attempts = 4`, fn fails twice then succeeds; assert the result and that sleep received `[baseMs, baseMs * 2]`.
+4. Exhausts attempts: fn always throws `Error('boom')` with `attempts = 3`; assert the thrown error's message is `'gave up after 3 attempts: boom'` and `error.cause === <the boom error>`.
+5. Default sleep: omit `sleep`, use `attempts = 2`, fn fails once then succeeds with a tiny `baseMs` (e.g. 1), assert the result (proves the real `setTimeout` default works without asserting timing).
+
+**Check that proves it**
+Run `bun test`; it must print that all tests pass (0 failures).
+
+Sending to coder now.
+architect · agent_send(coder)
+architect → coder Implement the retry job. Files to touch: src/retry.ts and a new src/retry.test.ts.  src/retry.ts must: - Keep the existi…
+coder · read(src/retry.ts)
+coder · tree(.)
+architect › Plan sent to coder. I'll wait for their report that `bun test` passes with 0 failures, then confirm the job is done.
+coder · read(package.json)
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · write(src/retry.ts)
+coder · write(import { describe, expect, test } from 'bun:test' import { r…)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me commit the work.
+coder · bash(git add src/retry.ts src/retry.test.ts && git commit -m "Imp…)
+coder › Done. Implemented the retry job and committed on `work/main`.
+
+**What changed:**
+- `src/retry.ts` — implemented the `retry` function: kept the existing `RetryOptions` type, added a default `sleep` using `setTimeout`, a `RangeError` thrown at the very top when `attempts < 1` (before calling `fn` or `sleep`), the attempt loop with exponential backoff (`baseMs * 2 ** (attempt - 1)`), and a final throw wrapping the last error with `cause` and the `'gave up after N attempts: <msg>'` message (extracted via `error.message` for Errors, `String()` for anything else).
+- `src/retry.test.ts` — new test file with a recording sleep, covering all 5 required cases.
+
+**Check output (`bun test`):**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 11 expect() calls
+Ran 5 tests across 1 file. [14.00ms]
+```
+
+**Commit:** `a837b56 Implement retry with backoff and tests` — all 5 tests pass, 0 failures.
+coder → architect Done. Implemented the retry job and committed on `work/main`.  **What changed:** - `src/retry.ts` — implemented the `ret…
+architect · bash(bun test 2>&1; echo '--- git ---'; git log --oneline -3; git…)
+verified: bun run test passes on work/main
+merged work/main into the repository: e148e93 Merge branch 'work/main'
+architect › The job is done.
+
+**What changed**
+- `src/retry.ts` — implemented `retry(fn, { attempts, baseMs, sleep })`: returns `fn`'s first success; waits `baseMs * 2^(attempt-1)` between tries via the passed-in `sleep` (defaulting to a real `setTimeout`); throws `RangeError` before running anything when `attempts < 1`; after the final failure throws an `Error` whose message starts `gave up after N attempts:` + the last error's message, with that error as `cause`.
+- `src/retry.test.ts` — new tests using a recording `sleep`, covering the `RangeError`, first-try success, retry-then-success backoff timings, exhaustion message/cause, and the default `setTimeout` sleep.
+
+**Verified**
+- `bun test`: 5 pass, 0 fail across 1 file.
+- Work committed on `work/main` as `a837b56`.
+
+  architect    deepseek-v4-pro      2 turns, 23552 tokens
+  coder        deepseek-v4-flash    1 turns, 50588 tokens
+
+main: done
+  bun run test passed
+  merged: e148e93 Merge branch 'work/main'
+  this job: 74k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e148e93 Merge branch 'work/main'","cost":"this job: 74k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4334,"outputTokens":3090,"cacheReadTokens":16128,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9602,"outputTokens":2970,"cacheReadTokens":38016,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

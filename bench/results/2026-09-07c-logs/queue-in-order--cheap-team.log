@@ -1,0 +1,68 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/queue.ts)
+architect · glob(**/*.test.ts)
+architect · read(src/queue.test.ts)
+architect · bash(cat package.json 2>/dev/null; ls)
+architect › The bug is clear: `push` calls `job()` immediately instead of chaining onto a tail promise, and `drain` doesn't account for jobs pushed while it's awaiting. Sending the plan to coder.
+architect · agent_send(Fix src/queue.ts so the Queue actually serializes jobs, per …)
+architect → coder Fix src/queue.ts so the Queue actually serializes jobs, per its doc comment. Workspace root: /private/var/folders/n0/s61…
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Plan sent to coder. I read `src/queue.ts` (a 19-line Queue whose `push` invokes `job()` immediately, so jobs run concurrently) and `src/queue.test.ts` (one happy-path test).
+
+The plan I handed off:
+- **src/queue.ts** — chain each job onto a private tail promise (`#tail.then(job)`) so jobs start on a later microtask, in push order, with the existing error-wrapping logic applied before chaining the tail; rewrite `drain` to repeatedly `await Promise.all` over batches of pending promises so jobs pushed mid-drain are included. Public surface unchanged.
+- **src/queue.test.ts** — add tests for push-order execution, non-synchronous start, error recording (including non-Error wrapping) without stopping later jobs, and drain covering jobs pushed while draining; keep the existing test.
+
+Check that proves it: `bun test` — all tests in `src/queue.test.ts` pass. I expect coder to reply with the change and that output; once the report confirms the check passes, the job is done.
+coder › Now I understand the current state. The `job()` call inside `push` starts jobs synchronously/concurrently, and `drain`'s single `Promise.all` misses jobs pushed mid-drain. Let me check the package config, then implement.
+coder · json(scripts)
+coder · write(src/queue.ts)
+coder · edit(src/queue.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 5 tests pass. Committing:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done.
+
+**What I changed in `src/queue.ts`:**
+- Added a private `#tail: Promise<void> = Promise.resolve()`.
+- `push` now chains instead of invoking: `const run = this.#tail.then(job)`, attaches the unchanged catch that records into `errors` (Error kept as-is, non-Error wrapped via `new Error(String(cause))`), pushes the caught promise onto `#pending`, and sets `this.#tail` to it so the next job chains after. `.then(job)` defers the job to a later microtask, so push stays synchronous and nothing runs inside it.
+- `drain` now loops: while `#pending` is non-empty, capture the current list, clear it, `await Promise.all(batch)`, repeat — covering jobs pushed while a drain is in flight.
+- Public surface (`errors`, `push(job): void`, `drain(): Promise<void>`) and both doc comments unchanged.
+
+**Tests added in `src/queue.test.ts`** (bun:test, existing test untouched): push-order with a slow first job and fast second; job not run synchronously by push; a throwing job (string cause) recorded as a wrapped Error while a later job still runs; and a drain that also waits for a job pushed from a microtask mid-drain.
+
+**Check output:**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 9 expect() calls
+Ran 5 tests across 1 file. [64.00ms]
+```
+
+Committed on `work/main` as `cfceecf` ("Serialize queue jobs and drain late pushes"); working tree clean.
+coder → architect Done.  **What I changed in `src/queue.ts`:** - Added a private `#tail: Promise<void> = Promise.resolve()`. - `push` now …
+verified: bun run test passes on work/main
+merged work/main into the repository: f506b9d Merge branch 'work/main'
+architect › Job done. `src/queue.ts` now serializes jobs: `push` chains each job onto a private `#tail` promise (`.then(job)`), so a job starts on a later microtask only after the previous one finishes, `push` itself stays synchronous and returns nothing, throwing jobs are recorded in `errors` (non-Errors wrapped) without blocking later ones, and `drain` loops over batches of pending promises so it also waits for jobs pushed while draining. The public surface and doc comments are unchanged, and `src/queue.test.ts` gained coverage for push order, non-synchronous start, error recording, and mid-drain pushes.
+
+Verified by the project's own check: `bun test` — 5 pass, 0 fail, 9 expect() calls across 1 file. Committed on `work/main` as `cfceecf` with a clean tree; the harness can run the check and merge.
+
+  architect    glm-5.3-flash        2 turns, 19639 tokens
+  coder        deepseek-v4-flash    1 turns, 61995 tokens
+
+main: done
+  bun run test passed
+  merged: f506b9d Merge branch 'work/main'
+  this job: 82k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"f506b9d Merge branch 'work/main'","cost":"this job: 82k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":3304,"outputTokens":4111,"cacheReadTokens":12224,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5891,"outputTokens":4648,"cacheReadTokens":51456,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

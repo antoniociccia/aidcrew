@@ -1,0 +1,82 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/config.ts)
+architect · read(src/index.ts)
+architect · bash(ls -la && cat package.json)
+architect · bash(ls src && cat src/*.ts | head -50)
+architect · glob(**/*.test.ts)
+architect › The project is small: `src/config.ts` has the type, `DEFAULTS` and `merge`; `src/index.ts` has `resolveConfig(file)`; tests run with `bun test` (Bun, `type: module`, `.ts` imports). Here's the plan.
+architect · agent_send(Job: environment layer on top of the file/defaults config. B…)
+architect → coder Job: environment layer on top of the file/defaults config. Bun project ("test": "bun test", ESM, .ts imports).  1. NEW s…
+architect › Plan sent to coder. Summary of what I decided:
+
+- **src/env.ts** (new): `fromEnv(env, prefix = 'APP_')` reads the four prefixed variables, converts port to a number and debug to a boolean (true/1/yes vs false/0/no, case-insensitive), skips absent or empty variables, and throws a `TypeError` naming the variable for a non-numeric port or an invalid debug word — prefix honoured in lookups and messages.
+- **src/config.ts**: adds `validate(config)` returning the config unchanged, or a `TypeError` naming the field for a port outside 1–65535 (integers only) or an empty host/name.
+- **src/index.ts**: `resolveConfig(file, env = process.env)` layers defaults → file → env, then validates.
+- **Tests**: new `src/env.test.ts` and `src/config.test.ts` covering every conversion, omission, prefix and error; `src/index.test.ts` updated to pass an explicit env so a stray `APP_PORT` in the runner's shell can't flake it, plus layering cases.
+
+I expect back: a report of the changes and the tail of `bun test` showing the new tests passing. When it arrives I'll confirm the job done; the harness will run `bun test` on the branch and merge.
+coder · tree(.)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · json(.)
+coder › Now I'll implement. First, the new `src/env.ts`:
+coder · write(src/env.ts)
+coder · edit(src/config.ts)
+coder · edit(import { type Config, DEFAULTS, merge, validate } from './co…)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { fromEnv } f…)
+coder · write(import { expect, test } from 'bun:test' import { validate, t…)
+coder · write(import { expect, test } from 'bun:test' import { resolveConf…)
+coder · bash(bun test 2>&1 | tail -30)
+coder › All green. Committing:
+coder · bash(git add -A && git commit -q -m "Add env layer and validate t…)
+coder › Done. Everything committed on `work/main` (commit `2d77cc7`).
+
+**Changed:**
+- **NEW `src/env.ts`** — `fromEnv(env, prefix = 'APP_')` reads `` `${prefix}PORT` ``, `HOST`, `DEBUG`, `NAME`. Absent/empty-string variables are left out entirely. PORT via `Number()`, NaN/non-finite throws `TypeError` naming the prefixed variable (e.g. `MY_PORT must be a number, got "abc"`). DEBUG lowercased; `true/1/yes` → true, `false/0/no` → false, else throws naming the variable. HOST/NAME pass through unchanged. Prefix honoured in every lookup and error.
+- **`src/config.ts`** — added `validate(config: Config): Config`; throws `TypeError` naming the field (`invalid port: 0`, `invalid host: ""`, `invalid name: ""`), checking port (integer, 1–65535, rejects NaN) first, then host, then name; returns config unchanged on success.
+- **`src/index.ts`** — `resolveConfig(file = {}, env = process.env)` now returns `validate(merge(merge(DEFAULTS, file), fromEnv(env)))`.
+- **NEW `src/env.test.ts`** — port→number, all six debug words in mixed case plus `TRUE`/`NO`, host/name stay strings, absent and empty-string left out via `'port' in result`, custom `MY_` prefix reads `MY_PORT` and names `MY_PORT`/`MY_DEBUG` in errors, TypeError for non-numeric `APP_PORT` naming it, invalid `APP_DEBUG` naming it.
+- **NEW `src/config.test.ts`** — valid config returned unchanged (`toBe` identity), port 0 / 65536 / 1.5 throw naming port, empty host and empty name throw naming them.
+- **`src/index.test.ts`** — existing cases now pass explicit `{}` env; added env-beats-file-beats-defaults, `{}` env leaves file values, `APP_DEBUG:'true'` flips debug, bad `APP_PORT` throws `TypeError`.
+
+One decision beyond the letter of the spec: for empty host/name, `validate` messages use `invalid host: ""` / `invalid name: ""` (the quoted empty string is the value) — matches the plan's "messages must contain the field name"; tests assert `invalid host` / `invalid name` which covers it.
+
+**Check output (`bun test`, tail):**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 19 pass
+ 0 fail
+ 39 expect() calls
+Ran 19 tests across 3 files. [17.00ms]
+```
+coder → architect Done. Everything committed on `work/main` (commit `2d77cc7`).  **Changed:** - **NEW `src/env.ts`** — `fromEnv(env, prefi…
+architect · bash(bun test 2>&1 | tail -6 && git log --oneline -3 && git statu…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9a22007 Merge branch 'work/main'
+architect › Verified myself in the checkout: `bun test` passes (19 pass, 0 fail across 3 files), work is committed as `2d77cc7` on `work/main` with a clean tree.
+
+**Job done.** What changed:
+- **`src/env.ts`** (new): `fromEnv(env, prefix = 'APP_')` layering the environment — port to number, debug to boolean (`true`/`1`/`yes` vs `false`/`0`/`no`, case-insensitive), host/name as strings, absent/empty variables omitted, `TypeError` naming the variable for a bad port or debug value, prefix honoured throughout.
+- **`src/config.ts`**: `validate(config)` returns the config or throws a `TypeError` naming the field for a non-integer or out-of-range port (1–65535) or empty host/name.
+- **`src/index.ts`**: `resolveConfig(file, env = process.env)` resolves defaults ← file ← env, then validates.
+- **Tests**: new `src/env.test.ts` and `src/config.test.ts`, and `src/index.test.ts` updated to pin env explicitly (so a stray `APP_PORT` in the shell can't flake it) with layering and error cases.
+
+Verified by the project's own check, `bun test`: 19 pass / 0 fail. Ready for the harness to run the check on the branch and merge.
+
+  architect    glm-5.3-flash        2 turns, 22946 tokens
+  coder        deepseek-v4-flash    1 turns, 64813 tokens
+
+main: done
+  bun run test passed
+  merged: 9a22007 Merge branch 'work/main'
+  this job: 88k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9a22007 Merge branch 'work/main'","cost":"this job: 88k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":15508,"outputTokens":3022,"cacheReadTokens":4416,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9401,"outputTokens":3444,"cacheReadTokens":51968,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

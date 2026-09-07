@@ -1,0 +1,57 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/toc.ts)
+coder · read(package.json)
+coder · bash(ls -la; git log --oneline -20 2>&1 | head -40; git status 2>…)
+coder · glob(**/*)
+coder · bash(bun --version 2>&1; node --version 2>&1)
+coder · toml(.aidcrew/config.toml)
+coder › Now I understand the setup. Let me implement `toc` and add tests.
+coder · write(src/toc.ts)
+coder · write(import { describe, expect, test } from "bun:test" import { t…)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/toc.test.ts: 38 |       "# No space after the mark", 39…
+coder › Two test expectations were wrong (not the implementation): the "no space" test string accidentally had a space after `#`, and the apostrophe in "It's" should collapse to a dash. Fixing the tests:
+coder · edit(src/toc.test.ts)
+coder · edit(src/toc.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 13 tests pass. Committing:
+coder · bash(git add -A && git commit -q -m "Implement toc() for ATX head…)
+verified: bun run test passes on work/main
+merged work/main into the repository: fc37fdc Merge branch 'work/main'
+coder › Done. Here is a summary.
+
+## What I changed
+
+**`src/toc.ts`** — implemented `toc(markdown)` to walk the document line by line:
+- Skips anything inside a ``` code fence (a line whose content starts with ``` toggles the fence state, so info strings like ` ```ts ` work).
+- Outside fences, recognizes an ATX heading as up to three spaces of indent, 1–6 `#` marks, then at least one space, then text. `level` is the number of `#` marks; `text` is the rest with surrounding whitespace trimmed.
+- `slugify` lowercases the text and collapses every run of characters that aren't letters or digits into one dash (`/[^a-z0-9]+/g`), then trims dashes from both ends.
+- A `usedSlugs` set resolves collisions: a slug already used gets `-2`, `-3`, … appended (the collision loop also steps past any `-N` that is itself taken).
+
+**`src/toc.test.ts`** — added 13 tests covering: empty input; all six levels in order; text trimming of marks/whitespace; rejection of non-headings (no space after `#`, seven hashes, list items, 4-space-indented lines); slugification of punctuation/case/digits; dash trimming and symbol-only slugs; duplicate suffixes `-2`/`-3` (including case/punctuation variants); source ordering; headings inside fences ignored; fences with info strings; a fence-opening line not being a heading; and blank/plain markdown lines.
+
+## Checks
+
+`bun test` → **13 pass, 0 fail** (15 expect calls).
+
+Two failures during development were bugs in my own test expectations, not the implementation (a "# No space…" string that in fact had a space after `#`, and an apostrophe expected not to produce a dash); fixed the tests, and the spec-faithful implementation then passed.
+
+## Decisions the spec didn't pin down
+
+- **Letters/digits are ASCII** (`[a-z0-9]` after lowercasing), so e.g. `é` would become a dash rather than survive. This is the usual slug convention; say the word if you want Unicode letters preserved instead.
+- Fences are only ` ``` ` lines (per the spec), not `~~~` tildes or 4-space-indented code blocks.
+- Indentation of up to three spaces before `#` is accepted (markdown-correct); four-plus-space lines are not headings.
+- A trailing `#` (e.g. `# Title #`) is kept as part of `text`; only the leading markers are stripped, exactly as specified.
+
+  coder        deepseek-v4-flash    1 turns, 139059 tokens
+
+main: done
+  bun run test passed
+  merged: fc37fdc Merge branch 'work/main'
+  this job: 139k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 16¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"fc37fdc Merge branch 'work/main'","cost":"this job: 139k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 16¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5815,"outputTokens":13436,"cacheReadTokens":119808,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

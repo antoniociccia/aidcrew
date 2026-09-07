@@ -1,0 +1,62 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/range.ts)
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · bash(find src -type f -maxdepth 3 | sort && echo '---' && find . …)
+architect · read(src/range.test.ts)
+architect · bash(bun --version 2>/dev/null || echo 'no bun')
+architect · bash(bun test 2>&1)
+architect › The file and tests are minimal and I've confirmed the baseline `bun test` passes. I have everything I need to hand a precise plan to the coder.
+architect · agent_send(coder)
+architect → coder Implement the overlaps fix in `src/range.ts` and add tests in `src/range.test.ts`.  ## src/range.ts  Replace the body of…
+coder · bash(git status && git branch --show-current)
+coder · read(src/range.ts)
+coder · read(src/range.test.ts)
+architect › Plan sent to coder. I expect back a report that `bun test` passes with all tests (original + new) and the change committed on the branch. I'll verify and mark done once the report arrives.
+coder › The files match the plan's starting state. Let me apply the implementation.
+coder · write(src/range.ts)
+coder · write(src/range.test.ts)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Committing.
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Fix…)
+coder › Done. Committed on `work/main` as `d85e5fa`.
+
+## What changed
+- **`src/range.ts`**: Replaced `overlaps` — added a `parseTime` helper that throws `TypeError` (naming the value) for unparseable dates, exclusive-end semantics via strict `<` so touching ranges return `false`, `RangeError` when `end < start`, and an early `false` for zero-length ranges.
+- **`src/range.test.ts`**: Kept the original shared-hour test and added the six tests from the plan (touching, same-instant, zero-length, unparseable start, unparseable end, end-before-start).
+
+## Check output
+`bun test`:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 11 expect() calls
+Ran 7 tests across 1 file. [13.00ms]
+```
+
+Passed — 7 tests, 0 failures. The implementation matches the suggested content exactly, so no deviations to report.
+coder → architect Done. Committed on `work/main` as `d85e5fa`.  ## What changed - **`src/range.ts`**: Replaced `overlaps` — added a `parse…
+architect · bash(bun test 2>&1 && echo '--- git ---' && git log --oneline -3 …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 6b4b002 Merge branch 'work/main'
+architect › The job is done.
+
+`overlaps` in `src/range.ts` now uses exclusive-end semantics (touching ranges return `false`, same-instant starts return `true`, zero-length ranges overlap nothing) and validates inputs: unparseable start/end throw a `TypeError` naming the value, and an end before start throws a `RangeError`. Tests were added in `src/range.test.ts`.
+
+Verified by running `bun test`: **7 pass, 0 fail**. Committed on `work/main` as `d85e5fa`, working tree clean.
+
+  architect    deepseek-v4-pro      2 turns, 43848 tokens
+  coder        deepseek-v4-flash    1 turns, 37167 tokens
+
+main: done
+  bun run test passed
+  merged: 6b4b002 Merge branch 'work/main'
+  this job: 81k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"6b4b002 Merge branch 'work/main'","cost":"this job: 81k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6027,"outputTokens":7229,"cacheReadTokens":30592,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6440,"outputTokens":1927,"cacheReadTokens":28800,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

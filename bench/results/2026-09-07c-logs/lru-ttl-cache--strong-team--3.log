@@ -1,0 +1,72 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect › I'll start by reading the existing cache.ts and any existing test setup to understand the project conventions.
+architect · read(src/cache.ts)
+architect · glob(src/**/*.test.ts)
+architect · glob(package.json)
+architect · read(src/cache.test.ts)
+architect · read(package.json)
+architect › I have everything I need. The project uses Bun tests, `bun test`. Now I'll write the plan.
+architect · agent_send(coder)
+architect → coder Implement the `Cache` class in `src/cache.ts` and add tests in `src/cache.test.ts`.  The file currently has a class with…
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+architect › I've read the existing `src/cache.ts` (stub bodies) and `src/cache.test.ts` (one stub test), confirmed the project runs `bun test`, and sent coder a precise implementation plan: LRU via a `Map` whose insertion order is recency (delete+re-set on get/set), `expiry = now() + ttlMs` stored at set time, constructor `RangeError` for `capacity < 1`, and a full test suite controlled by explicit `now` clocks.
+
+I'm waiting on coder's report that `bun test` passes.
+coder · bash(ls -la && cat package.json)
+coder · write(src/cache.ts)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { Cache } fro…)
+coder · bash(bun test 2>&1; echo "exit: $?")
+coder › All green. Committing:
+coder · bash(git add src/cache.ts && git commit -q -m "Implement Cache wi…)
+coder · agent_send(architect)
+coder → architect Done. Implemented Cache in src/cache.ts and added thorough tests in src/cache.test.ts, committed in two small commits on…
+architect › The report is clear and the check passes. I'll verify quickly by running the project's check myself, then confirm done.
+architect · bash(bun test 2>&1 | tail -20)
+coder › Implemented and handed off to the architect.
+
+**What changed**
+- `src/cache.ts` — full `Cache<K, V>` implementation backed by a private `Map<K, { value; expiry }>`:
+  - Constructor throws `RangeError` for `capacity < 1`; `now` defaults to `Date.now()`.
+  - `expiry = now() + ttlMs` stored at set time.
+  - `get` returns `undefined` for missing/expired, refreshes recency on hit via delete + re-set.
+  - `set` replaces value/expiry on existing keys without evicting; for new keys removes already-expired entries first, then evicts the Map-eldest if at capacity.
+  - `has`/`delete`/`size` treat expired entries as absent; `delete` on an expired entry returns `false`. Removed the `notImplemented` helper.
+- `src/cache.test.ts` — kept the original test and added 10 more covering missing keys, the full expiry cycle at the ttl boundary, get-refreshes-recency eviction, set-replace-without-evict, LRU eviction, live-only `size`, expired entries not wasting evictions, constructor `RangeError` (0 and −1) plus capacity 1 accepted, and delete semantics. Every test uses an explicit clock; no `Date.now` dependence.
+
+**Check output**
+```
+bun test v1.3.14 (0d9b296a)
+ 11 pass
+ 0 fail
+ 41 expect() calls
+Ran 11 tests across 1 file. [15.00ms]
+exit: 0
+```
+
+Committed as two small commits on `work/main`: `ca6eb63` (implementation), `c33766a` (tests). One decision beyond the literal spec: expired entries are removed lazily on the next `set` rather than on every read, which is the "evict expired first is fine and simpler" option the plan allowed.
+verified: bun run test passes on work/main
+merged work/main into the repository: 6682e8d Merge branch 'work/main'
+architect › Verified independently: `bun test` passes with 11 tests, 0 fail.
+
+The job is done. What changed:
+- `src/cache.ts` — `Cache` fully implemented as an LRU keyed by a `Map` (iteration order = recency), with `expiry = now() + ttlMs` stored at set time, `RangeError` for `capacity < 1`, get/set refreshing recency, set-evicts-LRU-on-overflow, and `has`/`delete`/`size` treating expired entries as absent.
+- `src/cache.test.ts` — 11 tests covering set/get, missing keys, full expiry lifecycle, recency refresh, replacement without eviction, LRU eviction, size, expired-entry eviction, `RangeError`, and capacity-1 acceptance, all driven by explicit `now` clocks.
+
+Verified with `bun test` (11 pass, 0 fail).
+
+  architect    deepseek-v4-pro      2 turns, 21513 tokens
+  coder        deepseek-v4-flash    1 turns, 64380 tokens
+
+main: done
+  bun run test passed
+  merged: 6682e8d Merge branch 'work/main'
+  this job: 86k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"6682e8d Merge branch 'work/main'","cost":"this job: 86k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":8915,"outputTokens":1590,"cacheReadTokens":11008,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6401,"outputTokens":4091,"cacheReadTokens":53888,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

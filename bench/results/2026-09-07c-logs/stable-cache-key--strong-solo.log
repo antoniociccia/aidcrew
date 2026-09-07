@@ -1,0 +1,58 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/key.ts)
+coder · tree(.)
+coder · read(src/key.test.ts)
+coder · read(package.json)
+coder · grep(cacheKey)
+coder · glob(**/*.ts)
+coder · write(src/key.ts)
+coder · write(src/key.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(bun -e "import { cacheKey } from './src/key.ts'; console.log…)
+coder · bash(git add src/key.ts && git commit -m "Sort object keys and no…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: ea4b368 Merge branch 'work/main'
+coder › Done. I rewrote `cacheKey` as a stable serializer instead of a plain `JSON.stringify`, and added tests.
+
+What changed
+- `src/key.ts` — replaced the one-liner with a recursive `serialize` that:
+  - sorts object keys at every depth (nested objects included)
+  - keeps array element order
+  - omits `undefined`, functions, and symbols from objects, as `JSON.stringify` does
+  - turns `undefined`/functions/symbols into `null` inside arrays, as `JSON.stringify` does
+  - calls `toJSON` where present, so `Date` becomes its ISO string
+  - turns `NaN`, `Infinity`, and `-Infinity` into `null`
+  - throws on `BigInt` and circular structures, matching `JSON.stringify`
+- `src/key.test.ts` — added coverage for key-order independence at every depth, array ordering, object omission, array nulling, `Date`, and non-finite numbers.
+
+Decisions not in the request
+- Symbols are handled the same as `undefined`/functions, since that is `JSON.stringify`'s behavior.
+- Top-level `undefined`/`function`/`symbol` return the raw string `"undefined"` (distinct from the quoted JSON string `'"undefined"'`), because `cacheKey` must return a string while `JSON.stringify` returns `undefined` for those.
+
+Checks
+```
+bun test v1.3.14 (0d9b296a)
+
+ 11 pass
+ 0 fail
+ 18 expect() calls
+Ran 11 tests across 1 file. [15.00ms]
+```
+
+Committed on `work/main`:
+- `59e3cae` Sort object keys and normalize values in cacheKey
+- `9c00e72` Add tests for cacheKey key stability
+
+  coder        deepseek-v4-pro      1 turns, 152618 tokens
+
+main: done
+  bun run test passed
+  merged: ea4b368 Merge branch 'work/main'
+  this job: 153k tokens, 5¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 18¢, on gpt-5 ≈ 16¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"ea4b368 Merge branch 'work/main'","cost":"this job: 153k tokens, 5¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 18¢, on gpt-5 ≈ 16¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5346,"outputTokens":13896,"cacheReadTokens":133376,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

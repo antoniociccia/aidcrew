@@ -1,0 +1,58 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/wrap.ts)
+coder · read(package.json)
+coder · bash(ls -la && git status 2>&1 | head -5 && which bun && bun --ve…)
+coder · bash(git branch -a && git log --oneline -5)
+coder · write(src/wrap.ts)
+coder · write(import { describe, expect, test } from 'bun:test' import { w…)
+coder · bash(bun test 2>&1)
+coder · bash(bun -e " import { wrap } from './src/wrap.ts' console.log(JS…)
+coder · error: command failed with exit code 1 "abc\ndef" "ab\ncd\nef" "a\n\nb"   8 |  *  9 |  * @throws {RangeError} if `width` is les…
+coder › The outputs are all correct (the last line is just the intentional `RangeError` escaping my ad-hoc script). Committing:
+coder · bash(git add src/wrap.ts src/wrap.test.ts && git commit -q -m "Im…)
+verified: bun run test passes on work/main
+merged work/main into the repository: da4826d Merge branch 'work/main'
+coder › Done. Implemented `wrap(text, width)` in `src/wrap.ts` and added tests in `src/wrap.test.ts`.
+
+## What I changed
+
+**`src/wrap.ts`**
+- `wrap(text, width)` throws a `RangeError` when `width < 1` (I floor fractional widths so character comparisons and slices stay coherent).
+- It first splits the input into paragraphs at blank lines — a line that is empty or only whitespace — collapsing consecutive blank lines, and dropping leading/trailing ones.
+- Each paragraph has its whitespace runs (spaces, tabs, intra-paragraph newlines) collapsed to single spaces and is trimmed, so paragraphs reflow rather than keeping hard line breaks; `\n\n` is emitted between wrapped paragraphs.
+- Greedy fill: words are joined onto the current line with a single space while it fits within `width`; when the next word would overflow the line is closed. A word longer than `width` is sliced into full-width chunks with the remainder starting the next line. No line ever gets a trailing space, including split long words.
+
+**`src/wrap.test.ts`** — 16 `bun:test` cases covering: empty input, short lines unchanged, space-at-last-fit breaking, long-word splitting (both alone and after filling the current line), run-of-spaces collapsing, trimming paragraph edges, blank-line paragraph separation (including all-space lines, consecutive blanks collapsing, and leading/trailing blanks dropped), intra-paragraph newline reflow, `RangeError` for widths 0/-1/-100, and a property test across widths 1–30 asserting every non-empty line is ≤ `width`, ends without a space, and that no characters are lost.
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 16 pass
+ 0 fail
+ 582 expect() calls
+Ran 16 tests across 1 file. [20.00ms]
+```
+
+## Decisions the spec didn't spell out
+
+- A "blank line" is any line that is empty or contains only whitespace.
+- Consecutive blank lines in the input collapse to one separator; leading/trailing blank lines produce no empty lines at the edges of the output.
+- Newlines *inside* a paragraph (non-blank) are treated as whitespace like spaces, so the paragraph reflows — the only preserved structure is blank-line paragraph separation.
+- Character count treats `width` as whole characters (code units); fine for the ASCII scope here.
+
+Committed on the current branch as `1c43a22`.
+
+  coder        deepseek-v4-flash    1 turns, 137950 tokens
+
+main: done
+  bun run test passed
+  merged: da4826d Merge branch 'work/main'
+  this job: 138k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"da4826d Merge branch 'work/main'","cost":"this job: 138k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5303,"outputTokens":12967,"cacheReadTokens":119680,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

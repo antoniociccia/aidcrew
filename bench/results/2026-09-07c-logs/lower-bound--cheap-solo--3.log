@@ -1,0 +1,43 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/search.ts)
+coder · bash(ls -la && ls -la src 2>/dev/null)
+coder · read(src/search.test.ts)
+coder · read(package.json)
+coder › The fix: use `< target` instead of `<= target` so `low` advances past only strictly-smaller elements, landing on the first equal element.
+coder · edit(src/search.ts)
+coder · edit(src/search.test.ts)
+coder · bash(bun test)
+coder · bash(git status && git diff)
+coder · bash(git add src/search.ts src/search.test.ts && git commit -m "R…)
+verified: bun run test passes on work/main
+merged work/main into the repository: d0b30f7 Merge branch 'work/main'
+coder › Done.
+
+**Change** — `src/search.ts`: the comparison changed from `sorted[mid] <= target` to `sorted[mid] < target`. That keeps the binary search but stops `low` from advancing past elements equal to `target`, so it lands on the first equal element (the lower bound) instead of the slot after the last one. The "below every element → 0" and "above every element → length" behaviors are unchanged.
+
+**Tests** — `src/search.test.ts`, added two cases:
+- boundary behavior: `0` when below everything, `length` when above everything, and equal-landing on `[1, 3, 5]` with `3` → `1`;
+- duplicates: `[1, 1, 2, 2, 2, 3]` with `2` → `2`, plus all-equal and below/above cases.
+
+**Checks** — `bun test`:
+
+```
+3 pass
+0 fail
+10 expect() calls
+Ran 3 tests across 1 file. [14.00ms]
+```
+
+Committed as `d8ef649` on `work/main`.
+
+  coder        deepseek-v4-flash    1 turns, 43230 tokens
+
+main: done
+  bun run test passed
+  merged: d0b30f7 Merge branch 'work/main'
+  this job: 43k tokens, 0.1¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 3¢, on gpt-5 ≈ 2¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d0b30f7 Merge branch 'work/main'","cost":"this job: 43k tokens, 0.1¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 3¢, on gpt-5 ≈ 2¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":2532,"outputTokens":1274,"cacheReadTokens":39424,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

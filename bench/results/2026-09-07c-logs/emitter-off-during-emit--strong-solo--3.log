@@ -1,0 +1,74 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/emitter.ts)
+coder · bash(ls -la && find . -maxdepth 2 -name 'package.json' -o -name '…)
+coder · read(package.json)
+coder · bash(find src -type f -maxdepth 3 | sort && git status && git bra…)
+coder · read(src/emitter.test.ts)
+coder · git-log()
+coder · bash(git checkout -b fix/emit-snapshot && git status --short --br…)
+coder · edit(src/emitter.ts)
+coder · edit(src/emitter.test.ts)
+coder · bash(bun test)
+coder · read(src/emitter.ts)
+coder · bash(git add src/emitter.ts && git commit -m 'Fix emit skipping l…)
+verified: bun run test passes on work/main
+merged work/main into the repository: a7cabd2 Merge branch 'fix/emit-snapshot'
+coder › Fixed `Emitter.emit` in `src/emitter.ts` on branch `fix/emit-snapshot`.
+
+## What changed
+
+**`src/emitter.ts`** — `emit` now copies the listener list before iterating:
+
+```ts
+emit(event: string, payload?: unknown): number {
+  const list = [...(this.#listeners.get(event) ?? [])]
+  for (const listener of list) {
+    listener(payload)
+  }
+  return list.length
+}
+```
+
+Because it iterates a snapshot:
+- every listener registered when `emit` began is called exactly once, in registration order, even if it or another listener is removed mid-emit;
+- listeners added mid-emit are not called until the next `emit`;
+- `emit` returns the number of listeners it called.
+
+`once` and `off` needed no changes: `once` now works correctly through the snapshot, and `off` already returned `true`/`false` correctly.
+
+**`src/emitter.test.ts`** — added tests covering:
+- self-removal not skipping the next listener;
+- `once` registered before a regular listener not silencing it;
+- a later listener removed mid-emit still being called once;
+- listeners added mid-emit waiting until the next emit;
+- `off` returning whether it removed anything;
+- `emit` returning the listener count.
+
+## Checks
+
+```
+bun test v1.3.14 (0d9b296a)
+
+
+ 7 pass
+ 0 fail
+ 19 expect() calls
+Ran 7 tests across 1 file. [15.00ms]
+```
+
+## Commits
+
+- `7eed3e5` Fix emit skipping listeners after removals
+- `d5e6330` Test listener add/remove during emit
+
+  coder        deepseek-v4-pro      1 turns, 87538 tokens
+
+main: done
+  bun run test passed
+  merged: a7cabd2 Merge branch 'fix/emit-snapshot'
+  this job: 88k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a7cabd2 Merge branch 'fix/emit-snapshot'","cost":"this job: 88k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5795,"outputTokens":5455,"cacheReadTokens":76288,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

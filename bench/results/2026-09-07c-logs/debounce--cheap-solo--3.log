@@ -1,0 +1,48 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/debounce.ts)
+coder · read(src/debounce.test.ts)
+coder · json(.)
+coder · write(src/debounce.ts)
+coder · write(import { expect, test } from 'bun:test' import { debounce, t…)
+coder · edit(src/debounce.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 13 tests pass. Let me check the git state and whether any typecheck exists.
+coder · bash(git rev-parse --is-inside-work-tree 2>/dev/null && git log -…)
+coder · glob(**/tsconfig*.json)
+coder · bash(cd "$(git rev-parse --show-toplevel)" && git add src/debounc…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 840dc82 Merge branch 'work/main'
+coder › Done. I implemented `debounce` in `src/debounce.ts` and added tests, committed in two commits.
+
+## What changed
+
+**`src/debounce.ts`** — replaced the stub with a real implementation:
+- Throws a `RangeError` up front when `ms < 0`.
+- The returned function stores the latest call's arguments, clears any existing timer, and schedules a fresh one for `ms` out via the injected `timers`.
+- When the timer fires it runs `fn` once with the stored arguments and clears its own pending state, so a call after firing starts a fresh delay.
+- `cancel()` clears the timer and drops the pending arguments.
+- `flush()` clears the timer and runs a pending call immediately (no-op if nothing is pending, and it won't double-fire after the timer already ran).
+
+The `GLOBAL_TIMERS` default and the existing `Timers`/`Debounced` types were already in place and are reused as-is.
+
+**`src/debounce.test.ts`** — kept the existing test and added a fake clock (`makeFakeTimers`) with injectable `setTimeout`/`clearTimeout` and an `advance(ms)`, plus tests covering: fires once after `ms` with the most recent call's args; calls within `ms` reset the timer; a call after firing re-arms; `cancel` drops a pending call; `flush` runs immediately, passes args, cancels the timer, and is a no-op when nothing is pending; `ms < 0` throws `RangeError`; `ms` of 0 works; and the global-timers default works against real time.
+
+## Checks
+
+- `bun test` (the project's only script): **13 pass, 0 fail**, 22 expect() calls.
+- There is no tsconfig or lint script in the repo, so `bun test` was the only available check.
+
+One thing I decided that the plan didn't spell out: `flush()` with no pending call does nothing rather than calling `fn` with no arguments, and `cancel()`/`flush()` after the timer has already fired are harmless no-ops — I added tests asserting both behaviors.
+
+  coder        deepseek-v4-flash    1 turns, 82552 tokens
+
+main: done
+  bun run test passed
+  merged: 840dc82 Merge branch 'work/main'
+  this job: 83k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"840dc82 Merge branch 'work/main'","cost":"this job: 83k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5230,"outputTokens":6922,"cacheReadTokens":70400,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

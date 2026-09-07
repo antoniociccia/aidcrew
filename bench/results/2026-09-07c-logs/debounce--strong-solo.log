@@ -1,0 +1,51 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(src/**/*)
+coder · read(src/debounce.ts)
+coder · read(src/debounce.test.ts)
+coder · read(package.json)
+coder · edit(src/debounce.ts)
+coder · write(src/debounce.test.ts)
+coder · bash(bun test)
+coder · bash(ls -la && test -f tsconfig.json && cat tsconfig.json || true)
+coder · bash(git status --short && git diff -- src/debounce.ts src/deboun…)
+coder · bash(git branch --show-current && git log --oneline -3)
+coder · bash(git add src/debounce.ts src/debounce.test.ts && git commit -…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3e9ab41 Merge branch 'work/main'
+coder › Implemented `debounce` in `src/debounce.ts` and added tests in `src/debounce.test.ts`.
+
+What changed:
+- `debounce` now throws `RangeError` when `ms < 0`.
+- Returned function stores the most recent arguments, cancels any pending timer, and schedules a new one on every call.
+- `cancel()` clears a pending timer and its arguments.
+- `flush()` clears the pending timer and invokes `fn` immediately with the latest arguments; it is a no-op when nothing is pending.
+- Timers are taken from the optional `timers` argument, defaulting to the global `setTimeout`/`clearTimeout`.
+- Added fake-timer tests covering: delayed single call with latest args, timer reset on repeated calls, `cancel`, `flush`, no-op `cancel`/`flush`, the `RangeError`, and re-entry from inside the running function.
+
+Exact check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 21 expect() calls
+Ran 9 tests across 1 file. [16.00ms]
+```
+
+Notes:
+- There is no `typecheck`/`lint` script in `package.json`, only `bun test`, so that is what I ran.
+- Committed on branch `work/main` as `c3dc76b Implement debounce with cancel and flush`.
+
+  coder        deepseek-v4-pro      1 turns, 85054 tokens
+
+main: done
+  bun run test passed
+  merged: 3e9ab41 Merge branch 'work/main'
+  this job: 85k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3e9ab41 Merge branch 'work/main'","cost":"this job: 85k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7178,"outputTokens":5044,"cacheReadTokens":72832,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

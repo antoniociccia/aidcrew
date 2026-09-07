@@ -1,0 +1,70 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && echo "---" && find . -maxdepth 2 -type f -not -pat…)
+architect · read(src/wrap.ts)
+architect · read(package.json)
+architect · bash(cat .aidcrew/config.toml 2>/dev/null; echo "---git---"; git …)
+architect · bash(which bun && bun --version; echo "---"; bun test 2>&1 | head…)
+architect · agent_send(coder)
+architect → coder Implement wrap() and add tests. Project uses Bun (package.json script: `bun test`). No tests exist yet.  FILES TO TOUCH …
+coder · tree(.)
+coder · read(src/wrap.ts)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+architect › Plan sent to coder. I expect back a report of the changes and a passing `bun test` result; I'll then verify and confirm the job is done.
+coder · json(package.json)
+coder › Now implement the wrap function:
+coder · write(src/wrap.ts)
+coder › Now write the tests:
+coder · write(import { describe, expect, test } from "bun:test" import { w…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/wrap.test.ts: 25 |   test("keeps the remainder of a lon…
+coder › One test case as written is inconsistent with the stated algorithm: `wrap("hello world\n\nfoo bar", 5)` cannot equal `"hello\nworld\n\nfoo bar"` — the second paragraph "foo bar" is 7 characters, longer than width 5, so greedy wrapping must produce `"foo\nbar"`. The other 8 cases all pass (8 pass, 1 fail). The behavior spec is unambiguous, so the width in that one test is the arithmetic slip: any width from 7–10 keeps "foo bar" intact while wrapping "hello world". I'll use width 7 so the documented expected string holds:
+coder · edit(test("keeps exactly one blank line between paragraphs", () =…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Committed as `206b4b9` on `work/main`.
+
+**What I changed**
+
+- `src/wrap.ts` — replaced the stub with the real `wrap()`: throws `RangeError` for `width < 1`; splits into paragraphs on `/\r?\n/` treating `/^\s*$/` lines as separators (leading/trailing blank lines dropped); collapses each paragraph's whitespace via `.trim().split(/\s+/)`; greedy-wraps words at `width`, splitting over-long words every `width` characters; joins paragraphs with `\n\n`. No line ever ends in a space.
+- `src/wrap.test.ts` — new file with `bun:test` tests covering all nine cases (RangeError for 0 and −1, space-run collapse, long-word splits, paragraphs, no trailing spaces, long word after short word).
+
+**One deviation from the plan** — the paragraph test as written was self-inconsistent: `wrap("hello world\n\nfoo bar", 5)` cannot equal `"hello\nworld\n\nfoo bar"` because the second paragraph "foo bar" is 7 chars > width 5, so the spec'd algorithm forces `"foo\nbar"` (the run proved it: that test failed with exactly that diff). I changed the width to 7 so the documented expected string holds while "hello world" still wraps. Every other test matches the plan verbatim.
+
+**`bun test` result**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 9 expect() calls
+Ran 9 tests across 1 file. [15.00ms]
+```
+
+All 9 tests pass, 0 failures.
+coder → architect Done. Committed as `206b4b9` on `work/main`.  **What I changed**  - `src/wrap.ts` — replaced the stub with the real `wra…
+architect · read(src/wrap.ts)
+architect · read(src/wrap.test.ts)
+architect · bash(git log --oneline -3 && bun test 2>&1)
+verified: bun run test passes on work/main
+merged work/main into the repository: 8e79b67 Merge branch 'work/main'
+architect › Job is done. `src/wrap.ts` now implements `wrap(text, width)` per the spec — throws `RangeError` for `width < 1`, splits on paragraph breaks, collapses whitespace runs, greedily wraps at spaces, splits over-long words every `width` characters, and joins paragraphs with exactly one blank line — and `src/wrap.test.ts` adds nine tests covering all the required cases.
+
+The coder's one deviation is sound: the paragraph test's original width of 5 was inconsistent with its expected output ("foo bar" is 7 chars), so it was corrected to width 7, which still exercises the paragraph-blank-line behavior. I read both files and confirmed the logic matches the spec.
+
+Verified: `bun test` → 9 pass, 0 fail, 9 expect() calls.
+
+  architect    deepseek-v4-pro      2 turns, 34735 tokens
+  coder        deepseek-v4-flash    1 turns, 63395 tokens
+
+main: done
+  bun run test passed
+  merged: 8e79b67 Merge branch 'work/main'
+  this job: 98k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"8e79b67 Merge branch 'work/main'","cost":"this job: 98k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6065,"outputTokens":5374,"cacheReadTokens":23296,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":13197,"outputTokens":5526,"cacheReadTokens":44672,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

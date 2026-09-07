@@ -1,0 +1,66 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(**/*.ts)
+architect · read(src/toc.ts)
+architect · bash(bun --version && ls src)
+architect › The project is a bun-test package with a stub in `src/toc.ts` (exports `Heading` and `toc`). I have what I need to plan; sending the implementation spec to coder.
+architect · agent_send(Implement toc(markdown) in this repo (markdown-toc, bun test…)
+architect → coder Implement toc(markdown) in this repo (markdown-toc, bun test). Two files to touch.  1) src/toc.ts — replace the stub bod…
+coder · tree(.)
+coder · read(src/toc.ts)
+coder · read(package.json)
+coder · write(src/toc.ts)
+architect › Plan sent to coder. Spec: `src/toc.ts` gets `toc(markdown)` implemented — per-line scan with a ```-fence toggle, ATX regex `/^(#{1,6}) (.*)$/` on trimmed lines, text trimmed, slug = lowercased with non-letter/digit runs collapsed to dashes and edges trimmed, and in-order dedup appending `-2`, `-3`… — plus a new `src/toc.test.ts` covering levels 1–6, slug normalization (unicode, punctuation, case collisions), dedup suffixes, fenced code skipping, non-heading rejections (7 #'s, no space), and internal-whitespace preservation.
+
+I expect back: the `bun test` summary with zero failures, the list of test names added, and any edge cases where coder had to make a judgment call.
+coder · write(import { describe, expect, test } from 'bun:test' import { t…)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Committing.
+coder · bash(git add src/toc.ts src/toc.test.ts && git commit -m "Impleme…)
+coder · agent_send(architect)
+coder → architect Implemented toc(markdown) on branch work/main, commit d839a37. Two files touched: src/toc.ts (replaced stub, export shap…
+coder › Done. Implemented `toc()` in `src/toc.ts` and added `src/toc.test.ts`, committed on `work/main` (d839a37).
+
+**Check output (`bun test`):**
+```
+9 pass
+0 fail
+Ran 9 tests across 1 file.
+```
+
+**Tests added:**
+1. recognizes levels 1-6 in document order
+2. collapses punctuation and lowercases, keeping unicode letters
+3. dedups repeated slugs, appending -2, -3 in order
+4. collides case-insensitively and through punctuation
+5. ignores heading-looking lines inside code fences
+6. a fence line with trailing text toggles and yields nothing
+7. skips non-heading lines (7 hashes, #nospace, paragraphs, mid-line #)
+8. trims heading text and keeps internal whitespace
+9. handles CRLF line endings
+
+**Spec edges decided on my own:** dedup keyed on the base slug storing count, suffix = count+1 (bare, -2, -3); trailing-dash strip regex `/^-+|-+$/g` after collapse — a heading of only punctuation collapses to an empty slug with no guard (untested; flagged to architect); fence toggle fires on any line starting with ``` then skips it, so trailing text still toggles, per the "only ``` fences" note I read it as the line's trimmed form.
+architect › Report says the check passes; verifying by running it before I call the job done.
+architect · bash(bun test 2>&1 | tail -5 && git log --oneline -1 && git statu…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 0ab87ea Merge branch 'work/main'
+architect › Verified myself: `bun test` → 9 pass, 0 fail; work committed as d839a37 on `work/main` with a clean tree.
+
+**Job done.** `toc(markdown)` is implemented in `src/toc.ts`: line-by-line scan with a ```-fence toggle, ATX `/^(#{1,6}) /` matching, trimmed text, slugs lowercased with non-letter/digit runs collapsed to dashes (unicode-aware), and in-order dedup appending `-2`, `-3`… — proven by 9 new tests in `src/toc.test.ts` covering levels 1–6, slug normalization, dedup, fences, non-headings, internal whitespace, and CRLF.
+
+On the edge coder flagged: a punctuation-only heading yielding the empty base slug is the spec's literal behavior (trim dashes from an all-dash string), so I'm keeping it — no guard.
+
+  architect    glm-5.3-flash        2 turns, 19888 tokens
+  coder        deepseek-v4-flash    1 turns, 52197 tokens
+
+main: done
+  bun run test passed
+  merged: 0ab87ea Merge branch 'work/main'
+  this job: 72k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"0ab87ea Merge branch 'work/main'","cost":"this job: 72k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":10295,"outputTokens":3129,"cacheReadTokens":6464,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5911,"outputTokens":2510,"cacheReadTokens":43776,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

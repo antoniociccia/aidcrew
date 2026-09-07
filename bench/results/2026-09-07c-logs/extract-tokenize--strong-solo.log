@@ -1,0 +1,57 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/stats.ts)
+coder · tree(.)
+coder · read(src/stats.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git branch -a)
+coder · write(src/tokenize.ts)
+coder · edit(src/stats.ts)
+coder · write(src/stats.test.ts)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/stats.test.ts: 11 |     '34', 12 |   ]) 13 | }) 14 |  …
+coder · edit(src/stats.test.ts)
+coder · bash(bun test)
+coder · bash(git diff -- src/stats.ts src/tokenize.ts)
+coder · bash(git add src/tokenize.ts src/stats.ts && git commit -q -m "Ex…)
+coder · read(src/stats.ts)
+coder · read(src/tokenize.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: 921b17c Merge branch 'work/main'
+coder › Done. Here's what I changed and the check output.
+
+**Changes**
+- Added `src/tokenize.ts` exporting `tokenize(text: string): string[]`, using exactly `wordCount`'s old behaviour: lower-case, split on runs of anything that is not a letter/digit/apostrophe, and drop empty words.
+- Updated `src/stats.ts`:
+  - `wordCount` now returns `tokenize(text).length` — identical results.
+  - `topWords` now counts tokens from `tokenize`, so it's case-insensitive and punctuation is treated as separators (the previous `split(/\s+/)` + per-word cleanup is gone).
+  - `topWords` sorting now breaks ties alphabetically via `b[1] - a[1] || (a[0] < b[0] ? -1 : ...)`.
+- Expanded `src/stats.test.ts` with tests for `tokenize`, `wordCount`, case-insensitive `topWords`, and tie-breaking order.
+
+**Check output**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 5 expect() calls
+Ran 5 tests across 1 file. [14.00ms]
+```
+
+Committed on `work/main`:
+- `9e30fbf` Extract shared tokenize and use it in stats
+- `393c41d` Test tokenize, wordCount and topWords
+
+One thing worth flagging: with the required tokenizer, a run of apostrophes alone counts as a word (e.g. `"  '  "` → `["'"]`), since apostrophes are allowed characters and nothing is empty. That matches `wordCount`'s original behaviour, so I left it as-is and wrote the "no empty words" test around punctuation-only separators instead.
+
+  coder        deepseek-v4-pro      1 turns, 92867 tokens
+
+main: done
+  bun run test passed
+  merged: 921b17c Merge branch 'work/main'
+  this job: 93k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"921b17c Merge branch 'work/main'","cost":"this job: 93k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6710,"outputTokens":3341,"cacheReadTokens":82816,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

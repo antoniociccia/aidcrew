@@ -1,0 +1,72 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/roman.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder · glob(**/*)
+coder · json(.)
+coder · bash(bun --version 2>&1; echo "---"; ls -la)
+coder · git-log()
+coder · toml(.)
+coder › The task is clear. Let me check the git state and existing conventions, then implement.
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder · write(src/roman.ts)
+coder · write(import { describe, expect, test } from 'bun:test' import { f…)
+coder · bash(bun test 2>&1)
+coder › All 25 tests pass. Let me verify TypeScript compiles cleanly too, then commit.
+coder · bash(cat > /tmp/tsconfig.check.json <<'EOF' {   "compilerOptions"…)
+coder · error: command failed with exit code 1 error TS18003: No inputs were found in config file '/tmp/tsconfig.check.json'. Specified…
+coder · bash(cat > tsconfig.check.json <<'EOF' {   "compilerOptions": {  …)
+coder · error: command failed with exit code 2 error TS2688: Cannot find type definition file for 'bun'.   The file is in the program b…
+coder · bash(cat > tsconfig.check.json <<'EOF' {   "compilerOptions": {  …)
+coder › Source typechecks clean under strict mode. Committing:
+coder · bash(git add src/roman.ts src/roman.test.ts && git commit -q -m "…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 238dc63 Merge branch 'work/main'
+coder › Done. Here's the summary.
+
+## What I changed
+
+**`src/roman.ts`** — implemented both functions around a single largest-first symbol table (`M, CM, D, CD, C, XC, L, XL, X, IX, V, IV, I`), with each subtractive pair placed before the symbol it subtracts from so the one ordering drives both building and parsing:
+
+- `toRoman(n)` greedily appends symbols while `n >= value`, so `4 → IV`, `9 → IX`, `40 → XL`, `90 → XC`, `400 → CD`, `900 → CM`, `3999 → MMMCMXCIX`. It throws `RangeError` unless `Number.isInteger(n) && 1 ≤ n ≤ 3999` (covers `NaN`, `Infinity`, and fractional inputs).
+- `fromRoman(text)` first rejects the empty string and anything not matching the canonical-numeral grammar `^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$` (case-insensitive) with a `SyntaxError` that quotes the offending text; it then scans greedily to total the value. This makes the accepted set exactly the canonical numerals, so `IIII`, `VX`, `IC`, `MMMM`, `IM`, etc. are all rejected.
+
+**`src/roman.test.ts`** (new) — uses `bun:test`:
+- 12 named `toRoman` cases plus a range/type-error case (`0`, `-1`, `4000`, `1.5`, `NaN`, `±Infinity`).
+- A round-trip `fromRoman(toRoman(n)) === n` for every `n` in `1..3999`.
+- Case-insensitivity checks.
+- Rejection of 10 non-standard strings, and an assertion that the `SyntaxError` message names the offending text.
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 25 pass
+ 0 fail
+ 4032 expect() calls
+Ran 25 tests across 1 file. [21.00ms]
+```
+
+The source also passes a strict `tsc --noEmit` check (run with a throwaway config; the test file itself isn't typecheckable without `bun-types`, which the project doesn't depend on, but `bun test` executes it and it passes).
+
+## Decisions the task didn't specify
+
+- Error messages quote the bad input, e.g. `"IIII" is not a standard Roman numeral` / `expected an integer between 1 and 3999, got 4000`.
+- `fromRoman` rejects the empty string explicitly even though the canonical grammar would otherwise match it.
+- Added `MMMCMXCIX`/`MCMXCIV`/`MCMXC` as `toRoman` spot checks alongside the round-trip sweep.
+
+Committed as `cb4449a` ("Implement toRoman and fromRoman with tests") on `work/main`.
+
+  coder        deepseek-v4-flash    1 turns, 113450 tokens
+
+main: done
+  bun run test passed
+  merged: 238dc63 Merge branch 'work/main'
+  this job: 113k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"238dc63 Merge branch 'work/main'","cost":"this job: 113k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5842,"outputTokens":6744,"cacheReadTokens":100864,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

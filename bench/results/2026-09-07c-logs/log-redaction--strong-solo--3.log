@@ -1,0 +1,57 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/logger.ts)
+coder · read(src/logger.test.ts)
+coder · read(package.json)
+coder · write(src/redact.ts)
+coder · edit(src/logger.ts)
+coder · write(src/redact.test.ts)
+coder · edit(src/logger.test.ts)
+coder · bash(bun test)
+coder · read(src/logger.ts)
+coder · read(src/redact.ts)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/redact.ts src/logger.ts && git commit -m "Add re…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 60dce22 Merge branch 'work/main'
+coder › Done. I added `src/redact.ts` with `redact(value)`, wired it into `log()` in `src/logger.ts`, and added tests for both.
+
+What changed
+- `src/redact.ts` (new): `redact(value)` returns a deep copy. It redacts, at any depth of plain objects and arrays:
+  - any key containing `password`, `passwd`, `secret`, `token`, `apikey`, `api_key`, `api-key`, or `authorization` (case-insensitive) → `'[redacted]'`
+  - any string value with `Bearer <token>` → `Bearer [redacted]` (repeated occurrences too)
+  - everything else is preserved; non-plain objects and primitives are returned as-is, and the input is never mutated.
+- `src/logger.ts`: imports `redact` and spreads `redact(fields)` into the line instead of raw `fields`.
+- `src/redact.test.ts` (new): covers non-mutation/copy, all sensitive key names and case variants, nested objects/arrays, bearer token replacement, and unchanged values.
+- `src/logger.test.ts`: kept the original test and added cases for sensitive fields, bearer tokens, and nested fields.
+
+Commits
+- `b849c43` Add redact helper and pass logger fields through it
+- `f8b0438` Test redact helper and logger redaction
+
+Checks
+```
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 14 expect() calls
+Ran 9 tests across 2 files. [18.00ms]
+```
+
+Decisions not in the plan
+- Bearer tokens are matched as `Bearer ` followed by one or more non-whitespace characters; the token run is replaced while `Bearer ` is kept.
+- Non-plain objects (e.g. `Date`) are left as-is rather than copied, to honor “nothing else changes” for values outside the plain object/array scope.
+
+  coder        deepseek-v4-pro      1 turns, 95083 tokens
+
+main: done
+  bun run test passed
+  merged: 60dce22 Merge branch 'work/main'
+  this job: 95k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"60dce22 Merge branch 'work/main'","cost":"this job: 95k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5824,"outputTokens":6187,"cacheReadTokens":83072,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

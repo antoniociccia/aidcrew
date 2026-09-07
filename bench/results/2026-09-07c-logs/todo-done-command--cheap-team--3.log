@@ -1,0 +1,93 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/cli.ts)
+architect · read(src/store.ts)
+architect · glob(**/*.test.*)
+architect · read(src/cli.test.ts)
+architect · bash(cat package.json)
+architect › Both files are small and the shape is clear. Plan:
+
+**src/store.ts**
+- `render` becomes `` todos.map((todo) => `${todo.id}. [${todo.done ? 'x' : ' '}] ${todo.text}`).join('\n') `` — done shows `[x]`, open shows `[ ]`.
+- Add `export function markDone(todos: Todo[], id: number): Todo[]` — returns a new list (map, not mutate) where the todo whose `id === id` has `done: true`; if none matches, `throw new RangeError(\`no todo with id ${id}\`)`.
+
+**src/cli.ts**
+- In `run`, add a `done` branch before the usage fallback: parse `rest[0]` with `Number`. If `!Number.isInteger(id)`, return `{ out: \`error: not a whole number: ${rest[0]}\`\n`, todos, code: 1 }` (todos unchanged). Otherwise call `markDone(todos, id)` in a try/catch: on `RangeError` return `{ out: \`error: ${e.message}\`\n`, todos, code: 1 } (unchanged); on success `{ out: \`done: ${todo.text}\`\n`, todos: next, code: 0 }` where `todo.text` is the text of the now-done todo. Update the usage line to `usage: todo add <text> | list | done <id>`.
+- Note `done` with no args hits `Number(undefined)` = NaN → the error path, so no extra guard needed.
+
+**src/store.test.ts** (new) — `markDone` on a two-todo list returns a new array with the target `done: true` and the other untouched, the input array is unchanged (assert original `todos[0].done === false` after the call), and `markDone(todos, 99)` throws `RangeError` whose message contains `99`.
+
+**src/cli.test.ts** (extend) — (1) `run(['add', 'buy milk'], [])` then `run(['done', '1'], added.todos)`: code 0, out `done: buy milk\n`, and `list` output contains `[x] buy milk`; (2) `run(['done', 'abc'], someTodos)`: code 1, out starts with `error:` and contains `abc`, todos unchanged (same reference/equal content); (3) `run(['done', '9'], someTodos)`: code 1, todos unchanged.
+
+Check: `bun test` should pass with no failures.
+architect · agent_send(Job: add a `done` command to the todo CLI. Checkout is /priv…)
+architect → coder Job: add a `done` command to the todo CLI. Checkout is /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-…
+coder · tree(.)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · read(src/store.ts)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder › Clear plan. Making the changes now.
+coder · edit(src/store.ts)
+architect › Plan sent to coder. Summary of what I decided:
+
+- **src/store.ts**: `render` gains the `[x]`/`[ ]` marker; new `markDone(todos, id)` returns a fresh list with the todo done and throws `RangeError` naming the id when absent.
+- **src/cli.ts**: `done <id>` branch — non-integer or unknown id prints one `error:` line and exits 1 with todos untouched; success prints `done: <text>` and exits 0; usage line updated.
+- **Tests**: new `src/store.test.ts` for `markDone` (including no-mutation and the throw), extended `src/cli.test.ts` for the command's success and both error paths.
+
+Expected back: coder's report with the full `bun test` output, all green. That check passing will mean the job is done.
+coder · edit(import { add, markDone, render, type Todo } from './store.ts…)
+coder · edit(if (command === 'list') return { out: `${render(todos)}\n`, …)
+coder · write(src/store.test.ts)
+coder · edit(import { expect, test } from 'bun:test' import { run } from …)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 6 tests pass. Committing.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Committed on `work/main` as a single commit (`38ec5ca`, "Add done command to mark a todo complete").
+
+**What changed:**
+- `src/store.ts` — `render` now prints `[x]` for done todos and `[ ]` otherwise; added `markDone(todos, id)` which returns a new array (map, input not mutated) with the matching todo set to `done: true`, throwing `RangeError` (`no todo with id ${id}`) when the id is absent.
+- `src/cli.ts` — new `done` branch: missing/non-integer id → `error: not a whole number: <raw>\n`, code 1, todos unchanged; `markDone` RangeError → `error: <message>\n`, code 1, todos unchanged; success → `done: <text>\n`, code 0 with the new list. Usage line updated to `usage: todo add <text> | list | done <id>`.
+- `src/store.test.ts` (new) — markDone returns new array with target marked and input unmutated; unknown id throws RangeError mentioning the id.
+- `src/cli.test.ts` — added done round-trip (`done: buy milk\n`, list shows `[x] buy milk`), non-integer id path, and unknown-id RangeError path, both leaving todos unchanged.
+
+**Check output (`bun test`):**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 17 expect() calls
+Ran 6 tests across 2 files. [17.00ms]
+```
+
+Handing back to architect.
+coder · agent_send(architect)
+coder → architect Job done and committed on work/main (38ec5ca "Add done command to mark a todo complete"). Implemented exactly per plan: …
+coder › Job complete. Implemented the `done` command per plan, all tests green (6 pass, 0 fail), committed on `work/main` as `38ec5ca`. Handed back to the architect with the full `bun test` output.
+architect · bash(git log --oneline -1 && git status --porcelain && bun test 2…)
+verified: bun run test passes on work/main
+merged work/main into the repository: ec2d8fb Merge branch 'work/main'
+architect › Verified myself: commit `38ec5ca` is on work/main with a clean tree, and `bun test` passes — 6 pass, 0 fail across 2 files.
+
+The job is done. What changed:
+- **src/store.ts**: `render` now shows done todos as `[x]` and open ones as `[ ]`; new `markDone(todos, id)` returns a fresh list with the todo marked done and throws `RangeError` naming the id when none matches, without mutating the input.
+- **src/cli.ts**: new `done <id>` branch — a non-integer id or one no todo has prints a single `error:` line naming the id and exits 1 with todos unchanged; success prints `done: <text>` and exits 0; usage line updated.
+- **src/store.test.ts** (new) and **src/cli.test.ts** (extended): cover `markDone`'s no-mutation and throw, plus the command's success and both error paths.
+
+Verified by: `bun test` — all green, 17 expect() calls.
+
+  architect    glm-5.3-flash        2 turns, 21731 tokens
+  coder        deepseek-v4-flash    1 turns, 69529 tokens
+
+main: done
+  bun run test passed
+  merged: ec2d8fb Merge branch 'work/main'
+  this job: 91k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"ec2d8fb Merge branch 'work/main'","cost":"this job: 91k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":9475,"outputTokens":2976,"cacheReadTokens":9280,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6395,"outputTokens":2590,"cacheReadTokens":60544,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

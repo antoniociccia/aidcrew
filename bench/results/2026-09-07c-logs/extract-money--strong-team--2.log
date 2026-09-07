@@ -1,0 +1,132 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/invoice.ts)
+architect · read(src/receipt.ts)
+architect · grep(formatInvoiceAmount|formatReceiptAmount|renderInvoice|render…)
+architect · glob(**/*.test.ts)
+architect · bash(cat package.json 2>/dev/null; echo '---'; ls -la)
+architect · read(src/invoice.test.ts)
+architect · read(src/receipt.test.ts)
+architect · bash(bun test 2>&1 | tail -30)
+architect · bash(git status --short; echo '---'; git branch --show-current)
+architect › Plan ready. Here is what needs to happen.
+
+## Files to touch
+
+**1. `src/money.ts` (new)**
+Export the single formatter:
+
+```ts
+/** Formats cents with thousands separators, two decimals, a leading minus
+ *  for negatives, then a space and the currency code. */
+export function formatMoney(cents: number, currency: string): string {
+  const sign = cents < 0 ? '-' : ''
+  const whole = Math.floor(Math.abs(cents) / 100)
+  const fraction = Math.abs(cents) % 100
+  const grouped = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return `${sign}${grouped}.${fraction.toString().padStart(2, '0')} ${currency}`
+}
+```
+
+**2. `src/invoice.ts`**
+- `import { formatMoney } from './money.ts'`
+- Make `formatInvoiceAmount` a thin wrapper: `return formatMoney(cents, currency)` (keep the export and its doc comment).
+- Leave `renderInvoice` untouched.
+
+**3. `src/receipt.ts`**
+- `import { formatMoney } from './money.ts'`
+- Make `formatReceiptAmount` a thin wrapper: `return formatMoney(cents, currency)` (keep the export and its doc comment).
+- Leave `renderReceipt` untouched (its labels/line structure stay the same).
+
+**4. `src/money.test.ts` (new)**
+Cover `formatMoney` directly: positive grouped (`123450` → `'1,234.50 EUR'`), positive ungrouped (`1250` → `'12.50 EUR'`), zero (`0` → `'0.00 EUR'`), small negative refund (`-1250` → `'-12.50 EUR'`), large negative (`-123450` → `'-1,234.50 EUR'`).
+
+**5. `src/receipt.test.ts`**
+- Keep the existing positive test unchanged (`'tea 12.50 EUR\nTOTAL 12.50 EUR'`), proving positive output is preserved.
+- Add a test that the refund bug is fixed: `renderReceipt([{ name: 'refund', cents: -1250 }], 'EUR')` → `'refund -12.50 EUR\nTOTAL -12.50 EUR'`.
+- Add a test for a large amount proving the thousands separator now appears: `renderReceipt([{ name: 'tea', cents: 123450 }], 'EUR')` → `'tea 1,234.50 EUR\nTOTAL 1,234.50 EUR'`.
+
+**6. `src/invoice.test.ts`**
+Leave as-is (already correct). Optionally add one negative case for `renderInvoice`, but not required.
+
+## Notes for the implementer
+- All internal imports must use the `.ts` extension (e.g. `'./money.ts'`), matching the existing tests.
+- Don't change the existing positive-output tests.
+
+## Check
+Run `bun test`. It should print all tests pass with `0 fail` (currently 2 tests; after this, expect the money + receipt additions to also pass).
+architect · agent_send(coder)
+architect → coder Implement this change exactly. Files and expected result below.  ## 1. `src/money.ts` (new) Export a single formatter:  …
+architect › Plan sent to coder. I'll wait for their report that `bun test` passes with 0 failures, then confirm the job is done.
+coder · tree(.)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/receipt.test.ts)
+coder · read(src/invoice.test.ts)
+coder · json(package.json)
+coder › Now I have the full picture. Let me create `money.ts`, update the two wrappers, and add tests.
+coder · write(src/money.ts)
+coder · write(src/money.test.ts)
+coder · edit(src/invoice.ts)
+coder · edit(import { formatMoney } from './money.ts'  /** An item on a t…)
+coder · edit(test('renders items and a total', () => {   expect(renderRec…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All tests pass. Now committing in small steps:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Implemented the change exactly as specified and committed on `work/main`.
+
+**Changed files:**
+- `src/money.ts` (new) — shared `formatMoney` (thousands separators, two decimals, leading minus, space + currency code)
+- `src/invoice.ts` — imports `formatMoney` from `'./money.ts'`; `formatInvoiceAmount` is now a thin wrapper `return formatMoney(cents, currency)`; `renderInvoice` untouched
+- `src/receipt.ts` — imports `formatMoney` from `'./money.ts'`; `formatReceiptAmount` is now a thin wrapper `return formatMoney(cents, currency)`; `renderReceipt` untouched
+- `src/money.test.ts` (new) — the five direct `formatMoney` cases
+- `src/receipt.test.ts` — existing positive test unchanged; added the refund (`-12.50`) and thousands-separator (`1,234.50`) tests
+- `src/invoice.test.ts` — untouched, as instructed
+
+**Check output (`bun test`, on the final committed state):**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 9 expect() calls
+Ran 9 tests across 3 files. [12.00ms]
+```
+
+**Commits (small, no signature/trailer):**
+- `67d2534` Add shared formatMoney to money.ts
+- `3e43045` Delegate format wrappers to formatMoney
+- `548442c` Test formatMoney and receipt negative/large amounts
+
+Working tree is clean. One thing worth noting: `receipt.ts` now delegates to `formatMoney`, which — unlike the old `formatReceiptAmount` — groups thousands and handles negatives. That is exactly what the plan specifies and the new receipt tests confirm; no decisions deviated from the plan.
+coder → architect Done. Implemented the change exactly as specified and committed on `work/main`.  **Changed files:** - `src/money.ts` (ne…
+architect · bash(bun test 2>&1 | tail -20; echo '==='; git log --oneline -5; …)
+architect · bash(git show --stat --oneline 67d2534 3e43045 548442c; echo '===…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 2e2cd69 Merge branch 'work/main'
+architect › The job is done. `bun test` passes with 9 tests across 3 files and 0 failures, and the work is committed on `work/main`.
+
+What changed:
+- New `src/money.ts` exports `formatMoney(cents, currency)`: thousands grouped with commas, two decimals, a leading minus for negatives, then a space and the currency code.
+- `formatInvoiceAmount` and `formatReceiptAmount` are now thin wrappers delegating to `formatMoney`, keeping their exports intact.
+- The receipt is fixed by the extraction: refunds render `-12.50 EUR` and large amounts get the thousands separator (`1,234.50 EUR`).
+- Added `src/money.test.ts` (direct formatter cases) and extended `src/receipt.test.ts` (refund + large-amount), while the existing positive-output tests were left unchanged and still pass.
+
+Verified by running `bun test` on the final committed state: 9 pass, 0 fail, clean working tree.
+
+  architect    deepseek-v4-pro      2 turns, 52085 tokens
+  coder        deepseek-v4-flash    1 turns, 72419 tokens
+
+main: done
+  bun run test passed
+  merged: 2e2cd69 Merge branch 'work/main'
+  this job: 125k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"2e2cd69 Merge branch 'work/main'","cost":"this job: 125k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":8368,"outputTokens":4293,"cacheReadTokens":39424,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6593,"outputTokens":2594,"cacheReadTokens":63232,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

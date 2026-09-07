@@ -1,0 +1,69 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(**/*.{ts,js,json})
+architect · read(src/debounce.ts)
+architect · read(src/debounce.test.ts)
+architect · bash(bun --version && bun test 2>&1 | tail -5)
+architect › Implementation and tests are both missing — `bun test` currently fails on the placeholder throw. Plan for coder:
+architect · agent_send(Implement debounce in src/debounce.ts and add tests in src/d…)
+architect → coder Implement debounce in src/debounce.ts and add tests in src/debounce.test.ts. Types, GLOBAL_TIMERS, and the existing "ret…
+coder · read(src/debounce.ts)
+coder · read(src/debounce.test.ts)
+coder · tree(.)
+coder · json(.)
+coder · bash(git status && git log --oneline -5)
+architect › Plan sent to coder. What I asked for:
+
+- **src/debounce.ts** — implement `debounce` keeping the existing `Timers`/`Debounced` types and `GLOBAL_TIMERS`: `ms < 0` throws `RangeError` before anything else; each call snapshots its args and (re)schedules via the injected `timers.setTimeout`, clearing any pending timer first so calls reset the countdown; on fire, args are snapshot-cleared before `fn(...args)` runs (reentrancy-safe); `cancel()` clears the timer and pending state (no-op when idle); `flush()` is a no-op with nothing pending, otherwise runs the pending call immediately with its captured args and reuses `cancel()` to kill the timer — so flush never double-fires.
+- **src/debounce.test.ts** — a fake-timer harness shaped like `Timers` (advances virtual time, fires only due callbacks) covering: fires once at exactly `ms` with latest args; later call resets the timer and its args win; `cancel` drops pending and doesn't break the next schedule; `flush` fires immediately without a later double-fire; `flush` idle no-op; `RangeError` for negative `ms` but not for `0`; and one async test proving the default is the global timers.
+
+Expected back: a report that `bun test` passes (8 pass / 0 fail across `src/debounce.test.ts`) with the output pasted, work committed on the current branch. Once I see that passing report I'll call the job done.
+coder › Now implementing the debounce function:
+coder · edit(src/debounce.ts)
+coder › Now the tests:
+coder · write(src/debounce.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 8 tests pass. Committing in small commits:
+coder · bash(git add src/debounce.ts && git commit -q -m "Implement debou…)
+coder › Done. Implemented `debounce` in `src/debounce.ts` and added the test suite in `src/debounce.test.ts`, keeping the existing types and `GLOBAL_TIMERS` untouched. `package.json` untouched.
+
+**What changed**
+- `src/debounce.ts`: throws `RangeError` with message `ms must be >= 0, got ${ms}` when `ms < 0`; closure state per spec (`timer`, `pendingArgs`, `hasPending`); always-rescheduling `debounced`, a `run` that snapshots args before clearing state (reentrancy-safe), a `cancel` that is a no-op when idle, and a `flush` that returns early when nothing is pending, otherwise runs with captured args after clearing state. No `this`, no leading edge, no return value.
+- `src/debounce.test.ts`: the `fakeTimers()` helper (exact shape from the brief) plus a `spy()` helper, then the 8 tests.
+
+**Check output** — `bun test`:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 19 expect() calls
+Ran 8 tests across 1 file. [57.00ms]
+```
+
+**Commits** (no signature/trailer, branch `work/main`):
+- `00856e7` Implement debounce with cancel and flush
+- `482b419` Add debounce tests
+
+One note: I added a `toThrow('ms must be >= 0, got -1')` assertion inside test 7 beyond the bare `RangeError` check, to pin the message the brief specified — same test count (8). The timer-reset case in test 3 reads exactly as specified: `d('second', 2)` at t=6 resets the timer to t=16, so the advance-4 assertion (t=10→16 boundary) still fires at 16 with only `['second', 2]`.
+coder → architect Done. Implemented `debounce` in `src/debounce.ts` and added the test suite in `src/debounce.test.ts`, keeping the existi…
+verified: bun run test passes on work/main
+merged work/main into the repository: 9080724 Merge branch 'work/main'
+architect › Job done. `debounce` is implemented in `src/debounce.ts` — `RangeError` for `ms < 0`, each call snapshots its args and reschedules through the injected `timers` (so calls within `ms` reset the countdown), reentrancy-safe fire via arg snapshot, `cancel()` as an idle-safe no-op, and `flush()` that runs the pending call immediately with its captured args and kills the timer so it never double-fires. Tests were added in `src/debounce.test.ts` with a fake-timer harness plus one async test proving the default is the global timers.
+
+Verified by the project's own check: `bun test` — 8 pass, 0 fail (19 expect calls) across `src/debounce.test.ts`, committed on `work/main` (`00856e7`, `482b419`). The extra message assertion on the `RangeError` is a reasonable pin; test count unchanged. Handing it to the harness to run the check on the branch and merge.
+
+  architect    glm-5.3-flash        2 turns, 22633 tokens
+  coder        deepseek-v4-flash    1 turns, 52506 tokens
+
+main: done
+  bun run test passed
+  merged: 9080724 Merge branch 'work/main'
+  this job: 75k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9080724 Merge branch 'work/main'","cost":"this job: 75k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":5641,"outputTokens":5088,"cacheReadTokens":11904,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6728,"outputTokens":2898,"cacheReadTokens":42880,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

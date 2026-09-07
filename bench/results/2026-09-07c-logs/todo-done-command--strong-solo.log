@@ -1,0 +1,64 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/cli.ts)
+coder · read(src/store.ts)
+coder · bash(ls -la && cat package.json 2>/dev/null; echo '---'; ls src t…)
+coder · error: command failed with exit code 1 total 16 drwxr-xr-x@ 6 antonio  staff  192  7 set 15:10 . drwxr-xr-x@ 3 antonio  staff  …
+coder · read(src/cli.test.ts)
+coder · bash(git log --oneline -5 2>/dev/null; echo '---'; git status --s…)
+coder · bash(find .aidcrew -type f -maxdepth 3 -print -exec cat {} \; 2>/…)
+coder · bash(git branch --show-current && git status --short)
+coder · edit(src/store.ts)
+coder · edit(src/cli.ts)
+coder · write(src/store.test.ts)
+coder · write(src/cli.test.ts)
+coder · bash(bun test)
+coder · read(src/store.ts)
+coder · read(src/cli.ts)
+coder · bash(git add src/store.ts && git commit -q -m "Add markDone and s…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: eb3a0bc Merge branch 'work/main'
+coder › Implemented the `done` command.
+
+What changed
+- `src/store.ts`
+  - Added `markDone(todos, id)`: returns a new list with the matching todo `done: true`, throws `RangeError('no such todo <id>')` when no todo has that id, and does not mutate the input list.
+  - `render` now shows `[x]` for done todos and `[ ]` for the rest, e.g. `1. [x] buy milk`.
+- `src/cli.ts`
+  - Added the `done` command: `done <id>` prints `done: <text>` and returns the updated list.
+  - A non-whole-number id (checked with `/^\d+$/`) or an unknown numeric id prints one line `error: no such todo <id>` and exits with code 1, returning the todos unchanged.
+  - Updated the usage line to include `done <id>`.
+- `src/store.test.ts` (new): tests `markDone` returns a new non-mutated list with the todo done, and that it throws a `RangeError` naming the id for a missing todo.
+- `src/cli.test.ts`: added tests for a successful `done`, a non-whole-number id, an unknown id, and updated the list test to assert the `[ ]`/`[x]` rendering.
+
+Decisions the plan didn't specify
+- Checkbox format: `<id>. [ ] <text>` / `<id>. [x] <text>`, keeping the existing `id. text` shape.
+- Error wording: `error: no such todo <id>` for both the non-whole-number and unknown-id cases (both start with `error:` and name the id as required).
+
+Check output
+```
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 23 expect() calls
+Ran 6 tests across 2 files. [15.00ms]
+```
+
+Committed on `work/main` in three small commits:
+- `8ec9574` Add markDone and show done state in render
+- `021d112` Add done command to CLI
+- `76a2d14` Test markDone and done command
+
+  coder        deepseek-v4-pro      1 turns, 121533 tokens
+
+main: done
+  bun run test passed
+  merged: eb3a0bc Merge branch 'work/main'
+  this job: 122k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"eb3a0bc Merge branch 'work/main'","cost":"this job: 122k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6518,"outputTokens":8263,"cacheReadTokens":106752,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

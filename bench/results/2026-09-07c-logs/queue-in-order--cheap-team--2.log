@@ -1,0 +1,74 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/queue.ts)
+architect · glob(**/*.test.*)
+architect · read(src/queue.test.ts)
+architect · read(package.json)
+architect › The bug is clear: `push` calls `job()` immediately instead of chaining onto a promise tail, so jobs run concurrently. One file to fix, plus its existing test file. Plan for coder:
+
+**1. `src/queue.ts`** — make it serial:
+
+- Keep `readonly errors: Error[]` with the same wrapping behaviour (non-Error throw values become `new Error(String(cause))`).
+- Replace `#pending` with a chain tail: `#tail: Promise<void> = Promise.resolve()`.
+- `push` stays synchronous and returns `void`: it must only *chain*, not call the job. Do `this.#tail = this.#tail.then(job).catch(...)` — the job is invoked in a microtask after the previous link settles, so it starts only after the previous job finished, never synchronously inside `push`.
+- `drain`: must also cover jobs pushed *while* draining (chained onto a newer tail after the snapshot). Loop: snapshot `tail = this.#tail`, `await tail`, and repeat while `this.#tail !== tail`; when stable, reset `#tail` to `Promise.resolve()` (preserves the old drain-clears-state behaviour).
+
+**2. `src/queue.test.ts`** — keep the existing test, add:
+
+- **Serial order**: two jobs each record `running++` / `running--` around an `await`; assert `running` never exceeded 1 and finish order is push order (e.g. first job awaits a longer delay than second, assert completion order is still 1 then 2).
+- **Not synchronous**: flag set inside the job is still false immediately after `push(...)` returns.
+- **Error isolation**: first job throws an `Error`, second throws a non-Error (`"boom"`), third succeeds — after `drain`, `errors` has exactly those two (second wrapped into an `Error`), third job's flag is set.
+- **Push during drain**: inside the first pushed job, push a second job; `drain` must not resolve until the second job's flag is set.
+
+Check: `bun test` (the repo's own check, via `npm test` script) — all old and new tests pass.
+architect · agent_send(Job: make Queue in src/queue.ts actually run jobs serially i…)
+architect → coder Job: make Queue in src/queue.ts actually run jobs serially in push order. Currently push() invokes job() immediately, so…
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+coder · write(src/queue.ts)
+architect › Plan sent to coder. What I decided and why: `src/queue.ts` needs a promise chain (`#tail`) instead of the `#pending` array — `push` chains `this.#tail = this.#tail.then(job).catch(...)` so the job is invoked only after the previous one settles, never synchronously; `drain` loops on the tail snapshot so jobs pushed mid-drain are waited for. Tests cover seriality, push-order completion, non-synchronous push, error isolation (including non-Error wrapping), and push-during-drain. I expect back the `bun test` output showing all tests green; when that report arrives I'll confirm the job done.
+coder › Let me clean up the drain loop to match the plan more directly:
+coder · edit(src/queue.ts)
+coder › Now the test file:
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me review the final files and commit:
+coder · read(src/queue.ts)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/queue.ts src/queue.test.ts && git commit -m "Run…)
+coder › Done. Reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Queue job done on work/main, commit 6f0657e "Run queue jobs serially in push order" (2 files, no signature/trailer).  Wh…
+coder › Done. Implemented the serial queue change on branch `work/main`, committed as `6f0657e`.
+
+**Changes:**
+- **src/queue.ts** — replaced `#pending: Promise<void>[]` with `#tail: Promise<void> = Promise.resolve()`. `push()` stays synchronous, returns void, never calls `job()`; it chains `.then(job).catch(...)` onto `#tail`, so a job starts in a microtask after the previous link settles. The catch keeps the existing wrapping behaviour: `Error` instances are recorded as-is, anything else as `new Error(String(cause))`, into `readonly errors`. `drain()` snapshots `#tail`, awaits it, re-snapshots in a loop while pushes grew the tail (so jobs pushed during draining are awaited), then resets `#tail` to `Promise.resolve()`.
+- **src/queue.test.ts** — kept the original test and added the four requested ones: serial/order (running never exceeds 1, completion order is push order even when the first job is slower), push-not-synchronous, error isolation (2 errors, second an `Error` instance, third job still runs), and push-during-drain.
+
+**Check output — `bun test`:**
+```
+5 pass
+0 fail
+8 expect() calls
+Ran 5 tests across 1 file. [37.00ms]
+```
+
+All old and new tests green; reported back to the architect with the same details.
+architect · bash(git log --oneline -2 && git status --porcelain && bun test 2…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3df15bc Merge branch 'work/main'
+architect › Job done. `src/queue.ts` now chains each job onto a promise tail, so jobs run one after another in push order, never synchronously inside `push`, with thrown errors (Error or not) recorded in `errors` without stopping later jobs, and `drain` waiting out jobs pushed mid-drain. Verified on the branch myself: commit 6f0657e is in, working tree clean, and `bun test` passes — 5 pass, 0 fail.
+
+  architect    glm-5.3-flash        2 turns, 22286 tokens
+  coder        deepseek-v4-flash    1 turns, 67589 tokens
+
+main: done
+  bun run test passed
+  merged: 3df15bc Merge branch 'work/main'
+  this job: 90k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3df15bc Merge branch 'work/main'","cost":"this job: 90k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":9902,"outputTokens":2784,"cacheReadTokens":9600,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6029,"outputTokens":3704,"cacheReadTokens":57856,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

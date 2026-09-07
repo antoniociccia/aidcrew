@@ -1,0 +1,62 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(ls -la && cat package.json 2>/dev/null | head -60)
+coder · read(src/money.ts)
+coder · bash(find src -type f -maxdepth 3 | sort && ls -la src)
+coder · glob(**/*.test.ts)
+coder · bash(bun --version 2>&1 || echo "no bun")
+coder · write(src/money.ts)
+coder · write(src/money.test.ts)
+coder · bash(bun test)
+coder · bash(ls -la && find . -maxdepth 2 -name 'tsconfig.json' -o -name …)
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · bash(git add src/money.ts && git commit -m "Implement parseMoney"…)
+coder · write(src/money.ts)
+coder · edit(src/money.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/money.ts src/money.test.ts && git commit -m "Mat…)
+coder · read(src/money.ts)
+coder · bash(bun -e "import {parseMoney} from './src/money.ts'; const cas…)
+coder · bash(git status --short && git log --oneline -4)
+verified: bun run test passes on work/main
+merged work/main into the repository: 8da0eb5 Merge branch 'work/main'
+coder › Implemented `parseMoney` in `src/money.ts` and added `src/money.test.ts`.
+
+What changed
+- `parseMoney(text)` now returns `{ cents, currency }`.
+- Currency detection supports `€`/`EUR`, `$`/`USD`, `£`/`GBP`; when several appear, the earliest one wins.
+- Missing or unsupported currency throws a `TypeError` naming the text (e.g. `parseMoney: no supported currency in "..."`).
+- Number parsing: a comma or dot followed by exactly two digits at the end of the number is the decimal separator; every other comma/dot/space is grouping.
+- Leading `-` (including between the currency and the number, e.g. `€-1.234,56`) and parentheses around the amount make it negative.
+- No digits throws a `TypeError` naming the text.
+
+Decisions the plan didn't specify
+- Currency codes are matched exactly: `USDT` does not count as `USD`, since `USD` must not be part of a longer letter run. Symbols match anywhere.
+- Error messages follow the form `parseMoney: ... in "<text>"` so the text is always named.
+
+Checks
+```
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 24 expect() calls
+Ran 9 tests across 1 file. [17.00ms]
+```
+
+Commits
+- `0490a62` Implement parseMoney
+- `e33c45a` Add parseMoney tests
+- `8a17cb1` Match currency codes exactly and tighten parseMoney
+
+  coder        deepseek-v4-pro      1 turns, 290407 tokens
+
+main: done
+  bun run test passed
+  merged: 8da0eb5 Merge branch 'work/main'
+  this job: 290k tokens, 8¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 27¢, on gpt-5 ≈ 25¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"8da0eb5 Merge branch 'work/main'","cost":"this job: 290k tokens, 8¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 27¢, on gpt-5 ≈ 25¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7481,"outputTokens":20654,"cacheReadTokens":262272,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

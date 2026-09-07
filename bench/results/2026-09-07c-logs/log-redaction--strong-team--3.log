@@ -1,0 +1,77 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/logger.ts)
+architect · read(package.json)
+architect · glob(**/*)
+architect · bash(ls -la; find . -name '*.test.ts' -not -path './node_modules/…)
+architect · read(src/logger.test.ts)
+architect · bash(which bun && bun --version; cat .aidcrew/config.toml)
+architect · bash(bun test 2>&1 | head -50)
+architect › The project is a Bun (`bun test`) repo with one existing logger test that already passes. I've read `src/logger.ts`, `src/logger.test.ts`, and `package.json`, and I've confirmed the current suite is green. Here's the plan for the coder.
+architect · agent_send(coder)
+architect → coder Implement redaction for the logger. Repo root: /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-bench-lo…
+coder · tree(.)
+coder · read(src/logger.ts)
+coder · read(src/logger.test.ts)
+architect › Plan sent to coder. I'll wait for their report with the `bun test` result before confirming the job is done.
+coder · json(package.json)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now I'll create the redact module:
+coder · write(src/redact.ts)
+coder · edit(src/logger.ts)
+coder › Now the redact tests:
+coder · write(import { expect, test } from 'bun:test' import { redact } fr…)
+coder › Now extend the logger tests:
+coder · edit(test('writes one json line', () => {   expect(log('info', 's…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 13 tests pass. Now commit in small pieces:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Implemented redaction for the logger on work/main. Committed in two commits: 958ca0d "Add redact helper with key and Bea…
+coder › Implemented and handed off to the architect.
+
+**What changed** (branch `work/main`, 2 commits):
+- **`src/redact.ts`** (new) — `redact(value)` never mutates input; rebuilds plain objects and arrays, lower-cased keys containing any of the eight sensitive fragments become the literal `'[redacted]'` without recursion, strings get `/Bearer\s+\S+/g` → `'Bearer [redacted]'` (capital B only), other primitives pass through.
+- **`src/logger.ts`** — fields routed through `redact` before the spread in `log()`; `Fields` type and one-JSON-line format unchanged; level/message not redacted.
+- **`src/redact.test.ts`** (new) — 8 tests covering the specified key-redaction, Bearer, non-mutation, and pass-through cases.
+- **`src/logger.test.ts`** — existing test kept unchanged; 4 redaction tests added.
+
+**Exact `bun test` result** (run after both commits, working tree clean):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 13 pass
+ 0 fail
+ 23 expect() calls
+Ran 13 tests across 2 files. [16.00ms]
+```
+
+One judgment call beyond the letter of the spec: I applied Bearer-token string redaction uniformly to any string anywhere in the tree (including object field values and array elements), which is what the requested logger tests imply; no other deviations.
+architect · bash(bun test 2>&1 | tail -20; echo "---git---"; git log --onelin…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 507864f Merge branch 'work/main'
+architect › The job is done.
+
+- Added `src/redact.ts` exporting `redact(value)`, which returns a new copy — rebuilding objects and arrays without mutating the input — redacting:
+  - the value of any key (at any depth, case-insensitive, substring match) whose name contains `password`, `passwd`, `secret`, `token`, `apikey`, `api_key`, `api-key`, or `authorization` → `'[redacted]'`;
+  - every `Bearer <token>` in string values → `'Bearer [redacted]'`.
+- Routed `log()` in `src/logger.ts` through `redact` before writing the line (level and message untouched).
+- Added `src/redact.test.ts` and expanded `src/logger.test.ts` (keeping the existing test).
+
+Verified with `bun test`: **13 pass, 0 fail** across 2 files, and the working tree is clean on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 40730 tokens
+  coder        deepseek-v4-flash    1 turns, 87300 tokens
+
+main: done
+  bun run test passed
+  merged: 507864f Merge branch 'work/main'
+  this job: 128k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 13¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"507864f Merge branch 'work/main'","cost":"this job: 128k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 13¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":8318,"outputTokens":6172,"cacheReadTokens":26240,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6669,"outputTokens":3831,"cacheReadTokens":76800,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

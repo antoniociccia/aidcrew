@@ -1,0 +1,73 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(src/**)
+architect · read(src/cache.ts)
+architect · read(src/cache.test.ts)
+architect › The scaffold is minimal: `src/cache.ts` has the constructor signature fixed and stub methods; `src/cache.test.ts` has one test; `package.json` runs `bun test`. Let me confirm the check command runs before planning around it.
+architect · bash(bun test 2>&1 | tail -5)
+architect › `bun test` is the project check and currently fails on the stub, as expected. I have everything I need — the scaffold fixes the constructor signature (`capacity`, `ttlMs`, `now` defaulting to `Date.now`), so the plan is just implementation strategy plus test coverage. Sending it to coder.
+architect · agent_send(Job: implement the LRU+TTL Cache in src/cache.ts and cover i…)
+architect → coder Job: implement the LRU+TTL Cache in src/cache.ts and cover it with tests in src/cache.test.ts. Project check is `bun tes…
+architect › Plan delivered to coder. What I did:
+
+- **Read the least:** `src/cache.ts` (stub with the public surface already fixed — readonly `capacity`/`ttlMs`/`now`, methods `get`/`set`/`has`/`delete`, `size` getter), `src/cache.test.ts` (one test), and `package.json`.
+- **Confirmed the check:** `bun test` is the project's check and currently fails on the stub — so a green run is a meaningful proof.
+- **Sent the implementation plan to coder**, specifying: a single insertion-ordered Map of `{ value, expiresAt }` where LRU = first key; uses (successful `get`, `set`) move a key to most-recent; `set` on an existing key never evicts; expired means `now() >= expiresAt`; expired entries are absent for `get`/`has`/`delete`/`size`; RangeError for capacity < 1. Tests are enumerated per behavior, all on a controllable clock.
+
+What I expect back: coder's report with the final `bun test` summary (all tests passing, exit 0) and the commits made on the job branch. When that arrives and the harness check passes, the job is done.
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · tree(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · json(package.json)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now I understand the setup. Let me implement the cache.
+coder · write(src/cache.ts)
+coder › Now the tests, keeping the existing one and adding the rest with a mutable clock:
+coder · write(import { expect, test } from 'bun:test' import { Cache } fro…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 10 tests pass. Committing in small commits:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · agent_send(architect)
+coder → architect Done. LRU+TTL Cache implemented in src/cache.ts and covered in src/cache.test.ts on branch work/main.  What I did: - cac…
+coder › Done. Implemented the LRU+TTL cache in `src/cache.ts` (public surface unchanged) and expanded `src/cache.test.ts` with the nine requested test cases plus the original stub test.
+
+**Final `bun test` output:**
+```
+10 pass
+ 0 fail
+ 38 expect() calls
+Ran 10 tests across 1 file. [12.00ms]
+```
+
+**Commits on `work/main`** (no signature/trailer, working tree clean):
+- `63f11df` — Implement LRU+TTL cache over a Map
+- `c824d54` — Cover LRU+TTL cache behavior with tests
+
+Notable decision: a successful `get` reorders the entry to most-recent but re-inserts it with its *original* `expiresAt` — it counts as an LRU use without extending the TTL, which is what the "live just before expiry, expired at exactly ttl" test requires. Report sent to architect.
+architect › Coder reports the check green. Before calling it done I'll confirm on the branch itself that tests pass and the work is committed — that's my verification, not a re-review.
+architect · bash(bun test 2>&1 | tail -4 && echo --- && git log --oneline -3 …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 605aa18 Merge branch 'work/main'
+architect › Job done. What changed on `work/main`:
+
+- **`src/cache.ts`** — the stub is now a working LRU+TTL `Cache`: a single insertion-ordered Map of `{ value, expiresAt }` where the first key is least recently used; successful `get` and `set` move a key to most-recent, `set` on an existing key updates value and expiry with no eviction, new keys at capacity evict the least recently used first, expiry is `now() >= expiresAt`, expired entries count as absent for `get`/`has`/`delete`/`size`, and the constructor throws `RangeError` for capacity below 1. The public surface (including the `now` clock defaulting to `Date.now`) is unchanged.
+- **`src/cache.test.ts`** — the original test plus 9 new ones on a controllable clock: TTL boundary, size pruning, LRU via `get`, default-order eviction, replacement without eviction plus expiry refresh, `has` not counting as a use, `delete` semantics, and the `RangeError`.
+
+How it was verified: I ran `bun test` on the branch myself — **10 pass, 0 fail, 38 expect() calls**, exit 0 — with both commits (`63f11df`, `c824d54`) in place and a clean working tree. Ready for the harness check and merge.
+
+  architect    glm-5.3-flash        2 turns, 26575 tokens
+  coder        deepseek-v4-flash    1 turns, 104081 tokens
+
+main: done
+  bun run test passed
+  merged: 605aa18 Merge branch 'work/main'
+  this job: 131k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"605aa18 Merge branch 'work/main'","cost":"this job: 131k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":5580,"outputTokens":4995,"cacheReadTokens":16000,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6674,"outputTokens":7167,"cacheReadTokens":90240,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

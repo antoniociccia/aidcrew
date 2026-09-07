@@ -1,0 +1,65 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder › Now I'll create the shared money module and wire both files to it.
+coder · write(src/money.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder › Now the tests. I'll add a dedicated test file for the shared formatter, and a regression test for the receipt's negative/total formatting fix.
+coder · write(import { expect, test } from 'bun:test' import { formatMoney…)
+coder · edit(src/receipt.test.ts)
+coder · edit(src/invoice.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 14 tests pass. Let me verify the final files and commit.
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder · bash(git add src/money.ts src/money.test.ts src/invoice.ts src/in…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3ee69a6 Merge branch 'work/main'
+coder › Done. 
+
+## What changed
+
+**New `src/money.ts`** — exports `formatMoney(cents: number, currency: string): string`, containing the invoice's formatting logic (commas grouping thousands, two decimals via `padStart`, a leading `-` for negatives, then ` ${currency}`).
+
+**`src/invoice.ts`** — `formatInvoiceAmount` is now a thin wrapper that delegates to `formatMoney`; `renderInvoice` is untouched and unchanged.
+
+**`src/receipt.ts`** — `formatReceiptAmount` is now a thin wrapper over `formatMoney` too. This is the fix: the old receipt code did `Math.floor(cents / 100)` / `cents % 100` on the raw negative value, so a refund of `-1250` produced `-13.-50 EUR`, and it never grouped thousands. `formatMoney` groups and takes the absolute value for the digits, so the refund now renders as `-12.50 EUR`.
+
+Both wrapper exports are kept with the same names and signatures, so nothing importing them breaks. Since the wrappers now share one implementation, positive output (`1,234.50 EUR`, `12.50 EUR`) is identical for both.
+
+**Tests**
+- `src/money.test.ts`: grouping, two decimals, under-a-cent, zero, negative small/large (regression for the mangled `-13.-50` case), and currency placement.
+- Extended `src/receipt.test.ts`: a refund rendered through `renderReceipt` (`refund -12.50 EUR\nTOTAL -12.50 EUR`) and thousands-grouping through `formatReceiptAmount`.
+- Extended `src/invoice.test.ts`: a negative credit line through `renderInvoice` and the wrapper's grouping.
+
+## Checks
+
+`bun test`:
+
+```
+ 14 pass
+ 0 fail
+ 14 expect() calls
+Ran 14 tests across 3 files.
+```
+
+Committed as `fe72086` on `work/main`.
+
+One decision the request left open: I named the negative test case a "refund" and documented `formatMoney`'s contract in a doc comment mirroring the invoice's original one. No other deviations.
+
+  coder        deepseek-v4-flash    1 turns, 85950 tokens
+
+main: done
+  bun run test passed
+  merged: 3ee69a6 Merge branch 'work/main'
+  this job: 86k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3ee69a6 Merge branch 'work/main'","cost":"this job: 86k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6188,"outputTokens":3346,"cacheReadTokens":76416,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

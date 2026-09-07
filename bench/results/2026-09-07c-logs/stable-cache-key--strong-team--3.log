@@ -1,0 +1,78 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/key.ts)
+architect · bash(ls && cat package.json 2>/dev/null | head -60)
+architect · bash(find src -type f | sort && echo '---' && ls -la)
+architect · grep(cacheKey)
+architect · read(src/key.test.ts)
+architect · bash(which bun && bun --version)
+architect · agent_send(coder)
+architect → coder Implement a stable cacheKey. Files to touch:  1. src/key.ts — replace the one-line implementation.  When done, src/key.t…
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · read(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · read(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+architect › I read `src/key.ts` (a one-line `JSON.stringify` wrapper), `src/key.test.ts`, and `package.json` (check is `bun test`, and bun 1.3.14 is installed). I planned the fix and sent it to coder:
+
+- **`src/key.ts`**: replace with a recursive `stable` helper that sorts object keys at every depth, keeps array order, omits `undefined`/function object properties, maps `Date` → ISO string, and maps `NaN`/`Infinity` → `null`; `cacheKey` returns `stable(value) ?? "undefined"`.
+- **`src/key.test.ts`**: add tests for key-order invariance (top-level and nested), array order preservation, `undefined`/function omission in objects and nulling in arrays, `Date` → ISO string, and `NaN`/`Infinity` → `null`.
+
+Verification: `bun test` must pass. I asked coder to commit on `work/main` and report the `bun test` output.
+coder · tree(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · json(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder › Now I'll implement the changes.
+coder · write(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · write(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All tests pass. Let me commit.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Here's the report:
+
+**What changed:**
+- **`src/key.ts`** — replaced the one-line `JSON.stringify(value)` with a private recursive `stable(value)` helper plus `cacheKey` returning `stable(value) ?? "undefined"`. The helper:
+  - Returns `undefined` sentinel for `undefined` and functions
+  - `null` → `"null"`
+  - `Date` → `JSON.stringify(date.toISOString())`
+  - numbers → `"null"` for NaN / non-finite, `JSON.stringify` otherwise
+  - strings → `JSON.stringify`, booleans → `String(value)`
+  - arrays → maps each element, `undefined` results become `"null"`, order preserved, wrapped in `[...]`
+  - objects → keys sorted (making key order irrelevant at every depth), `undefined` results skipped, wrapped in `{...}`
+- **`src/key.test.ts`** — kept the existing test and added 7 new ones covering key order, nested order, array order, sentinel omission/nulling, Date handling, and NaN/Infinity handling (top-level and nested).
+
+**`bun test` output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 16 expect() calls
+Ran 8 tests across 1 file. [18.00ms]
+```
+
+Committed as `8ba5547` on `work/main`.
+coder → architect Done. Here's the report:  **What changed:** - **`src/key.ts`** — replaced the one-line `JSON.stringify(value)` with a pr…
+architect · bash(bun test)
+architect · read(src/key.ts)
+architect · read(src/key.test.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: b0c7ffa Merge branch 'work/main'
+architect › The job is done. I verified the changes myself by running `bun test` in the checkout (8 pass, 0 fail, 16 expect calls) and reading the final `src/key.ts` and `src/key.test.ts`.
+
+**What changed:**
+- `src/key.ts`: `cacheKey` now delegates to a private recursive `stable` helper that sorts object keys at every depth (making key order irrelevant), preserves array order, omits `undefined`/function object properties, maps `Date` → ISO string, and maps `NaN`/`Infinity` → `null`.
+- `src/key.test.ts`: added 7 tests covering key-order invariance (top-level and nested), array order preservation, sentinel omission/nulling, Date handling, and NaN/Infinity handling.
+
+**Verification:** `bun test` passes — `8 pass, 0 fail, 16 expect() calls`. Committed as `8ba5547` on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 41632 tokens
+  coder        deepseek-v4-flash    1 turns, 45802 tokens
+
+main: done
+  bun run test passed
+  merged: b0c7ffa Merge branch 'work/main'
+  this job: 87k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"b0c7ffa Merge branch 'work/main'","cost":"this job: 87k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6286,"outputTokens":4754,"cacheReadTokens":30592,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":8958,"outputTokens":2284,"cacheReadTokens":34560,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

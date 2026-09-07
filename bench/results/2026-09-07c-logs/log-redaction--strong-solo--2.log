@@ -1,0 +1,73 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/logger.ts)
+coder · tree(.)
+coder · read(src/logger.test.ts)
+coder · read(package.json)
+coder · write(src/redact.ts)
+coder · edit(src/logger.ts)
+coder · write(src/redact.test.ts)
+coder · write(src/logger.test.ts)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/redact.test.ts:  # Unhandled error between tests -----…
+coder · edit(src/redact.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/redact.ts src/redact.test.ts && git commit -q -m…)
+coder · read(src/redact.ts)
+coder · read(src/logger.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: 5571146 Merge branch 'work/main'
+coder › Done. Changes on branch `work/main`, committed as two commits:
+
+- `8356aa5` Add `redact()` for secret fields and Bearer tokens
+- `d28ef70` Redact logger fields before writing the line
+
+## What changed
+
+**`src/redact.ts`** (new)
+- Exports `redact(value: unknown): unknown`.
+- Deep-copies plain objects (including null-prototype objects) and arrays.
+- For every key whose lowercased name contains `password`, `passwd`, `secret`, `token`, `apikey`, `api_key`, `api-key`, or `authorization`, replaces the value with `'[redacted]'`.
+- For every string value, replaces `Bearer <token>` with `Bearer [redacted]`.
+- Never mutates the input; non-plain objects and primitives pass through unchanged.
+
+**`src/logger.ts`**
+- `log()` now passes `fields` through `redact()` before spreading them into the JSON line. `level` and `message` are not redacted.
+
+**`src/redact.test.ts`** (new)
+- Covers key redaction at depth, case-insensitivity, all `api` key spellings, Bearer tokens (including multiple per string), top-level arrays/strings, unchanged values, and non-mutation.
+
+**`src/logger.test.ts`**
+- Added tests for redacted flat fields, nested fields, and Bearer tokens in fields; kept the existing one-JSON-line test.
+
+## Checks
+
+```
+bun test
+bun test v1.3.14 (0d9b296a)
+
+ 10 pass
+ 0 fail
+ 16 expect() calls
+Ran 10 tests across 2 files. [16.00ms]
+```
+
+No typecheck or lint scripts exist in `package.json` (`"test": "bun test"` is the only script), so that is the only check run.
+
+## Decisions the plan didn't specify
+
+- "Objects" is treated as plain objects (prototype `Object.prototype` or `null`) plus arrays. Dates, Maps, and class instances are returned as-is rather than being rebuilt, so "nothing else changes" holds and no constructor assumptions are made.
+- Key matching is substring-based, exactly as "contains" says (e.g. `tokenCount` would match `token`).
+- The Bearer match is case-sensitive and single-space, following the literal `'Bearer '` in the request (the "in any case" wording was applied only to key names).
+
+  coder        deepseek-v4-pro      1 turns, 156659 tokens
+
+main: done
+  bun run test passed
+  merged: 5571146 Merge branch 'work/main'
+  this job: 157k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 13¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"5571146 Merge branch 'work/main'","cost":"this job: 157k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 13¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6588,"outputTokens":10295,"cacheReadTokens":139776,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

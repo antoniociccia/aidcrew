@@ -1,0 +1,53 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · tree(.)
+coder · read(src/range.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder · bash(cd "$(pwd)" && git rev-parse --is-inside-work-tree 2>&1; git…)
+coder · bash(git checkout -b fix/overlaps-half-open 2>&1)
+coder › Now implementing. The end is exclusive, so `[s₁,e₁)` and `[s₂,e₂)` overlap iff `s₁ < e₂ && s₂ < e₁`; and a zero-length range `[s,s)` holds no moment at all, so it must be excluded explicitly.
+coder · write(src/range.ts)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { overlaps } …)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/range.test.ts: 61 | }) 62 |  63 | test('an unparseable …
+coder › Bun's `Date.parse` rolled "2026-02-30" over to a valid March date rather than returning NaN. Let me check what Bun actually treats as unparseable:
+coder · bash(bun -e "for (const s of ['not a date','2026-13-01T09:00:00Z'…)
+coder · edit(src/range.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 8 tests pass. Let me review the diff and commit:
+coder · bash(git diff --stat && git add src/range.ts src/range.test.ts &&…)
+verified: bun run test passes on work/main
+merged work/main into the repository: cb0628a Merge branch 'fix/overlaps-half-open'
+coder › Done. Both files changed on branch `fix/overlaps-half-open` (commit `6a1b2a6`).
+
+## What changed
+
+**`src/range.ts`** — `overlaps` now:
+- Treats ranges as half-open, so overlap requires strict inequality on both ends: `aStart < bEnd && bStart < aEnd`. Touching ranges (`aEnd === bStart`) no longer overlap, while ranges sharing a start still do.
+- Explicitly returns `false` when either range is zero length (`start === end`), so an empty range overlaps nothing — not even itself, and not even when it sits inside another range (the strict inequalities alone would have said an empty range inside a longer one overlaps).
+- Parses each range through a `parseRange` helper: an unparseable start or end throws a `TypeError` whose message quotes the offending value (`cannot parse "..." as an ISO 8601 instant`); a range whose end is before its start throws a `RangeError`.
+
+**`src/range.test.ts`** — added tests for each requirement: touching (both orders), same-instant start, containment, zero-length vs. itself / containing range / same start, unparseable start and end each throwing `TypeError` with the value in the message, and end-before-start throwing `RangeError`.
+
+## Checks
+
+`bun test` (the only script in package.json) → **8 pass, 0 fail** (15 expect calls). No lint or typecheck script exists.
+
+## Decisions the plan didn't spell out
+
+- **Validation order / both ranges always validated:** `overlaps` parses and validates both ranges fully before deciding, so a malformed range throws even when it would not have overlapped, and a parse failure is reported as `TypeError` before an ordering problem is considered. Within one range, start and end are parsed first, then ordering is checked.
+- **First draft test used `2026-02-30T09:00:00Z` as an unparseable value, and it failed:** Bun's `Date.parse` is lenient and rolls Feb 30 forward to a valid March date instead of returning NaN. I switched the test value to `2026-13-01T09:00:00Z`, which does parse to NaN.
+
+  coder        deepseek-v4-flash    1 turns, 131656 tokens
+
+main: done
+  bun run test passed
+  merged: cb0628a Merge branch 'fix/overlaps-half-open'
+  this job: 132k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"cb0628a Merge branch 'fix/overlaps-half-open'","cost":"this job: 132k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5819,"outputTokens":8589,"cacheReadTokens":117248,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

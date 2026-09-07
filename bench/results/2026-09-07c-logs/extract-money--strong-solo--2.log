@@ -1,0 +1,59 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · bash(ls -la && cat package.json 2>/dev/null; cat tsconfig.json 2>…)
+coder · error: command failed with exit code 1 total 16 drwxr-xr-x@ 6 antonio  staff  192  7 set 16:10 . drwxr-xr-x@ 3 antonio  staff  …
+coder · bash(find src -type f | sort; echo '---'; cat package.json; echo …)
+coder · glob(**/*.test.ts)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · bash(git status --short --branch; git log --oneline -5 2>/dev/nul…)
+coder · bash(git checkout -b extract-money-formatter)
+coder · write(src/money.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · write(import { expect, test } from 'bun:test' import { formatMoney…)
+coder · edit(test('renders items and a total', () => {   expect(renderRec…)
+coder · bash(bun test)
+coder · bash(git diff -- src && git status --short)
+coder · bash(git add src/money.ts src/invoice.ts src/receipt.ts && git co…)
+verified: bun run test passes on work/main
+merged work/main into the repository: cc7159d Merge branch 'extract-money-formatter'
+coder › Done. I worked on branch `extract-money-formatter`.
+
+What I changed:
+- Added `src/money.ts` exporting `formatMoney(cents, currency)` with the invoice's exact behaviour (thousands grouped with commas, two decimals, leading minus, space, currency code).
+- `src/invoice.ts`: `formatInvoiceAmount` is now a thin wrapper that calls `formatMoney`; still exported. `renderInvoice` untouched.
+- `src/receipt.ts`: `formatReceiptAmount` is now a thin wrapper that calls `formatMoney`; still exported. `renderReceipt` untouched.
+- Added `src/money.test.ts` covering grouping, zero-padding, negative amounts, and the currency suffix.
+- Added a refund test to `src/receipt.test.ts` proving `-1250` cents now renders as `-12.50 EUR` instead of `-13.-50 EUR`.
+
+Checks:
+- `bun test` (the only script in `package.json`):
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 7 expect() calls
+Ran 7 tests across 3 files. [17.00ms]
+```
+
+Decisions beyond the plan:
+- Kept the existing doc comments on the two wrappers, since their public shape didn't change.
+- Added one extra `formatMoney` case for `0` cents to lock down the `0.00` form.
+- No typecheck/lint scripts exist in this project, so `bun test` was the only check to run.
+
+  coder        deepseek-v4-pro      1 turns, 93798 tokens
+
+main: done
+  bun run test passed
+  merged: cc7159d Merge branch 'extract-money-formatter'
+  this job: 94k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"cc7159d Merge branch 'extract-money-formatter'","cost":"this job: 94k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7018,"outputTokens":2940,"cacheReadTokens":83840,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

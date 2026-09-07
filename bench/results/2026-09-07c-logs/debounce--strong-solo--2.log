@@ -1,0 +1,60 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(ls -la && find . -maxdepth 2 -type f -not -path './node_modu…)
+coder · read(src/debounce.ts)
+coder · read(src/debounce.test.ts)
+coder · read(package.json)
+coder · write(src/debounce.ts)
+coder · write(src/debounce.test.ts)
+coder · bash(bun test)
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · bash(git diff)
+coder · bash(git add src/debounce.ts && git commit -m 'Implement debounce…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 8613df3 Merge branch 'work/main'
+coder › Implemented `debounce` in `src/debounce.ts` and added tests in `src/debounce.test.ts`.
+
+What changed:
+- `debounce` now validates `ms < 0` and throws `RangeError`.
+- The returned function stores the most recent arguments, clears any pending timer, and schedules a new one via the provided `timers` (defaulting to global timers).
+- Added `cancel()` to clear a pending timer and drop its arguments, and `flush()` to clear the timer and invoke `fn` immediately with the stored arguments.
+- Both methods are no-ops when nothing is pending.
+
+Tests added:
+- returns a function (existing, kept)
+- exposes `cancel` and `flush`
+- trailing-edge call with most recent args
+- timer reset on calls within `ms`
+- `cancel` drops a pending call and the debounced fn still works afterwards
+- `flush` runs immediately and cancels the timer
+- `ms = 0` accepted
+- `ms < 0` throws `RangeError`
+- default timers are the globals (verified by stubbing `globalThis.setTimeout`/`clearTimeout`)
+
+Checks:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 22 expect() calls
+Ran 9 tests across 1 file. [15.00ms]
+```
+
+Commits on `work/main`:
+- `5c4444c` Implement debounce
+- `20d651e` Add debounce tests
+
+One decision not in the plan: `cancel()` also drops the stored arguments, so a later `flush()` after `cancel()` is a no-op.
+
+  coder        deepseek-v4-pro      1 turns, 113619 tokens
+
+main: done
+  bun run test passed
+  merged: 8613df3 Merge branch 'work/main'
+  this job: 114k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"8613df3 Merge branch 'work/main'","cost":"this job: 114k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7627,"outputTokens":8456,"cacheReadTokens":97536,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,61 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/csv.ts)
+coder · bash(ls -la && find . -maxdepth 2 -name 'package.json' -not -path…)
+coder · glob(**/*.test.ts)
+coder · read(package.json)
+coder · read(src/csv.test.ts)
+coder · edit(src/csv.ts)
+coder · edit(src/csv.test.ts)
+coder · bash(bun test)
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/csv.ts && git commit -m "Escape formula-leading …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 88725b9 Merge branch 'work/main'
+coder › Done. Here's what changed and the result.
+
+## What I changed
+
+`src/csv.ts` — the `field` helper now checks string cells first: if a string starts with `=`, `+`, `-`, `@`, a tab, or a carriage return, it is emitted with a single quote prefixed and the whole field double-quoted, so spreadsheets render it as text. Numbers bypass that check entirely and are written plainly, negative or not. The existing quoting rules for comma, double quote, and newline are unchanged, and double quotes inside a quoted field are still doubled (including in the new prefixed branch).
+
+Key detail: the dangerous-character test runs before `String(cell)`, so a numeric `-1` is not mistaken for a dangerous string.
+
+`src/csv.test.ts` — added tests covering:
+- existing comma/double-quote/newline quoting
+- `=`, `+`, `-`, `@` prefixes
+- tab and carriage-return prefixes
+- quote-doubling inside a prefixed field
+- numbers (`-1, 0, 1.5`) written plainly
+
+## Checks
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 12 expect() calls
+Ran 7 tests across 1 file. [8.00ms]
+```
+
+## Decisions beyond the plan
+
+- Kept the dangerous-character regex to only trigger on the **first** character (`^[...]`), per the requirement that a field *starts with* those characters.
+- Added the existing quoting tests for comma/double-quote/newline so the untouched behavior is pinned while I was at it.
+
+Committed as two small commits on `work/main`:
+- `420689c` Escape formula-leading string cells in CSV output
+- `0deb70d` Add CSV escaping tests
+
+  coder        deepseek-v4-pro      1 turns, 66622 tokens
+
+main: done
+  bun run test passed
+  merged: 88725b9 Merge branch 'work/main'
+  this job: 67k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"88725b9 Merge branch 'work/main'","cost":"this job: 67k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5912,"outputTokens":3366,"cacheReadTokens":57344,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

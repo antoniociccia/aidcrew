@@ -1,0 +1,75 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(**/*.ts)
+coder · read(src/money.ts)
+coder · json(package.json)
+coder · glob(**/*)
+coder · json(.)
+coder · glob(**/*.json)
+coder · error: bunfig.toml does not exist
+coder · bash(cat .aidcrew/config.toml .aidcrew/agents/coder.md 2>/dev/nul…)
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder · bash(git status; echo "==="; git branch -a; echo "==="; git remot…)
+coder › Now let me implement `parseMoney`:
+coder · write(src/money.ts)
+coder › Now the tests:
+coder · write(import { describe, expect, test } from 'bun:test' import { p…)
+coder · edit(src/money.test.ts)
+coder · bash(bun test 2>&1)
+coder › All pass. Let me sanity-check a few extra edge cases beyond the suite:
+coder · bash(bun -e " import { parseMoney } from './src/money.ts' for (co…)
+coder › One nuance: my regex handles a code suffixing the number (`100EUR`) but not prefixing without a space (`EUR100`). Let me make code adjacency symmetric on both sides while still rejecting substrings like `euro`/`XUSD`:
+coder · edit(/** One of the supported markers, anywhere in the text (case…)
+coder · edit(test('code directly adjacent to digits', () => {       expec…)
+coder · bash(bun test 2>&1)
+coder · bash(bun -e " import { parseMoney } from './src/money.ts' for (co…)
+coder › Everything behaves correctly. Let me review the final implementation once and commit:
+coder · read(src/money.ts)
+coder › The implementation reads cleanly. Let me check whether a typecheck is feasible and then commit:
+coder · bash(command -v tsc >/dev/null && tsc --version || echo "no tsc";…)
+coder · bash(tsc --noEmit --strict --target es2020 --module nodenext --mo…)
+coder · bash(tsc --noEmit --strict --target es2020 --module nodenext --mo…)
+coder › `src/money.ts` typechecks clean under `tsc --strict`. Now committing:
+coder · bash(git add src/money.ts src/money.test.ts && git commit -q -m "…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 7fa63f7 Merge branch 'work/main'
+coder › Done. Implemented `parseMoney(text)` in `src/money.ts` and added a test suite in `src/money.test.ts`.
+
+## What I changed
+
+**`src/money.ts`** — `parseMoney` now:
+- **Currency**: scans the text for `€`/`EUR`, `$`/`USD`, `£`/`GBP` anywhere (codes case-insensitive, and allowed flush against digits either side — `100EUR`, `EUR100`, `eur10` — while still rejecting substrings like `euro` or `XUSD` via `(?<![A-Za-z])…(?![A-Za-z])` lookarounds). No supported marker → `TypeError` naming the text; markers of two different currencies → also `TypeError`. The marker is stripped before reading digits so it never splits the amount.
+- **Amount**: takes the run of digits/separators from the first digit, strips spaces, and treats the trailing comma/dot followed by exactly two digits as the decimal separator — everything else as grouping. So `€1.234,56` → 123456 cents, `$1,234` → 123400 cents, `USD 1,234.56` → 123456 cents, `1 234,56 €` → 123456.
+- **Negative**: a `-` before the number, or the number wrapped in `(…)`, makes the result negative; `-0` is normalized to `0`.
+- **No digits at all** → `TypeError` naming the text. Errors use `TypeError` with the original text quoted, e.g. `no supported currency in "1.234,56"`.
+
+**`src/money.test.ts`** — 21 tests (currency variants incl. case/adjacency, decimal-vs-grouping rules, space grouping, large and small amounts, minus/parenthesis negatives, and the three `TypeError` paths for no currency / unsupported currency / no digits).
+
+## Checks
+
+- `bun test` → **21 pass, 0 fail, 36 expect() calls**
+- `tsc --noEmit --strict --target es2020 --module nodenext --moduleResolution nodenext src/money.ts` → clean (exit 0)
+- `bun test` is the project's own test script (`"test": "bun test"`); there's no tsconfig or lint configured, so the tsc run above was a bonus check on just `money.ts`.
+
+Committed as `5f4fcb5 Implement parseMoney and add tests`.
+
+## Decisions the spec didn't spell out
+
+- Currency **codes** are matched case-insensitively (`eur 5` works); the returned code is always uppercase.
+- A text containing two *different* supported currencies (e.g. `$5 €4`) throws a `TypeError` rather than silently picking one.
+- Codes matched directly adjacent to digits on either side (`100EUR`, `EUR100`) are accepted, but only when they aren't part of a longer word.
+- A `TypeError` from an unrecognized currency marker (e.g. `¥1,000`, `JPY 100`) reads as "no supported currency" — the message still names the text.
+
+One caveat worth flagging: the tests run under `bun test` (which transpiles rather than typechecks), and type-checking the test file needs `bun-types` which isn't installed; I verified the implementation file itself under strict `tsc`.
+
+  coder        deepseek-v4-flash    1 turns, 504332 tokens
+
+main: done
+  bun run test passed
+  merged: 7fa63f7 Merge branch 'work/main'
+  this job: 504k tokens, 0.9¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 37¢, on gpt-5 ≈ 33¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"7fa63f7 Merge branch 'work/main'","cost":"this job: 504k tokens, 0.9¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 37¢, on gpt-5 ≈ 33¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":8008,"outputTokens":26180,"cacheReadTokens":470144,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

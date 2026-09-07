@@ -1,0 +1,68 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/logger.ts)
+coder · read(src/logger.test.ts)
+coder · json(package.json)
+coder › Now I understand the setup — a tiny bun project with `bun:test`. Let me create `src/redact.ts`:
+coder · write(src/redact.ts)
+coder › Now wire it into the logger:
+coder · edit(src/logger.ts)
+coder · edit(src/logger.ts)
+coder › Now the tests. First `src/redact.test.ts`:
+coder · write(import { expect, test } from 'bun:test' import { redact } fr…)
+coder › Now add a logger test for redaction:
+coder · edit(test('writes one json line', () => {   expect(log('info', 's…)
+coder › Now run the tests:
+coder · bash(bun test 2>&1)
+coder › All 10 tests pass. Let me commit the work.
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder › There's already a branch `work/main`. Let me commit on it:
+coder · bash(git add src/redact.ts src/redact.test.ts src/logger.ts src/l…)
+verified: bun run test passes on work/main
+merged work/main into the repository: ee86082 Merge branch 'work/main'
+coder › Done. Here's what I changed and the outcome.
+
+## What changed
+
+**`src/redact.ts`** (new) — exports `redact(value)`:
+- Walks objects and arrays to any depth, returning a new copy; the input is never mutated.
+- The value of every key whose name contains any of `password`, `passwd`, `secret`, `token`, `apikey`, `api_key`, `api-key`, or `authorization` (case-insensitive, and matching as substrings) is replaced with `'[redacted]'` — regardless of the value's type (`string`, number, boolean, nested object, etc.).
+- Every string value, at any depth, has any `Bearer <token>` sequence's token replaced with `'[redacted]'` (matching `Bearer` case-insensitively).
+- Everything else is left untouched: primitives pass through, and non-secret keys/values are returned as-is.
+
+**`src/logger.ts`** — `log()` now runs its `fields` through `redact` before building the JSON line, so secrets are gone from the emitted line while the caller's `fields` object is untouched.
+
+**`src/redact.test.ts`** (new) — covers primitives, each secret keyword, case sensitivity, nested objects/arrays, non-string secret values, bearer-token redaction in strings (including multiple tokens and nested locations), and non-mutation of the input.
+
+**`src/logger.test.ts`** — added a test asserting redaction happens before writing (parsing the emitted JSON back), and one asserting the fields passed to `log` are not mutated.
+
+## Checks
+
+`bun test` output:
+
+```
+ 10 pass
+ 0 fail
+ 19 expect() calls
+Ran 10 tests across 2 files. [19.00ms]
+```
+
+Committed on the existing `work/main` branch as `ffe5e54 Redact secrets from logged fields`.
+
+## Notes
+
+- I treated "key whose name contains" as a substring match (e.g. `mySecret`, `apiToken`, `user_password` all redact), consistent with the wording.
+- The secret-key match is applied at every point the key's value would be written; the bearer redaction only applies to string values (non-string bearer tokens aren't a thing).
+- The existing logger test was left intact and still passes.
+
+  coder        deepseek-v4-flash    1 turns, 80122 tokens
+
+main: done
+  bun run test passed
+  merged: ee86082 Merge branch 'work/main'
+  this job: 80k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"ee86082 Merge branch 'work/main'","cost":"this job: 80k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":8943,"outputTokens":8203,"cacheReadTokens":62976,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

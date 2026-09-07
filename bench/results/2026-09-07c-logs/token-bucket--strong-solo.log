@@ -1,0 +1,43 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current)
+coder · write(src/limiter.ts)
+coder · write(src/limiter.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/limiter.ts src/limiter.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9afddc7 Merge branch 'work/main'
+coder › Done. Implemented `RateLimiter` in `src/limiter.ts` as a token bucket and added tests.
+
+What changed
+- `src/limiter.ts`
+  - Starts full (`tokens = capacity`) and records `lastRefill` from the injected `now()`.
+  - `tryTake(n = 1)`:
+    - Refuses immediately when `n > capacity`.
+    - Refills up to the current time first.
+    - Returns `false` and takes nothing when there aren't enough tokens, otherwise deducts and returns `true`.
+  - `available` getter refills up to the current time and reports tokens, including fractional amounts.
+  - Refill is `elapsedMs / 1000 * refillPerSecond`, capped at `capacity`, with `elapsed` clamped at 0 so a backwards clock can't reduce the bucket.
+
+- `src/limiter.test.ts`
+  - Added tests for starting full, default `n = 1`, insufficient tokens taking nothing, continuous refill, capping at capacity, `n > capacity` refusal, `available` not consuming, and fractional amounts.
+
+Checks
+- `bun test`: 8 pass, 0 fail, 20 expect() calls.
+
+One decision worth flagging: the `available` getter also commits the refill (updates the bucket's internal "last refill" time). Since the refill is computed from the same `now()`, it reads identically whether committed or not, and committing keeps `available` and `tryTake` consistent when time advances.
+
+  coder        deepseek-v4-pro      1 turns, 48479 tokens
+
+main: done
+  bun run test passed
+  merged: 9afddc7 Merge branch 'work/main'
+  this job: 48k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9afddc7 Merge branch 'work/main'","cost":"this job: 48k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4907,"outputTokens":4020,"cacheReadTokens":39552,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

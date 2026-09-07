@@ -1,0 +1,60 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/stats.ts)
+coder · tree(.)
+coder · read(src/stats.test.ts)
+coder · read(package.json)
+coder · bash(git status && git branch --show-current)
+coder · write(src/tokenize.ts)
+coder · write(src/stats.ts)
+coder · write(src/tokenize.test.ts)
+coder · write(src/stats.test.ts)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/stats.test.ts: 4 | test('counts words, whatever their …
+coder · edit(src/stats.test.ts)
+coder · bash(bun test)
+coder · bash(git status && git diff)
+coder · bash(git add src/tokenize.ts src/tokenize.test.ts src/stats.ts sr…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 60a383b Merge branch 'work/main'
+coder › Done. Here's what changed and the check output.
+
+## What changed
+
+- **`src/tokenize.ts`** (new): exports `tokenize(text): string[]`, using `wordCount`'s exact old behaviour — lower-cases, splits on runs of anything that isn't a letter/digit/apostrophe, filters out empty strings.
+- **`src/stats.ts`**: both functions now use `tokenize`.
+  - `wordCount` is now `tokenize(text).length` — results unchanged.
+  - `topWords` counts lower-cased words and sorts by count descending, breaking ties alphabetically (`a[0] < b[0] ? ...`).
+- **Tests**:
+  - `src/tokenize.test.ts` (new): covers lower-casing, apostrophe/letter/digit runs, separators, and no empty words.
+  - `src/stats.test.ts`: added a `topWords` test for case-insensitive counting and frequency-then-alphabetical ordering.
+
+One fix during testing: my first `topWords` test expected `['the', 3], ['cat', 2]`, but `'and'` also occurs twice and sorts before `'cat'`, so the correct expectation is `['the', 3], ['and', 2]`. I corrected the test, not the code.
+
+## Check output
+
+```
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+
+ 4 pass
+ 0 fail
+ 5 expect() calls
+Ran 4 tests across 2 files. [16.00ms]
+```
+
+There is no typecheck or lint script in `package.json` (`scripts` only has `test`), so `bun test` is the project's own check and it passes.
+
+Committed on `work/main` as `12a1d79` ("Extract shared tokenizer for wordCount and topWords").
+
+  coder        deepseek-v4-pro      1 turns, 80792 tokens
+
+main: done
+  bun run test passed
+  merged: 60a383b Merge branch 'work/main'
+  this job: 81k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"60a383b Merge branch 'work/main'","cost":"this job: 81k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6563,"outputTokens":2677,"cacheReadTokens":71552,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

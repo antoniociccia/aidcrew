@@ -1,0 +1,52 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/csv.ts)
+coder · glob(**/*csv*)
+coder · read(src/csv.test.ts)
+coder · edit(src/csv.ts)
+coder · edit(src/csv.test.ts)
+coder · json(package.json)
+coder · bash(bun test)
+coder · glob(tsconfig*.json)
+coder · json(package.json)
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git checkout -b fix/csv-formula-injection && git add src/csv…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3227790 Merge branch 'fix/csv-formula-injection'
+coder › Done. Here's what changed:
+
+**`src/csv.ts`**
+- In `field`, string cells are now checked against `/^[-=+@\t\r]/`. If a string starts with `=`, `+`, `-`, `@`, tab, or CR, it is emitted as a quoted field with a leading single quote: `"'<escaped text>"`.
+- Number cells bypass that check entirely, so negatives are written plainly.
+- The existing quoting logic is unchanged, and any `"` inside the new prefixed quoted field is still doubled.
+
+**`src/csv.test.ts`**
+- Added tests for each dangerous prefix (`=`, `+`, `-`, `@`, tab, CR).
+- Added a test that numbers (including negatives) are written plainly.
+- Added tests for quote doubling, both for a plain quoted field and for a prefixed field containing quotes.
+
+**Checks**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 10 expect() calls
+Ran 4 tests across 1 file. [11.00ms]
+```
+
+The work is on branch `fix/csv-formula-injection`, committed as `e542df6`. Note: the only script in `package.json` is `bun test`, and there's no tsconfig, so `bun test` was the project's own check available.
+
+  coder        deepseek-v4-pro      1 turns, 90982 tokens
+
+main: done
+  bun run test passed
+  merged: 3227790 Merge branch 'fix/csv-formula-injection'
+  this job: 91k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3227790 Merge branch 'fix/csv-formula-injection'","cost":"this job: 91k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5794,"outputTokens":4292,"cacheReadTokens":80896,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

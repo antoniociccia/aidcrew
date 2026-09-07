@@ -1,0 +1,51 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder · write(src/csv.ts)
+coder · write(src/cli.ts)
+coder · write(src/csv.test.ts)
+coder · write(src/cli.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/csv.ts src/csv.test.ts && git commit -m "Add CSV…)
+coder · bash(git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: 8ce661b Merge branch 'work/main'
+coder › Done. Changes are committed on `work/main` in two commits.
+
+**What changed**
+- `src/csv.ts` (new): exports `parseCsv(text: string): string[][]`, handling quoted fields, commas inside quotes, doubled quotes (`""` → `"`), and `\r\n`/`\n` line endings.
+- `src/csv.test.ts` (new): unit tests for the parser.
+- `src/cli.ts`: added `--json`. It uses `parseCsv`, treats row 1 as the header, and prints `JSON.stringify(objects)` plus `\n`. Empty input and header-only input print `[]\n`. A data row whose field count differs from the header returns code 1 with `line N: expected X fields, got Y\n` and no JSON.
+- `src/cli.test.ts`: added `--json` tests and updated the usage assertion to include `--json`.
+
+**Check output**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 17 pass
+ 0 fail
+ 17 expect() calls
+Ran 17 tests across 2 files. [12.00ms]
+```
+
+`bun test` is the only check the project has (`package.json` has no lint/typecheck script).
+
+**Decisions the plan didn't specify**
+- Error line wording: I chose `line N: expected X fields, got Y`.
+- The parser treats any newline (`\n`, `\r\n`, or a lone `\r`) as a row separator, even inside a quoted field — the spec didn't call for multi-line quoted fields.
+- `--json` is checked after `--upper`/`--count`, matching the existing flag-order behavior.
+
+  coder        deepseek-v4-pro      1 turns, 128454 tokens
+
+main: done
+  bun run test passed
+  merged: 8ce661b Merge branch 'work/main'
+  this job: 128k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 12¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"8ce661b Merge branch 'work/main'","cost":"this job: 128k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 12¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5552,"outputTokens":9878,"cacheReadTokens":113024,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

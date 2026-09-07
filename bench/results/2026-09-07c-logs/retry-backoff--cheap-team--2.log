@@ -1,0 +1,71 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(**/*.ts)
+architect · read(src/retry.ts)
+architect · bash(git log --oneline -5 && git status --short && which bun && b…)
+architect › The job is small and fully specified: a stub at `src/retry.ts`, Bun's test runner, nothing else in the project. I'll write the plan and hand it to coder.
+
+**Plan**
+
+1. `src/retry.ts` — replace the stub body, keeping the exported signature:
+   - First line, before any `await` or call to `fn`: if `options.attempts < 1`, throw a `RangeError` (inside the async function this surfaces as a rejected promise — the test should expect a rejection).
+   - `const sleep = options.sleep ?? ((ms) => new Promise(r => setTimeout(r, ms)))`.
+   - Loop up to `attempts` times: `try { return await fn() } catch (err)`. On failure, if attempts remain, `await sleep(baseMs * 2 ** failureIndex)` (10 after 1st failure with `baseMs: 10`, then 20, 40…), then continue.
+   - After the final failure: `throw new Error(\`gave up after ${attempts} attempts: ${err.message}\`, { cause: err })` — message starts with `gave up after N attempts: ` and `cause` is the last error.
+2. `src/retry.test.ts` (new, `bun:test`) with a recording fake `sleep` (`waits.push(ms)`): success on first try returns result and calls sleep zero times; fail-fail-succeed returns the result with waits `[baseMs, baseMs*2]`; fail×3-then-succeed gives `[10, 20, 40]`; always-failing throws `Error` matching `/^gave up after 2 attempts: boom$/` with `cause === lastError`, fn called exactly `attempts` times, waits `[baseMs]`; `attempts: 0` rejects with `RangeError` and `fn` never called; no `sleep` option still resolves (baseMs 1, fail then succeed) proving the default timer path.
+
+**Check:** `bun test` should print the new suite with all tests passing, 0 failures.
+architect · agent_send(Job: implement retry in this repo (checkout root, branch wor…)
+architect → coder Job: implement retry in this repo (checkout root, branch work/main — commit there, small commits, no trailers).  Files: …
+coder · bash(pwd && git status && git log --oneline -5 && ls)
+coder · read(src/retry.ts)
+coder · json(.)
+coder · tree(src)
+coder · write(src/retry.ts)
+architect › Plan handed to coder. I expect back: the two files (`src/retry.ts` implemented, `src/retry.test.ts` new), committed on `work/main`, and the tail of `bun test` output showing the retry suite all green with 0 failures. When that lands I'll review the diff against the spec and call the job done.
+coder · write(import { test, expect } from 'bun:test' import { retry } fro…)
+coder › Let me refine the tests to use plain counters rather than relying on mock-function matchers:
+coder · write(import { test, expect } from 'bun:test' import { retry } fro…)
+coder · bash(bun test 2>&1 | tail -40)
+coder › All 6 tests pass. Let me see the full output for the report:
+coder · bash(bun test 2>&1)
+coder · bash(git add src/retry.ts src/retry.test.ts && git commit -m "Imp…)
+coder · agent_send(architect)
+coder → architect Retry implemented on work/main, commit 279a6d1 "Implement retry with exponential backoff and add tests" (2 files, 110 in…
+coder › Done. Retry implemented and committed on `work/main` at `279a6d1`.
+
+**What changed:**
+- `src/retry.ts` — replaced only the stub body, keeping the exported signature and `RetryOptions` type intact: RangeError for `attempts < 1` first (rejects, as intended for an async fn), default setTimeout sleep, exponential waits baseMs·2ⁿ with no wait after the final failure, and a final `Error("gave up after N attempts: <msg>", { cause: err })`.
+- `src/retry.test.ts` — new file with all six requested scenarios (first success, fail-twice-then-succeed [10, 20], three-failure doubling [10, 20, 40], give-up with cause + exact call/waits counts, attempts 0/−1 RangeError with fn never called, and default-sleep path with baseMs 1).
+
+**Check — exact tail of `bun test`:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 19 expect() calls
+Ran 6 tests across 1 file. [14.00ms]
+```
+6 pass, 0 fail. Working tree clean; report sent to architect.
+architect · bash(git log --oneline -3 && bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: cbdc757 Merge branch 'work/main'
+architect › Job done. `src/retry.ts` now implements `retry` per spec — RangeError for `attempts < 1` before anything runs, waits doubling through the injected `sleep` (`baseMs`, `2·baseMs`, `4·baseMs`, none after the final failure), default `setTimeout` sleep, and a final `Error` starting with `gave up after N attempts: ` whose `cause` is the last error — with `src/retry.test.ts` covering success-first-try, backoff timing via a recording fake sleep, exhaustion message/cause/call-count, and the default-sleep path.
+
+Verified: `bun test` on branch `work/main` at commit `279a6d1` prints **6 pass, 0 fail** (19 expect calls). The harness can run the project check and merge.
+
+  architect    glm-5.3-flash        2 turns, 21336 tokens
+  coder        deepseek-v4-flash    1 turns, 74272 tokens
+
+main: done
+  bun run test passed
+  merged: cbdc757 Merge branch 'work/main'
+  this job: 96k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"cbdc757 Merge branch 'work/main'","cost":"this job: 96k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":9237,"outputTokens":3139,"cacheReadTokens":8960,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6143,"outputTokens":3745,"cacheReadTokens":64384,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,71 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(**/*.ts)
+architect · read(src/window.ts)
+architect · bash(ls -la src/ && git log --oneline -5 2>/dev/null; git status …)
+architect › Skeleton confirmed: `src/window.ts` has the class shape (limit, windowMs, now already wired), bun test is the project check, no test file yet. Plan:
+
+**src/window.ts** — implement both methods:
+- Constructor: validate first — if `limit < 1` or `windowMs < 1` throw `RangeError`. Keep `now` defaulting to `Date.now`.
+- Per-key state: a `Map<string, number[]>` of event timestamps.
+- Expiry rule: an event at time `t` counts only while `now - t < windowMs`, so an event exactly `windowMs` old no longer counts (prune with `t > now - windowMs`).
+- `allow(key)`: prune the key's timestamps, if fewer than `limit` remain push the current `now()` and return `true`; else record nothing and return `false`.
+- `remaining(key)`: prune, return `limit - length` (never negative).
+- Keys independent by construction (separate map entries); same-millisecond events each count.
+
+**src/window.test.ts** (new) — bun tests using a controlled clock (a `let t` with `now: () => t`):
+- allows up to `limit` events, then refuses; `remaining` counts down to 0.
+- refusal records nothing: after a refused call, advancing the clock still leaves the earlier slot count intact and `remaining` unchanged.
+- events expire: after advancing ≥ `windowMs`, old events no longer count — including the exact boundary (`t + windowMs` must NOT count, `t + windowMs - 1` must).
+- keys are independent (one key at limit doesn't affect another).
+- `limit: 0` and `windowMs: 0` (and negatives) throw `RangeError`.
+- `remaining` on a fresh key returns `limit`.
+
+**Check** — `bun test` should print all tests passing (expect ~8–10 cases, 0 failures).
+
+Sending to coder; I expect back the report that `bun test` passes with the file list touched.
+architect · agent_send(Implement SlidingWindow in this repo (bun, ESM, test script …)
+architect → coder Implement SlidingWindow in this repo (bun, ESM, test script is `bun test`).  Files: 1. src/window.ts — class skeleton al…
+coder · tree(.)
+coder · read(src/window.ts)
+coder · read(package.json)
+architect › Plan sent to coder. Waiting on their report: they should confirm touching `src/window.ts` (implemented `allow`/`remaining`, RangeError validation, per-key timestamp map with `t > now - windowMs` pruning) plus the new `src/window.test.ts` with a controlled clock, and that `bun test` passes with zero failures. When it passes, the job is done.
+coder · write(src/window.ts)
+coder · write(/** At most limit events per key in any windowMs-long span. …)
+coder › Now the test file:
+coder · write(import { describe, expect, test } from 'bun:test' import { S…)
+coder · bash(bun test 2>&1 | tail -30)
+coder › All tests pass. Let me check the git status and commit.
+coder · bash(git status && git log --oneline -3)
+coder · bash(git add src/window.ts src/window.test.ts && git commit -m "I…)
+coder › Done. Reporting back.
+coder · agent_send(architect)
+coder → architect Implemented SlidingWindow. Files touched: src/window.ts (implemented), src/window.test.ts (new). Pushed as commit 2e920c…
+coder › Done. Implemented SlidingWindow in `src/window.ts` and added `src/window.test.ts`, both committed on `work/main`.
+
+The check passes: **11 pass, 0 fail, 52 expect() calls**.
+architect · bash(bun test 2>&1 | tail -8 && git log --oneline -2 && git statu…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 1ae2d03 Merge branch 'work/main'
+architect › Verified on my checkout: `bun test` → 11 pass, 0 fail (52 expect calls), commit 2e920cb on work/main, working tree clean.
+
+**Job done.** What changed:
+- `src/window.ts` — `SlidingWindow` implemented: `RangeError` for `limit < 1` or `windowMs < 1`; per-key timestamp lists in a private map; `allow(key)` prunes expired events (strict `t > now - windowMs`, so an event exactly `windowMs` old no longer counts), admits and records when under `limit`, otherwise records nothing and returns false; `remaining(key)` returns how many more events the key may have; keys fully independent.
+- `src/window.test.ts` — new, controlled clock (`now: () => t`): limit-then-refuse, remaining countdown, refusal records nothing, exact expiry boundary (`t + windowMs - 1` counts, `t + windowMs` doesn't), older events expiring while newer stay, independent keys, fresh-key remaining, same-millisecond events, and RangeError cases.
+
+How it was verified: `bun test` passes with zero failures on the job branch.
+
+  architect    glm-5.3-flash        2 turns, 19472 tokens
+  coder        deepseek-v4-flash    1 turns, 70653 tokens
+
+main: done
+  bun run test passed
+  merged: 1ae2d03 Merge branch 'work/main'
+  this job: 90k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"1ae2d03 Merge branch 'work/main'","cost":"this job: 90k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":9376,"outputTokens":1968,"cacheReadTokens":8128,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9793,"outputTokens":4156,"cacheReadTokens":56704,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

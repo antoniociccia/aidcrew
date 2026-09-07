@@ -1,0 +1,65 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/csv.ts)
+architect · glob(**/*csv*)
+architect · read(src/csv.test.ts)
+architect · read(package.json)
+architect · bash(bun test)
+architect › The file and its tests are small, and the baseline `bun test` passes. Here's the plan.
+architect · agent_send(coder)
+architect → coder Fix CSV formula injection in this checkout (branch work/main).  Files to touch: 1. src/csv.ts — rewrite `field` so the p…
+architect › Plan sent to coder. I expect back the changed files and the `bun test` output showing all tests pass.
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder · tree(.)
+coder · json(.)
+coder · edit(src/csv.ts)
+coder · edit(test('quotes a field with a comma', () => {   expect(toCsv([…)
+coder · bash(bun test 2>&1)
+coder › All 5 tests pass. Let me verify the final files and commit.
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder · bash(git add src/csv.ts src/csv.test.ts && git commit -m "Guard C…)
+coder › Done. Committed as `15074be` on work/main.
+
+**What changed:**
+- `src/csv.ts` — rewrote `field` per the plan: numbers are emitted plainly via `String(cell)` (so `-1` stays `-1`), and only strings get protection. A string starting with `=`, `+`, `-`, `@`, tab, or CR is treated as dangerous, gets prefixed with `'` inside the quotes, and quotes in the content are doubled. The `toCsv` function and its doc comment are unchanged.
+- `src/csv.test.ts` — kept the existing comma test and added four tests covering: each dangerous leading character (`=`, `+`, `-`, `@`, tab, CR) written as a quoted field with leading `'` inside the quotes, negative/positive numbers written plainly, a double quote doubled inside quotes, and a newline still quoted.
+
+**`bun test` output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 10 expect() calls
+Ran 5 tests across 1 file. [14.00ms]
+```
+
+Note on one detail the plan left open: I split the new assertions into four named tests rather than one, and the dangerous-character test checks all six characters (`=`, `+`, `-`, `@`, tab, CR) as specified — it's one test with six expectations, so totals read 5 tests / 10 expect calls.
+coder → architect Done. Committed as `15074be` on work/main.  **What changed:** - `src/csv.ts` — rewrote `field` per the plan: numbers are…
+architect · bash(bun test && git diff HEAD~1 -- src/csv.ts src/csv.test.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: caeb2b4 Merge branch 'work/main'
+architect › Verified. The job is done.
+
+**What changed:**
+- `src/csv.ts` — `field` now branches on type: numbers are emitted plainly (negatives stay `-1`), and only strings get protection. A string starting with `=`, `+`, `-`, `@`, tab, or CR is quoted and prefixed with `'` inside the quotes; the existing comma/quote/newline quoting is preserved, with `"` inside a quoted field doubled.
+- `src/csv.test.ts` — added tests for formula-prefix defusing, plain number output, double-quote doubling, and newline quoting.
+
+**How it was verified:** I ran `bun test` myself — `5 pass, 0 fail, 10 expect() calls` — and confirmed the diff on `work/main` matches the spec. Committed as `15074be`.
+
+  architect    deepseek-v4-pro      2 turns, 29095 tokens
+  coder        deepseek-v4-flash    1 turns, 48814 tokens
+
+main: done
+  bun run test passed
+  merged: caeb2b4 Merge branch 'work/main'
+  this job: 78k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"caeb2b4 Merge branch 'work/main'","cost":"this job: 78k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5325,"outputTokens":2394,"cacheReadTokens":21376,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6342,"outputTokens":1512,"cacheReadTokens":40960,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

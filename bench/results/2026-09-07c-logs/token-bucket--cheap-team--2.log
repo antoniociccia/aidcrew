@@ -1,0 +1,62 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(src/**/*)
+architect · read(src/limiter.ts)
+architect · read(src/limiter.test.ts)
+architect › The skeleton is small and clear: a class with `capacity`, `refillPerSecond`, and an injectable `now`, plus two unimplemented members. `bun test` is the project check. Here's the plan.
+architect · agent_send(Implement the token-bucket RateLimiter and add tests. Branch…)
+architect → coder Implement the token-bucket RateLimiter and add tests. Branch: work/main (your checkout). Two files.  1) src/limiter.ts —…
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+architect › The plan is with coder. Summary of what I decided and expect back:
+
+**Plan sent:**
+- `src/limiter.ts`: keep the class shape; add private `tokens` (start at capacity) and `last` (captured via the injected `now` at construction). A private `refill()` adds `(elapsed/1000) * refillPerSecond`, clamped to capacity, guarding against time going backwards. `tryTake(n)` refills first, refuses any `n > capacity` outright, and otherwise only subtracts when tokens are available. `available` refills and returns the raw fractional count.
+- `src/limiter.test.ts`: keep the existing "starts full" test; add tests for draining, all-or-nothing takes, `n > capacity` always refused, fractional continuous refill via `toBeCloseTo`, capacity ceiling after a huge time jump, and a frozen clock never refilling.
+
+**Expected back:** a commit on work/main and the tail of `bun test` showing 0 failures — after which the harness runs the check on the branch and I'll call the job done.
+coder · tree(.)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · write(src/limiter.ts)
+coder · write(import { expect, test } from 'bun:test' import { RateLimiter…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Implemented the RateLimiter and added the tests, committed as one commit (`da761ec`, no signature/trailer).
+
+**What changed**
+
+- `src/limiter.ts` — kept the class signature and doc comments exactly. Added private mutable `tokens` (init `capacity`) and `last` (init via injected `this.now()`, not `Date.now`). Added private `refill()` that computes `elapsed = Math.max(0, this.now() - this.last)`, adds `(elapsed / 1000) * this.refillPerSecond`, clamps with `Math.min(this.capacity, ...)`, and sets `this.last = this.now()`. `tryTake(n)` calls `refill()` first, refuses `n > capacity` without touching tokens, otherwise subtracts when available. `get available` calls `refill()` and returns the fractional count unrounded.
+- `src/limiter.test.ts` — kept "starts full"; added the six requested tests using a mutable fake clock (`let t = 0; const now = () => t`): drain to empty, refused take takes nothing, `n > capacity` refused even when full, continuous fractional refill (with `toBeCloseTo(0.5)`), refill capped at capacity, and fixed-clock never refills.
+
+**Check output** (exact tail of `bun test`):
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 25 expect() calls
+Ran 7 tests across 1 file. [13.00ms]
+```
+
+Nothing was decided beyond the plan. Ready for the architect to collect.
+coder → architect Done. Implemented the RateLimiter and added the tests, committed as one commit (`da761ec`, no signature/trailer).  **Wha…
+architect · bash(git log --oneline -2 && bun test 2>&1 | tail -6)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3e692d2 Merge branch 'work/main'
+architect › **Job done.** Coder implemented the token-bucket `RateLimiter` in `src/limiter.ts` (private `tokens` starting at capacity, `last` captured via the injected `now`, a `refill()` that adds elapsed time × `refillPerSecond` clamped to capacity, `tryTake` refusing `n > capacity` and otherwise all-or-nothing, fractional `available`) plus six new fake-clock tests in `src/limiter.test.ts`, committed as `da761ec`. I re-ran the project check on work/main myself: `bun test` → **7 pass, 0 fail, 25 expect() calls**. Ready for the harness to run the check and merge.
+
+  architect    glm-5.3-flash        2 turns, 19656 tokens
+  coder        deepseek-v4-flash    1 turns, 46411 tokens
+
+main: done
+  bun run test passed
+  merged: 3e692d2 Merge branch 'work/main'
+  this job: 66k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3e692d2 Merge branch 'work/main'","cost":"this job: 66k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":8572,"outputTokens":2252,"cacheReadTokens":8832,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5994,"outputTokens":2401,"cacheReadTokens":38016,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

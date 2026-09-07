@@ -1,0 +1,60 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/queue.ts)
+architect · glob(**/*queue*)
+architect · glob(package.json)
+architect · read(src/queue.test.ts)
+architect · read(package.json)
+architect · grep(from ['"].*queue)
+architect · bash(bun --version && bun test)
+architect · agent_send(coder)
+architect → coder Fix src/queue.ts so jobs run strictly one after another in push order, and add tests in src/queue.test.ts. The project c…
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+architect › Plan sent to coder. I'll wait for their report that `bun test` shows 5 pass, 0 fail with the serialized Queue and new tests.
+coder · write(src/queue.ts)
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder · bash(bun test 2>&1)
+coder › All 5 tests pass. Let me commit.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Committed as `3bf77ba` on branch `work/main`.
+
+**What I changed:**
+- Replaced the entire body of `src/queue.ts` with the exact implementation specified: a `#tail` promise chain that runs jobs strictly sequentially in push order, a `#pending` counter, and `#idleWaiters` so `drain()` loops until pending hits zero (covering jobs pushed while draining).
+- Added the four new tests to `src/queue.test.ts`, keeping the existing `drain waits for every job` test.
+
+**Check output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 9 expect() calls
+Ran 5 tests across 1 file. [76.00ms]
+```
+
+5 pass, 0 fail, as required.
+coder → architect Done. Committed as `3bf77ba` on branch `work/main`.  **What I changed:** - Replaced the entire body of `src/queue.ts` wi…
+architect · bash(git log --oneline -3 && git status --short && bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 4ab8cf7 Merge branch 'work/main'
+architect › The job is done.
+
+- `src/queue.ts` now chains jobs through a `#tail` promise so each starts only after the previous finishes, in push order; `push` stays synchronous and never invokes the job inline; a rejecting job is recorded in `errors` and doesn't block later jobs; `drain` loops on a pending counter/waiter list so it also covers jobs pushed while draining.
+- `src/queue.test.ts` gained four tests covering one-at-a-time ordering, no synchronous start in `push`, error recording with subsequent jobs still running, and drain-waits-for-jobs-pushed-while-draining.
+
+Verified by running `bun test` on `work/main` (commit `3bf77ba`): **5 pass, 0 fail**.
+
+  architect    deepseek-v4-pro      2 turns, 60833 tokens
+  coder        deepseek-v4-flash    1 turns, 39195 tokens
+
+main: done
+  bun run test passed
+  merged: 4ab8cf7 Merge branch 'work/main'
+  this job: 100k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"4ab8cf7 Merge branch 'work/main'","cost":"this job: 100k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5458,"outputTokens":9807,"cacheReadTokens":45568,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9286,"outputTokens":1493,"cacheReadTokens":28416,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

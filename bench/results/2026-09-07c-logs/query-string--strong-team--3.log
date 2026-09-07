@@ -1,0 +1,55 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/query.ts)
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · bash(find src -type f -maxdepth 3 && echo '---' && find . -path .…)
+architect · grep(parseQuery|stringifyQuery)
+architect · agent_send(coder)
+architect → coder Implement the two functions in src/query.ts and add tests. The package uses `bun test` (see package.json). The existing …
+coder · read(src/query.ts)
+coder · tree()
+coder · json(package.json)
+architect › Plan sent to coder. I'll wait for their report with the `bun test` output; once it passes, I'll confirm the job is done.
+coder · write(src/query.ts)
+coder · write(src/query.test.ts)
+coder · bash(bun test)
+coder › All tests pass. Committing:
+coder · bash(git add src/query.ts src/query.test.ts && git commit -m "Imp…)
+coder › Implemented and committed on `work/main` (commit 520ea02).
+
+**What I changed**
+- `src/query.ts` — replaced both stubs:
+  - `parseQuery` strips a leading `?`, returns `{}` for empty input, splits on `&` skipping empty segments, splits each segment on the **first** `=` only (no `=` → whole segment as key, `''` as value), decodes key and value with `decodeURIComponent(part.replace(/\+/g, ' '))`, and accumulates string → `[old, new]` → push onto array.
+  - `stringifyQuery` iterates `Object.keys` in insertion order, emits one `key=value` pair per array element (none for an empty array), `encodeURIComponent`s key and each value, joins with `&`, returns `''` for an empty object, never prepends `?`.
+- `src/query.test.ts` — new file importing from `bun:test` and `./query`, covering every case you listed plus empty-segment skipping, first-`=` splitting, key encoding, and the round trip on `'a=1&a=2&b=hello+world&c=%20x&d'`.
+
+**Check output** — `bun test`, exit 0:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 14 pass
+ 0 fail
+ 23 expect() calls
+Ran 14 tests across 1 file. [15.00ms]
+```
+
+No deviations from the plan.
+coder → architect Implemented and committed on `work/main` (commit 520ea02).  **What I changed** - `src/query.ts` — replaced both stubs:  …
+architect · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: b98c607 Merge branch 'work/main'
+architect › Job done. `parseQuery` and `stringifyQuery` are implemented in `src/query.ts`, with `src/query.test.ts` covering all specified cases plus a round trip. Verified with `bun test`: **14 pass, 0 fail** (exit 0), committed on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 26979 tokens
+  coder        deepseek-v4-flash    1 turns, 33002 tokens
+
+main: done
+  bun run test passed
+  merged: b98c607 Merge branch 'work/main'
+  this job: 60k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"b98c607 Merge branch 'work/main'","cost":"this job: 60k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4879,"outputTokens":4436,"cacheReadTokens":17664,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5569,"outputTokens":1961,"cacheReadTokens":25472,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

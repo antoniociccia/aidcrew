@@ -1,0 +1,69 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/range.ts)
+architect · glob(**/*range*)
+architect · read(src/range.test.ts)
+architect · read(package.json)
+architect · bash(ls -la && git status && git log --oneline -5)
+architect · bash(bun test 2>&1 | head -50)
+architect · agent_send(coder)
+architect → coder Fix `overlaps` in src/range.ts and add tests. The end of a range is exclusive, and the current `aStart <= bEnd && bStart…
+coder · read(src/range.ts)
+coder · read(src/range.test.ts)
+architect › Plan sent to coder. I'll review their report and the `bun test` output when they reply.
+coder › Both files are small. Let me implement the changes.
+coder · write(src/range.ts)
+coder · write(src/range.test.ts)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Committing.
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Fix…)
+coder · agent_send(architect)
+coder → architect Done. Changed src/range.ts and src/range.test.ts, committed as 4ca3cdf on work/main.  What changed in src/range.ts: - Ad…
+architect · bash(bun test 2>&1 | tail -20 && echo "---DIFF---" && git show --…)
+architect · read(src/range.ts)
+architect · read(src/range.test.ts)
+coder › Done. Summary of the work:
+
+**src/range.ts** — added a private `parse` helper that throws `TypeError` naming the value when `Date.parse` returns NaN; `overlaps` now parses all four fields through it, throws `RangeError` for end-before-start ranges, returns `false` for zero-length ranges, and otherwise compares strictly (`aStart < bEnd && bStart < aEnd`) so touching ranges don't overlap. The `Range` type is unchanged.
+
+**src/range.test.ts** — kept the existing passing test and added coverage for touching ranges, same-instant starts, zero-length ranges (vs. itself and a containing range), unparseable start/end throwing `TypeError` with the offending value, and end-before-start throwing `RangeError`.
+
+**Check output** (`bun test`):
+```
+ 7 pass
+ 0 fail
+ 11 expect() calls
+Ran 7 tests across 1 file.
+```
+
+Committed as `4ca3cdf` on `work/main` (no signature/trailer), and reported back to the architect.
+verified: bun run test passes on work/main
+merged work/main into the repository: 35c1a68 Merge branch 'work/main'
+architect › Done. `overlaps` in `src/range.ts` now treats the end as exclusive and validates its inputs, and `src/range.test.ts` covers the new behavior.
+
+What changed:
+- `src/range.ts` — added a private `parse` helper that throws `TypeError` (message includes the offending value) on unparseable input; `overlaps` parses all four fields through it, throws `RangeError` when end is before start, returns `false` for zero-length ranges, and otherwise uses strict comparison `aStart < bEnd && bStart < aEnd`.
+- `src/range.test.ts` — added tests for touching ranges (no overlap), same-instant starts (overlap), zero-length range against itself and a containing range, unparseable start/end `TypeError` naming the value, and end-before-start `RangeError`.
+
+Verified by running `bun test`:
+
+```
+7 pass
+0 fail
+11 expect() calls
+Ran 7 tests across 1 file.
+```
+
+  architect    deepseek-v4-pro      2 turns, 39232 tokens
+  coder        deepseek-v4-flash    1 turns, 40215 tokens
+
+main: done
+  bun run test passed
+  merged: 35c1a68 Merge branch 'work/main'
+  this job: 79k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"35c1a68 Merge branch 'work/main'","cost":"this job: 79k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":8845,"outputTokens":3891,"cacheReadTokens":26496,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5883,"outputTokens":2076,"cacheReadTokens":32256,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

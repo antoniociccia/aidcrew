@@ -1,0 +1,52 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/csv.ts)
+coder · bash(ls)
+coder · read(package.json)
+coder · bash(find src -type f -maxdepth 3 | sort)
+coder · read(src/csv.test.ts)
+coder · bash(bun --version)
+coder · edit(src/csv.ts)
+coder · edit(src/csv.test.ts)
+coder · bash(bun test)
+coder · read(src/csv.ts)
+coder · edit(src/csv.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git branch -a && git log --oneline -5)
+coder · bash(git add src/csv.ts && git commit -m 'Neutralize formula-lead…)
+verified: bun run test passes on work/main
+merged work/main into the repository: af85324 Merge branch 'work/main'
+coder › Done. Changed `src/csv.ts` so `field()` now distinguishes numbers from strings:
+
+- Numbers are written plainly via `String(cell)`, including negatives (`-5` stays `-5`).
+- String fields whose first character is `=`, `+`, `-`, `@`, a tab, or a carriage return get a single quote prefixed and are wrapped in double quotes, e.g. `"'=1+2"`.
+- The existing comma / double-quote / newline quoting is preserved, and embedded double quotes are still doubled inside quoted fields.
+
+Added tests in `src/csv.test.ts` covering the formula-like prefixes, plain negative/positive numbers, and the unchanged quoting behavior.
+
+Check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 4 expect() calls
+Ran 4 tests across 1 file. [11.00ms]
+```
+
+Commits on `work/main`:
+- `ccdb135` Neutralize formula-leading string fields in CSV output
+- `80329f7` Add tests for CSV formula injection defenses
+
+  coder        deepseek-v4-pro      1 turns, 95969 tokens
+
+main: done
+  bun run test passed
+  merged: af85324 Merge branch 'work/main'
+  this job: 96k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"af85324 Merge branch 'work/main'","cost":"this job: 96k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5783,"outputTokens":3786,"cacheReadTokens":86400,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,188 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder › I'll start by exploring the codebase to understand its structure.
+coder · bash(cd /workspace 2>/dev/null && pwd && ls -la)
+coder · error: refused: that would leave your checkout for /workspace. Your checkout is /private/var/folders/n0/s619yhq953bdp1k85z3bhc6…
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Let me look at the config and any other guidance.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now I understand the structure. Let me check the git branch state and implement the Cache class.
+
+Let me create a branch and implement the cache.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now let me implement the Cache class. I'll use a `Map<K, number>` for last-used timestamps and a value map, tracking the least recently used entry.
+
+Let me think about the design:
+- Maintain a `Map<K, V>` for values
+- Maintain a `Map<K, number>` for last-used timestamps (`lastUsed`)
+- `size` counts entries that haven't expired
+- `get` returns undefined if missing or expired; counts as a use (updates lastUsed)
+- `set` replaces value+time without evicting; evicts LRU if would exceed capacity
+- `has`/`delete` treat expired as absent
+- capacity < 1 throws RangeError in constructor
+
+For LRU eviction, I track the min lastUsed entry.
+
+Let me write the implementation:
+coder · write(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder › Now let me add tests covering all the requirements.
+coder · write(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder › I made a typo in the path. Let me fix - the write created a file at a different path. Let me check what path was used (I wrote to the wrong case `m3adGi` instead of `m3AdGi`).
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › It seems the file was written correctly to the right path (case-insensitive filesystem on macOS). Let me run the tests.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › There's a bug. Let me analyze. The issue is my `clock` helper returns the *next* time on each call, but the eviction test uses a constant `() => 0` clock... wait, the failures are about actual logic.
+
+Wait, let me re-examine. The eviction test `() => 0` passes a constant time. But `expired()` returns `this.now() - last >= this.ttlMs`. With constant now=0 and last=0, `0 - 0 = 0 >= 1000` is false, so not expired. And `get` sets lastUsed to 0 again. So that logic seems fine.
+
+Let me look at the failing eviction test. Set a, then b, then get('a') (makes a recent, b oldest). Then set c. size would be 3 > 2, so evict LRU = b. But test says b still there (received 2).
+
+Wait — the problem: in `set`, I call `this.lastUsed.set(key, this.now())` before evicting. But `evictOne` picks the oldest `lastUsed`. With a constant `() => 0` clock, all timestamps are 0, so `oldestTime` never updates from Infinity! Because all times are 0, `time < oldestTime` is `0 < Infinity` true for first, then for second `0 < 0` false. So only the first entry (a) is considered for eviction... Actually `oldestKey` becomes 'a' and stays. It evicts 'a' instead of 'b'.
+
+Hmm, that reveals a real issue with my LRU approach when timestamps tie. But with a constant clock in tests, ties happen. More importantly, this reveals my design might not be robust. But the real issue: for a proper LRU I should track the actual order of use.
+
+Let me reconsider. The cleanest way to implement LRU with a Map: use the Map itself as the order structure. Delete and re-insert the key on `get` to move it to the end (most recently used). Then eviction removes the first key. Let me rewrite using `values` map ordered by recency.
+
+Actually the simplicity: maintain a single `Map<K, V>` where insertion order = recency (most recent last). On get, delete+reinsert to move to end. On set of existing key, delete+reinsert. Eviction: delete the first key.
+
+Let me rewrite:
+
+```ts
+export class Cache<K, V> {
+  private readonly values = new Map<K, V>()
+  private readonly lastUsed = new Map<K, number>()
+
+  constructor(...) { if (capacity < 1) throw new RangeError }
+
+  private expired(key: K): boolean {
+    const last = this.lastUsed.get(key)
+    return last === undefined || this.now() - last >= this.ttlMs
+  }
+
+  private touch(key: K, value?: V): void {
+    this.values.delete(key)
+    if (value !== undefined) this.values.set(key, value)
+  }
+
+  get(key: K): V | undefined {
+    if (this.expired(key)) return undefined
+    const value = this.values.get(key)
+    // move to most recent position
+    this.values.delete(key)
+    this.values.set(key, value!)
+    return value
+  }
+
+  set(key: K, value: V): void {
+    const existed = this.values.has(key)
+    this.values.delete(key)
+    this.values.set(key, value)
+    this.lastUsed.set(key, this.now())
+    if (!existed && this.size > this.capacity) {
+      // evict LRU = first key
+      const oldest = this.values.keys().next().value
+      this.delete(oldest)
+    }
+  }
+
+  has(key: K): boolean {
+    return this.values.has(key) && !this.expired(key)
+  }
+
+  delete(key: K): boolean {
+    this.values.delete(key)
+    return this.lastUsed.delete(key)
+  }
+
+  get size(): number {
+    let count = 0
+    for (const key of this.values.keys()) {
+      if (!this.expired(key)) count++
+    }
+    return count
+  }
+}
+```
+
+Wait, but there's subtlety: eviction should evict the LRU by use. If `set` re-moves key to end (most recent), then the first key in the map is the LRU. Good. And expired entries — should eviction skip expired ones? An expired entry counts as absent, but physically it's still in the map. If capacity exceeded, we evict LRU which is the oldest-used. That's fine; expired ones would be evicted eventually anyway or could be. Actually if there are expired entries, they're still occupying map entries but not counted in size. When we evict, we evict the first key regardless.
+
+But consider: what if all keys are expired and size=0 but the map is full? Then `!existed && this.size > this.capacity` → size=0 > capacity? No. So no eviction happens, and it would grow unbounded... Actually if all expired, size=0, and we keep setting new keys, size grows as count of unexpired. New keys aren't expired, so eventually size > capacity triggers eviction. Fine.
+
+But there's a subtle issue: expired entries still take map slots and would be considered for eviction (they're oldest). That's fine—evicting them is good.
+
+Let me also reconsider the `delete` return value. Map.delete returns whether the key existed. My `delete` should return true if the key was present (in values). Let me make delete return `this.values.delete(key)` and also remove lastUsed.
+
+Also for expired entries "counting as absent" — delete on an expired key: it's in values, so values.delete returns true. That matches "treat expired entries as absent" meaning `has` returns false and `get` undefined. delete returning true for an expired-but-present key seems acceptable.
+
+Let me rewrite the cache file cleanly.
+coder · write(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder › Now let me reconsider the "get returns undefined for an expired entry" test. With `clock([0, 0, 1500])`: set calls now → 0. First get calls now → 0 (not expired, since 0-0=0 < 1000). Second get calls now → 1500, expired. Good.
+
+But wait, in `get` when not expired I set the value, and in the expired check inside get I call `this.now()` once. Let me trace: first get: `expired()` calls now() → 0 (second time). last was 0, 0-0=0 < 1000, not expired. Good, returns 1. Second get: expired() calls now() → 1500. 1500-0 = 1500 >= 1000, expired, returns undefined. 
+
+The has test `clock([0, 1500])`: set now→0. has→now 1500, expired, false. But test expects first has true! Let me re-read my test.
+
+Test 'expired entries count as absent for has':
+```
+const times = clock([0, 1500])
+cache.set('a', 1)
+expect(cache.has('a')).toBe(true)   // now() → 1500 → expired → false!
+```
+
+That's wrong. set uses now() once → 0. Then has uses now() → 1500, which is expired. My test expectation is wrong. Let me fix the test to have enough time values.
+
+Let me rewrite the tests more carefully. Actually let me simplify the tests and make the clock give explicit control. Let me rewrite the test file cleanly with a proper design where I can control each call.
+coder · write(/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aid…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 13 tests pass. Now let me commit on a branch.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Let me verify there are no TypeScript check tools configured, and do a final sanity check of the implementation.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › The implementation is complete and all tests pass. Let me do a final review of the tree to confirm the state.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 5dba501 Merge branch 'feat/lru-ttl-cache'
+coder › Done. Here's a summary of what I implemented.
+
+## What changed
+
+**`src/cache.ts`** — Implemented the `Cache<K, V>` class:
+- Maintains two internal `Map`s: one for values (whose insertion order doubles as recency, most-recently-used last) and one for each key's last-used timestamp.
+- **Constructor**: throws a `RangeError` when `capacity < 1`; keeps the supplied `now` clock with a `Date.now()` default.
+- **`get`**: returns `undefined` for a missing or expired entry; on a hit it moves the key to the most-recent position (the successful get counts as a use).
+- **`set`**: replaces an existing key's value and timestamp without evicting (it's counted as a use); when a brand-new key would push the unexpired `size` past capacity, it evicts the first (least recently used) entry.
+- **`has`**: true only if present and unexpired.
+- **`delete`**: behaves like `Map.delete`, removing the entry and its timestamp.
+- **`size`**: counts only unexpired entries.
+
+I chose the ordered-`Map` approach (delete + re-insert to track LRU) rather than tracking timestamps with ties, because it gives a deterministic LRU order even when the clock returns identical values (as it does under a constant test clock).
+
+**`src/cache.test.ts`** — Added 13 tests covering all documented behaviors: basic get/set, missing keys, replace-without-evict, LRU eviction (with and without a preceding get), get-counts-as-use, expiry on get and has, delete, size excluding expired entries, eviction reflected in size, and the `RangeError` for capacity below 1.
+
+## Check output
+
+The project's only check is `bun test` (no separate typecheck or lint script). Output:
+
+```
+13 pass
+0 fail
+29 expect() calls
+Ran 13 tests across 1 file. [11.00ms]
+```
+
+Committed as `feat/lru-ttl-cache` on branch `feat/lru-ttl-cache` (commit `56f2aff` "Implement LRU TTL cache with tests").
+
+One decision beyond the stated plan: the spec says expired entries count as absent, so I evict based on the unexpired `size` (`this.size > capacity`) rather than raw stored count—this keeps capacity measured in live entries while still allowing expired slots to be reclaimed naturally.
+
+  coder        deepseek-v4-flash    1 turns, 152110 tokens
+
+main: done
+  bun run test passed
+  merged: 5dba501 Merge branch 'feat/lru-ttl-cache'
+  this job: 152k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"5dba501 Merge branch 'feat/lru-ttl-cache'","cost":"this job: 152k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":13002,"outputTokens":7780,"cacheReadTokens":131328,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

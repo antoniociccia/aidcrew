@@ -1,0 +1,66 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/cache.ts)
+coder · tree(.)
+coder · read(src/cache.test.ts)
+coder · read(package.json)
+coder · edit(src/cache.ts)
+coder · write(src/cache.test.ts)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/cache.test.ts: 122 |  123 |   now = 1000 // 'a' has ex…
+coder · edit(src/cache.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/cache.ts src/cache.test.ts && git commit -m "Imp…)
+verified: bun run test passes on work/main
+merged work/main into the repository: a24491a Merge branch 'work/main'
+coder › Implemented `Cache<K, V>` in `src/cache.ts` and added tests in `src/cache.test.ts`.
+
+What changed:
+- `Cache` now stores entries in a `Map` with each entry's `{ value, expiresAt }`, where `expiresAt = now() + ttlMs` at set time.
+- Constructor throws `RangeError` when `capacity < 1`.
+- `get`: returns `undefined` for missing/expired keys (removing expired entries), and moves a live entry to the most-recently-used end.
+- `set`: updates an existing key's value and expiry in place (no eviction), otherwise purges expired entries and evicts the oldest (least recently used) before inserting.
+- `has` / `delete`: treat expired entries as absent (and clean them up); `has` does not count as a use.
+- `size`: removes expired entries first, then counts the remaining live entries.
+- `removeExpired` helper sweeps entries whose `expiresAt <= now`.
+
+Tests added:
+- basic set/get
+- missing key
+- capacity `0` and `-1` throw `RangeError`
+- expiry exactly at `ttlMs`
+- successful `get` counts as a use for eviction order
+- `set` replaces value/time without evicting others
+- LRU eviction on capacity overflow
+- expired entries are absent for `has`/`delete`/`size`
+- `delete` returns whether the key was present
+- `size` counts only live entries
+- expired entries are purged before a live entry is evicted
+
+Check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+
+ 11 pass
+ 0 fail
+ 32 expect() calls
+Ran 11 tests across 1 file. [9.00ms]
+```
+
+Committed on `work/main` as `5a3a479 Implement LRU cache with TTL expiry`.
+
+One decision the plan did not specify: expiry is checked as `expiresAt <= now`, so an entry is expired exactly `ttlMs` after being set (i.e. lifetime is `[set, set + ttlMs)`). The test pins that behavior.
+
+  coder        deepseek-v4-pro      1 turns, 83060 tokens
+
+main: done
+  bun run test passed
+  merged: a24491a Merge branch 'work/main'
+  this job: 83k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a24491a Merge branch 'work/main'","cost":"this job: 83k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5603,"outputTokens":5905,"cacheReadTokens":71552,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

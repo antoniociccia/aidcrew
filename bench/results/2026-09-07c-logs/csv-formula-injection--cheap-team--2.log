@@ -1,0 +1,86 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/csv.ts)
+architect · glob(**/*test*)
+architect · read(src/csv.test.ts)
+architect · bash(cat package.json)
+architect › The check is `bun test` (bun:test, two files involved). I have what I need — sending the plan to coder.
+architect · agent_send(Job: stop CSV formula injection in src/csv.ts. Repo checkout…)
+architect → coder Job: stop CSV formula injection in src/csv.ts. Repo checkout is on branch work/main already; commit as you go.  Plan — o…
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+architect › Plan sent to coder. What I decided after reading `src/csv.ts`, its test, and `package.json`:
+
+- **src/csv.ts**: `field` gains two rules — number cells pass through plain (so `-5` is never treated as a risky string), and string cells starting with `=`, `+`, `-`, `@`, tab, or CR get a single-quote prefix inside a double-quoted field (e.g. `"'=HYPERLINK(...)"`). Existing comma/quote/newline quoting and the doubled-inner-quote rule stay as-is; `toCsv` itself unchanged.
+- **src/csv.test.ts**: keep the existing test, add exact-output tests for the HYPERLINK case, each risky starter, a non-number `-` string, plain negative numbers, and safe strings.
+
+Expected back: the diff and green `bun test` output; I'll then call the job done and let the harness run the project check.
+coder › Let me look at the repo context before deciding on the ambiguous tab/CR test cases in the plan.
+coder · tree(.)
+coder · git-log()
+coder · grep(HYPERLINK|csv|CSV|injection|formula)
+coder · json(.)
+coder · git-log(.)
+coder · error: git log failed: fatal: empty string is not a valid pathspec. please use . instead if you meant to match all paths
+coder › The repo is a tiny two-file package with a `bun test` script. The plan has one inconsistency I need to resolve: step 1 and step 3 say the guard fires only when the **first character** is risky (anchored regex `/^[=+\-@\t\r]/`, and "fields containing `\r` but not starting with it keep today's behavior"), while the test bullet lists `"a\tb"` / `"a\rb"` (tab/CR in the *middle*) as risky starters to be wrapped. Those two cannot both hold. I'll follow the explicit spec (anchored guard; middle tab/CR plain) and pin the boundary with tests. Let me implement.
+coder · edit(src/csv.ts)
+coder · write(src/csv.test.ts)
+coder · bash(bun test 2>&1)
+coder › All green. Let me review the diff and commit.
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done — committed as `17a2f0b` on `work/main`.
+
+**src/csv.ts** — `field` now:
+- Returns numbers plainly via `String(cell)` (negative `-5` stays `-5`, no guard, no quote).
+- Guards strings whose *first* character is `=`, `+`, `-`, `@`, tab or CR (`/^[=+\-@\t\r]/`) by prefixing a single `'` *inside* the surrounding quotes, so `=HYPERLINK("http://x")` → `"'=HYPERLINK(""http://x"")"`. Only `"` is doubled; `'` is written once.
+- Otherwise quotes exactly when the field contains a comma, `"` or `\n` (unchanged `/[",\n]/` test), doubling inner `"`. `toCsv` itself is untouched.
+
+**src/csv.test.ts** — kept the comma test and added: the `=HYPERLINK(...)` case with guard + doubling, each risky starter (`+SUM(A1)`, `-cmd`, `@x`, and leading-tab / leading-CR strings), `-2+3` → `"'-2+3"`, `[[42, -5]]` → `42,-5\n`, `['abc','']` → `abc,\n`, `say "hi"` → `"say ""hi"""`, a `\n` field stays quoted, and `a,b` → `"a,b"` with no `'` prefix. Also a boundary test that a tab/CR *in the middle* (`a\tb`, `a\rb`) passes through unquoted.
+
+**Test output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 14 pass
+ 0 fail
+ 14 expect() calls
+Ran 14 tests across 1 file. [16.00ms]
+```
+
+**One decision the plan left ambiguous:** the test bullet listed `"a\tb"` / `"a\rb"` under "risky starters" expecting `"'<text>"`, but steps 1 and 3 say the guard only fires on a leading `\t`/`\r` (anchored regex; "fields containing `\r` but not starting with it keep today's behavior — do not add `\r` to that test"). Those two readings can't both hold, so I implemented the explicit spec and asserted the boundary in tests: a tab/CR in the middle stays plain, a leading one is guarded. If you wanted middle tab/CR guarded instead, that would change step 3's rule and the regex — say the word and I'll flip it.
+coder → architect Done — committed as `17a2f0b` on `work/main`.  **src/csv.ts** — `field` now: - Returns numbers plainly via `String(cell)…
+architect · agent_send(Confirmed: keep the leading-only guard, no flip. The user's …)
+architect → coder Confirmed: keep the leading-only guard, no flip. The user's requirement was "a string field that starts with =, +, -, @,…
+coder › Acknowledged — job closed. Final state on `work/main`:
+
+- Commit `17a2f0b` "guard CSV fields against formula injection" (src/csv.ts + src/csv.test.ts).
+- Anchored leading-only guard `/^[=+\-@\t\r]/` in place; numbers pass plainly; `\n`/comma/`"` quoting rule unchanged.
+- `bun test`: 14 pass, 0 fail.
+
+Nothing further needed on my side.
+coder → architect Acknowledged — job closed. Final state on `work/main`:  - Commit `17a2f0b` "guard CSV fields against formula injection" …
+verified: bun run test passes on work/main
+merged work/main into the repository: 3617ba5 Merge branch 'work/main'
+architect › Job done. `src/csv.ts` now guards formula injection in `toCsv`: strings starting with `=`, `+`, `-`, `@`, tab, or CR are written as `'…` inside a double-quoted field (e.g. `=HYPERLINK("http://x")` → `"'=HYPERLINK(""http://x"")"`), numbers — negative included — pass through plain, and the existing comma/quote/newline quoting with doubled inner quotes is unchanged. Verified by `bun test` on branch `work/main` (commit `17a2f0b`): **14 pass, 0 fail**, including the HYPERLINK case, each risky starter, plain `-5`, and the boundary that a mid-field tab/CR stays unquoted.
+
+Coder flagged one ambiguity: my test bullet could have been read as guarding tabs/CRs anywhere in the field. I confirmed the leading-only reading matches the requirement and that their boundary tests pin it correctly — no change needed. Ready for the harness check and merge.Job closed and nothing left outstanding. Final state:
+
+- **Changed**: `src/csv.ts` — `toCsv`'s `field` guards formula injection: string fields starting with `=`, `+`, `-`, `@`, tab, or CR (anchored `/^[=+\-@\t\r]/`) are written with a `'` prefix inside a quoted field; numbers pass through plainly, negative included; the existing comma/`"`/newline quoting with doubled inner quotes is unchanged. `src/csv.test.ts` — new exact-output tests covering all of the above plus boundary cases (mid-field tab/CR unquoted).
+- **Verified**: `bun test` on branch `work/main` — 14 pass, 0 fail. Work committed as `17a2f0b`.
+
+Ready for the harness to run the project check and merge.
+
+  architect    glm-5.3-flash        3 turns, 25535 tokens
+  coder        deepseek-v4-flash    2 turns, 141262 tokens
+
+main: done
+  bun run test passed
+  merged: 3617ba5 Merge branch 'work/main'
+  this job: 167k tokens, 0.5¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 22¢, on gpt-5 ≈ 20¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3617ba5 Merge branch 'work/main'","cost":"this job: 167k tokens, 0.5¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 22¢, on gpt-5 ≈ 20¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":4317,"outputTokens":2658,"cacheReadTokens":18560,"unstatedTurns":3},"turns":3},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9715,"outputTokens":13403,"cacheReadTokens":118144,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

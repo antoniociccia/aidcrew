@@ -1,0 +1,61 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/range.ts)
+architect · glob(**/*.test.*)
+architect · read(src/range.test.ts)
+architect · bash(cat package.json 2>/dev/null; ls)
+architect › The code is tiny and the spec is clear. Plan follows; sending to coder.
+
+**Files to touch**
+
+1. `src/range.ts` — rewrite `overlaps`:
+   - Parse the four instants through a small helper that throws `new TypeError(...)` with the offending string in the message when `Date.parse` returns `NaN` (check each field individually so the message names which one — e.g. include the field and value like `a.start: 'garbage'`).
+   - After parsing, if `a.end` is strictly before `a.start` (or likewise for `b`), throw a `RangeError`. Strictly before — a zero-length range (`start === end`) stays legal.
+   - If either range is zero-length, return `false` — it overlaps nothing, not even itself, and not a range that starts at that same instant. (The plain exclusive formula alone would wrongly say a zero-length range inside another overlaps.)
+   - Otherwise return `aStart < bEnd && bStart < aEnd` — strict comparisons, so touching ranges don't overlap and two ranges starting at the same instant do.
+
+2. `src/range.test.ts` — keep the existing shared-hour test and add:
+   - touching ranges → `false` (a ends exactly when b starts, and the reverse order);
+   - same start instant → `true`;
+   - zero-length range vs a range that strictly contains its instant → `false`, and `overlaps(zero, zero)` → `false`;
+   - unparseable start and unparseable end each throw `TypeError` with the bad string in the message;
+   - end before start throws `RangeError`.
+
+**Check:** `bun test` — expect all tests pass, including the new ones (roughly 8 tests total; exact count per what you add).
+architect · agent_send(Fix src/range.ts overlaps() and add tests in src/range.test.…)
+architect → coder Fix src/range.ts overlaps() and add tests in src/range.test.ts (bun test project).  src/range.ts — rewrite overlaps:    …
+coder · read(src/range.ts)
+coder · read(src/range.test.ts)
+coder · bash(ls -la && cat package.json 2>/dev/null; ls src)
+architect › Plan sent to coder. Waiting for their report: `bun test` output showing all tests passing (existing shared-hour test plus the new touching/same-start/zero-length/TypeError/RangeError cases) and a summary of what changed in `src/range.ts`.
+coder › Now I'll rewrite both files per the plan.
+coder · write(src/range.ts)
+coder · write(src/range.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 8 tests pass. Now commit in small pieces.
+coder · bash(git add src/range.ts && git commit -q -m "Validate and stric…)
+coder · agent_send(architect)
+coder → architect Done. Rewrote src/range.ts overlaps(): added parseInstant helper that throws TypeError with the offending value ("range …
+coder › Done. Both files rewritten per the plan, tests pass 8/8, work committed in two small commits on `work/main`:
+
+- `src/range.ts` — `parseInstant` helper (TypeError with the offending value), end-before-start RangeError (strict, zero length legal), zero-length short-circuit `false`, and strict `<` final comparison so touching ranges don't overlap while same-start non-zero ranges do.
+- `src/range.test.ts` — kept the existing shared-hour test; added the seven requested (touching both orders, same start, zero-length vs containing both orders, zero vs zero, unparseable start/end with message assertions, end-before-start with message assertion).
+
+`bun test` output: **8 pass, 0 fail, 13 expect() calls**. Reported to the architect with commit hashes 64f8ca4 and de4105a.
+verified: bun run test passes on work/main
+merged work/main into the repository: d7f2c72 Merge branch 'work/main'
+architect › Job done. `overlaps` in `src/range.ts` now treats the end as exclusive: touching ranges (one ending exactly when the other starts) don't overlap, ranges sharing a start instant do, zero-length ranges overlap nothing including themselves, unparseable start/end throws a `TypeError` naming the offending value, and end-before-start throws a `RangeError`. Verified by the project's own check, `bun test`: 8 pass, 0 fail (1 pre-existing shared-hour test plus 7 new covering all the specified behaviors), committed on `work/main` as 64f8ca4 and de4105a.
+
+  architect    glm-5.3-flash        2 turns, 19275 tokens
+  coder        deepseek-v4-flash    1 turns, 47278 tokens
+
+main: done
+  bun run test passed
+  merged: d7f2c72 Merge branch 'work/main'
+  this job: 67k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d7f2c72 Merge branch 'work/main'","cost":"this job: 67k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":6796,"outputTokens":3903,"cacheReadTokens":8576,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5795,"outputTokens":2443,"cacheReadTokens":39040,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

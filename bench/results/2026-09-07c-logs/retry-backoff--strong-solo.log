@@ -1,0 +1,54 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/retry.ts)
+coder · read(package.json)
+coder · glob(**/*.test.ts)
+coder · bash(bun --version 2>/dev/null || echo "no bun")
+coder · write(src/retry.ts)
+coder · write(import { expect, test } from 'bun:test' import { retry } fro…)
+coder · edit(src/retry.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/retry.ts src/retry.test.ts && git commit -m "Imp…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 0a746f4 Merge branch 'work/main'
+coder › Implemented `retry` in `src/retry.ts` and added `src/retry.test.ts`.
+
+What changed:
+- `src/retry.ts`
+  - `retry` now validates `attempts < 1` and throws a `RangeError` before `fn` runs.
+  - Calls `fn` up to `attempts` times, returning the first successful result.
+  - Between failures it awaits the provided `sleep`, starting at `baseMs` and doubling each time.
+  - `sleep` defaults to a real `setTimeout`-backed wait when not provided.
+  - After the last failure it throws `Error` with message `gave up after N attempts: <last error message>` and `cause` set to the last error.
+
+- `src/retry.test.ts`
+  - Success on first call, no sleep recorded.
+  - Retry with failures at `attempts: 4`, recording waits `[5, 10, 20]`.
+  - Final-failure error message and `cause`.
+  - `attempts: 0` throws `RangeError` and `fn` is never called.
+  - Default `setTimeout` sleep actually waits (~20ms measured).
+
+Check output:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 14 expect() calls
+Ran 5 tests across 1 file. [35.00ms]
+```
+
+Decisions beyond the plan: for a non-`Error` rejection I used `String(lastError)` for the message (the `cause` is still the original value), and I kept the `bun test` script the project already had. Committed on `work/main` as `79f8bf3`.
+
+  coder        deepseek-v4-pro      1 turns, 68128 tokens
+
+main: done
+  bun run test passed
+  merged: 0a746f4 Merge branch 'work/main'
+  this job: 68k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"0a746f4 Merge branch 'work/main'","cost":"this job: 68k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4885,"outputTokens":4235,"cacheReadTokens":59008,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

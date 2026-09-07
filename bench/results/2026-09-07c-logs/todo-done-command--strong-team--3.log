@@ -1,0 +1,80 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/cli.ts)
+architect · read(src/store.ts)
+architect · glob(**/*.test.ts)
+architect · read(src/cli.test.ts)
+architect · glob(**/*.{json,md})
+architect · read(package.json)
+architect › I've read the code that matters: `src/cli.ts` (command dispatch), `src/store.ts` (todo state + `render`), and the existing test file. Here is the plan.
+architect · agent_send(coder)
+architect → coder Implement the `done` command. Files to touch: src/store.ts, src/cli.ts, and tests.  **1. src/store.ts**  - Add:   ```ts …
+coder · tree(.)
+coder · bash(git status && git branch --show-current)
+architect › Plan sent to coder. I'll wait for their report that `bun test` passes, then confirm the job is done.
+coder · read(src/store.ts)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · json(.)
+coder › The plan is clear and the files are small. Let me implement each change.
+coder · edit(src/store.ts)
+coder · edit(src/cli.ts)
+coder · edit(if (command === 'list') return { out: `${render(todos)}\n`, …)
+coder › Now the tests. `store.test.ts` is new; `cli.test.ts` gets additional cases.
+coder · write(src/store.test.ts)
+coder · edit(import { expect, test } from 'bun:test' import { add, markDo…)
+coder › I need to fix my list test — after `markDone` on a single-todo list there's no undone todo to check. Add a second todo first.
+coder · edit(test('list shows [x] for a done todo and [ ] for an undone t…)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/cli.test.ts: 42 | }) 43 |  44 | test('render shows done…
+coder › Same one-todo-list mistake in the render test in cli.test.ts.
+coder · edit(test('render shows done as [x] and undone as [ ]', () => {  …)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me review the final files and commit.
+coder · read(src/cli.ts)
+coder · bash(git add src/store.ts src/cli.ts src/store.test.ts src/cli.te…)
+coder · bash(git commit -m "Add done command to mark a todo as done" 2>&1)
+coder › Done and committed. Report to the architect:
+coder · agent_send(architect)
+coder → architect `done` command implemented on work/main (commit ca2da7b "Add done command to mark a todo as done").  Changed: - src/stor…
+coder › Implemented and committed. Summary:
+
+**Files changed** (commit `ca2da7b` on `work/main`):
+- **src/store.ts** — added `markDone` (throws `RangeError` on missing id, returns a new list without mutating the input) and changed `render` to `${todo.id}. [${done ? 'x' : ' '}] ${todo.text}`.
+- **src/cli.ts** — added the `done` branch with the exact error/usage semantics requested (`error: ${arg}` code 1 for bad ids, `error: no todo ${id}` code 1 on RangeError, `done: ${text}` code 0 on success); usage string now includes `done`.
+- **src/store.test.ts** (new) and **src/cli.test.ts** — tests as specified.
+
+**Check output** — `bun test`:
+```
+9 pass
+0 fail
+21 expect() calls
+Ran 9 tests across 2 files.
+```
+
+One deviation from the plan's sketch: the cli.test.ts test asserting `[x]`/`[ ]` in `list` and the render check need an undone todo present, so they add two todos (buy milk, walk dog) and mark the first done, rather than marking a single todo list. Behavior otherwise follows the plan exactly.
+architect · bash(bun test 2>&1 | tail -20)
+verified: bun run test passes on work/main
+merged work/main into the repository: f45441d Merge branch 'work/main'
+architect › Job is done. The `done <id>` command is implemented and verified.
+
+What changed:
+- **src/store.ts** — added `markDone(todos, id)`: returns a new list with the matching todo marked done (never mutates the input) and throws a `RangeError` naming the id when none matches. `render` now shows `[x]` for done and `[ ]` for not-done.
+- **src/cli.ts** — `run` handles `done`: a missing/non-whole-number id prints `error: <id>` and exits 1; an unknown id prints `error: no todo <id>` and exits 1; a valid id prints `done: <text>` and exits 0. Todos are left unchanged on every error path. Usage string updated.
+- **tests** — new `src/store.test.ts` covers `markDone` (new list, no mutation, RangeError naming the id) and `src/cli.test.ts` covers the command's success and error paths plus the `[x]`/`[ ]` rendering.
+
+Verified with `bun test`: 9 pass, 0 fail, 21 expect() calls across 2 files.
+
+  architect    deepseek-v4-pro      2 turns, 27517 tokens
+  coder        deepseek-v4-flash    1 turns, 103540 tokens
+
+main: done
+  bun run test passed
+  merged: f45441d Merge branch 'work/main'
+  this job: 131k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"f45441d Merge branch 'work/main'","cost":"this job: 131k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7199,"outputTokens":2910,"cacheReadTokens":17408,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":7242,"outputTokens":3754,"cacheReadTokens":92544,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

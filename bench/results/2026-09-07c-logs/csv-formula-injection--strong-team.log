@@ -1,0 +1,71 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/csv.ts)
+architect · glob(**/*csv*)
+architect · read(src/csv.test.ts)
+architect · bash(cat package.json 2>/dev/null; echo "---"; ls)
+architect · agent_send(coder)
+architect → coder Fix CSV formula injection in src/csv.ts and add tests.  File to change: src/csv.ts (and src/csv.test.ts).  What the code…
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+architect › Plan sent to coder. I'll wait for their report with the `bun test` output.
+coder · write(src/csv.ts)
+coder · write(import { expect, test } from 'bun:test' import { toCsv } fro…)
+coder › Let me double-check my test expectations against the field function, especially around quoting of tab/CR characters in the expected strings.
+coder · write(import { expect, test } from 'bun:test' import { toCsv } fro…)
+coder · bash(bun test 2>&1)
+coder › All 7 tests pass. Now commit.
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder › Done. Committed as `869f47c` ("Guard against CSV formula injection") on `work/main`.
+
+**What changed** (diff stat: `src/csv.ts` +9/−2, `src/csv.test.ts` +26):
+
+`src/csv.ts` — `field` now branches on `typeof cell`:
+- Numbers: `String(cell)` plainly, so `-1` stays `-1`.
+- Strings: flagged dangerous when starting with `=`, `+`, `-`, `@`, `\t`, or `\r`; quoted when dangerous or containing `,`, `"`, or `\n`. When quoted, inner `"` are doubled; dangerous strings additionally get a `'` prefix inside the quotes (e.g. `=HYPERLINK("x")` → `"'=HYPERLINK(""x"")"`). `toCsv` line format (comma-separated, `\n`-terminated) unchanged.
+
+`src/csv.test.ts` — kept the existing comma test and added tests for: `=` prefix+quoting; `+`/`-`/`@`/tab/CR prefixes; negative numbers `-1` and `-12.5` written plainly; embedded double quote doubling; embedded newline quoting; and a dangerous string with an embedded double quote getting both prefix and doubled quotes.
+
+**Check output** — `bun test`:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 7 expect() calls
+Ran 7 tests across 1 file. [13.00ms]
+```
+
+One note: the suggested structure was followed as-is; no deviations from the plan needed. The branch is committed and ready for the harness.
+coder → architect Done. Committed as `869f47c` ("Guard against CSV formula injection") on `work/main`.  **What changed** (diff stat: `src/…
+architect · bash(bun test 2>&1; echo "---"; git log --oneline -1; git show --…)
+architect · read(src/csv.ts)
+architect · read(src/csv.test.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: 7656e05 Merge branch 'work/main'
+architect › The job is done and verified.
+
+**What changed** — `src/csv.ts` now guards against spreadsheet formula injection:
+- Number fields (`typeof cell === 'number'`) are written plainly, so `-1` stays `-1`.
+- String fields starting with `=`, `+`, `-`, `@`, `\t`, or `\r` get a `'` prefix inside double quotes (e.g. `=HYPERLINK("x")` → `"'=HYPERLINK(""x"")"`).
+- The existing quoting for fields containing a comma, double quote, or newline is preserved, with inner double quotes doubled.
+
+`src/csv.test.ts` gained tests covering the `=` prefix, all other dangerous starters, negative numbers written plainly, embedded double-quote doubling, newline quoting, and a dangerous string containing an inner double quote.
+
+**How it was verified** — I ran `bun test` myself on the committed branch: **7 pass, 0 fail**, and confirmed the commit `869f47c` ("Guard against CSV formula injection") is on `work/main` with the expected diff.
+
+  architect    deepseek-v4-pro      2 turns, 27103 tokens
+  coder        deepseek-v4-flash    1 turns, 63256 tokens
+
+main: done
+  bun run test passed
+  merged: 7656e05 Merge branch 'work/main'
+  this job: 90k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"7656e05 Merge branch 'work/main'","cost":"this job: 90k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5528,"outputTokens":2503,"cacheReadTokens":19072,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6624,"outputTokens":4152,"cacheReadTokens":52480,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

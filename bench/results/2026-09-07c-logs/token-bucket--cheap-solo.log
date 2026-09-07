@@ -1,0 +1,63 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder · write(src/limiter.ts)
+coder · write(import { expect, test } from 'bun:test' import { RateLimiter…)
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder › The test expectation was wrong — at t=500 only half a token has refilled. Let me fix the test:
+coder · edit(src/limiter.test.ts)
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder › All 9 tests pass. Let me check for any other checks configured and review git state:
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder › There's no tsconfig or typecheck script configured. Let me review the final files and commit.
+coder · bash(cd "$(git rev-parse --show-toplevel)" && git checkout -b fea…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 83b516e Merge branch 'feat/token-bucket'
+coder › Done. Here's what I changed:
+
+## Implementation (`src/limiter.ts`)
+
+I implemented `RateLimiter` as a token bucket with two private fields: `tokens` (current balance) and `lastRefill` (timestamp of the last refill). It starts full (`tokens = capacity`).
+
+**`tryTake(n)`**:
+- First refills up to the current time.
+- Returns `false` and takes nothing if `n > capacity` or `tokens < n`.
+- Otherwise deducts `n` and returns `true`.
+
+**`available`**:
+- Refills up to the current time and returns the (possibly fractional) balance.
+
+**Refill logic**: a private `refill()` computes elapsed seconds since `lastRefill` via `now()`, adds `elapsed * refillPerSecond`, caps at `capacity`, and only advances `lastRefill` when time moved forward — so a backwards-moving clock just refills nothing rather than corrupting the bucket.
+
+## Tests (`src/limiter.test.ts`)
+
+Added 8 tests on top of the existing "starts full" one (9 total, 36 assertions): taking exact amounts, taking n, refusal when n exceeds capacity, refusal when insufficient (takes nothing), continuous fractional refill over time, a single large time jump refilling to capacity without overshoot, fractional `available` with a partial take, zero-cost zero takes, and a backwards-moving clock.
+
+## Checks
+
+The project's only check is `bun test`:
+
+```
+ 9 pass
+ 0 fail
+ 36 expect() calls
+Ran 9 tests across 1 file. [13.00ms]
+exit: 0
+```
+
+There's no typecheck/lint script or tsconfig in the repo. One decision not in the plan: I made the initial `lastRefill` come from `now()` at construction (rather than literal `0`), so a bucket constructed with a non-zero clock is still born full and its first `available`/`tryTake` computes a zero elapsed time. Completed on branch `feat/token-bucket` (commit `b4e1f59`).
+
+  coder        deepseek-v4-flash    1 turns, 76006 tokens
+
+main: done
+  bun run test passed
+  merged: 83b516e Merge branch 'feat/token-bucket'
+  this job: 76k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"83b516e Merge branch 'feat/token-bucket'","cost":"this job: 76k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":11731,"outputTokens":4755,"cacheReadTokens":59520,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

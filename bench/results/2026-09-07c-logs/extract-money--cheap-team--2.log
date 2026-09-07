@@ -1,0 +1,87 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/invoice.ts)
+architect · read(src/receipt.ts)
+architect · bash(ls -la; cat package.json 2>/dev/null; ls src)
+architect · read(src/invoice.test.ts)
+architect · read(src/receipt.test.ts)
+architect › I've read both modules, their tests, and the project's runner (bun test). The plan is small and clear — sending it to the coder.
+architect · agent_send(Job: extract a shared money formatter and fix the receipt's …)
+architect → coder Job: extract a shared money formatter and fix the receipt's drift. Branch work/main, commit as you go.  Files: 1. NEW sr…
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · bash(ls -la && echo "---" && ls src 2>/dev/null && echo "---" && …)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · write(src/money.ts)
+architect › Plan sent to the coder. What I asked for:
+
+- **New `src/money.ts`** with `formatMoney(cents, currency)` — the invoice's logic verbatim (leading minus, comma-grouped whole part, two decimals, space + currency).
+- **`invoice.ts` / `receipt.ts`** keep `formatInvoiceAmount` and `formatReceiptAmount` as one-line wrappers delegating to it, so nothing importing them breaks and `renderInvoice`/`renderReceipt` output is unchanged for positive amounts.
+- **Tests**: a new `money.test.ts` covering zero, small, grouped, and negative amounts, plus a receipt test pinning the refund case (`-1250` → `-12.50 EUR`, not the mangled `-13.-50`).
+
+Expect back: the runner output showing `bun test` green — including the pre-existing invoice/receipt tests, which prove no regression — and a list of the files changed.
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · write(import { expect, test } from 'bun:test' import { formatMoney…)
+coder · edit(src/receipt.test.ts)
+coder · bash(bun test 2>&1)
+coder · bash(git status --short && echo "---" && git diff --stat)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder › The import landed mid-file in invoice.ts; let me move it to the top for clean style.
+coder · edit(import { formatMoney } from './money.ts'  /** A line of an i…)
+coder · edit(import { formatMoney } from './money.ts'  /** An item on a t…)
+coder · bash(bun test 2>&1 && echo "=== exit: $?")
+coder › All green. Now committing in small steps.
+coder · bash(git add src/money.ts src/money.test.ts && git commit -q -m "…)
+coder › Done. Committed in three small commits on `work/main`.
+
+**Changed files:**
+- **NEW `src/money.ts`** — `formatMoney(cents, currency)`, logic copied verbatim from the invoice formatter: leading `-` for negatives, `Math.floor(Math.abs(cents)/100)` grouped with `/\B(?=(\d{3})+(?!\d))/g`, two-digit fraction via `padStart`, then `' ' + currency`.
+- **NEW `src/money.test.ts`** — 8 bun:test cases: 0 → `0.00 EUR`, 5 → `0.05 EUR`, 1250 → `12.50 EUR`, 123450 → `1,234.50 EUR`, 1234567 → `12,345.67 EUR`, -1250 → `-12.50 EUR`, -123450 → `-1,234.50 EUR`, and 1250 USD → `12.50 USD`.
+- **`src/invoice.ts`** — `formatInvoiceAmount` body now `return formatMoney(cents, currency)`; import at top; export, JSDoc and `renderInvoice` untouched. Positive output is byte-identical (same code path).
+- **`src/receipt.ts`** — `formatReceiptAmount` delegates to `formatMoney`; export and `renderReceipt` untouched. Positive output unchanged; negative refunds now render `-12.50 EUR` instead of the old mangled `-13.-50 EUR` (that was `Math.floor(-12.5) = -13` plus `-1250 % 100 = -50` in the old code).
+- **`src/receipt.test.ts`** — added the refund test: `[tea, -1250]` → `tea -12.50 EUR\nTOTAL -12.50 EUR`.
+
+**Check output** (`bun test` from repo root, exit 0):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 11 pass
+ 0 fail
+ 11 expect() calls
+Ran 11 tests across 3 files. [18.00ms]
+```
+
+Both pre-existing tests pass (`work: 1,234.50 EUR` and `tea 12.50 EUR`), plus the new money and refund tests. One deviation from the letter of the plan: I placed the `import` at the top of invoice.ts/receipt.ts rather than in the middle of the file, purely stylistic — imports are hoisted so behavior is unaffected.
+
+Commits: `575ae78` (money module + tests), `38fcfba` (invoice delegation), `70eb725` (receipt delegation + refund fix). Nothing left outstanding.
+coder → architect Done. Committed in three small commits on `work/main`.  **Changed files:** - **NEW `src/money.ts`** — `formatMoney(cents…
+architect · bash(bun test 2>&1 | tail -5; echo "---"; git status --short; git…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 2e014e9 Merge branch 'work/main'
+architect › Verified myself: `bun test` passes (11 pass, 0 fail across 3 files) and the tree is clean with the three commits on `work/main`.
+
+**Job done.** What changed:
+
+- **New `src/money.ts`** — `formatMoney(cents, currency)` with the invoice's behaviour: leading minus, comma-grouped thousands, two decimals, space + currency code.
+- **`src/invoice.ts`** and **`src/receipt.ts`** — `formatInvoiceAmount` and `formatReceiptAmount` kept as thin wrappers delegating to it, so no importer breaks and positive-amount output is unchanged.
+- **Receipt fixed by the extraction** — a refund of -1250 cents now renders `tea -12.50 EUR / TOTAL -12.50 EUR` instead of the old mangled `-13.-50 EUR`.
+- **New `src/money.test.ts`** plus a refund test in `src/receipt.test.ts`.
+
+**Verified by**: `bun test` — 11 pass, 0 fail, including both pre-existing invoice and receipt tests proving no regression. The import placement deviation is fine (purely stylistic).
+
+  architect    glm-5.3-flash        2 turns, 21294 tokens
+  coder        deepseek-v4-flash    1 turns, 94159 tokens
+
+main: done
+  bun run test passed
+  merged: 2e014e9 Merge branch 'work/main'
+  this job: 115k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"2e014e9 Merge branch 'work/main'","cost":"this job: 115k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":3017,"outputTokens":1509,"cacheReadTokens":16768,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":7313,"outputTokens":3518,"cacheReadTokens":83328,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

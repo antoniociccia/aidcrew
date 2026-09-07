@@ -1,0 +1,85 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/stats.ts)
+architect · glob(src/**/*)
+architect · read(src/stats.test.ts)
+architect · bash(cat package.json; ls)
+architect › The drift is clear: `wordCount` lowercases and splits on non-`[a-z0-9']` runs; `topWords` splits on whitespace and strips other chars per token, so `The` and `the` survive as distinct keys, and its ties come out in insertion order. Plan for coder:
+
+**1. New file `src/tokenize.ts`**
+```ts
+/** Words: lower-cased runs of letters, digits and apostrophes. */
+export function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9']+/)
+    .filter((word) => word !== '')
+}
+```
+This is `wordCount`'s body verbatim (minus the `.length`), so its behaviour is the spec.
+
+**2. `src/stats.ts`** — import `tokenize` from `./tokenize.ts`:
+- `wordCount` becomes `tokenize(text).length`. Identical results by construction, including edge cases we keep deliberately: leading/trailing apostrophes stay (`'tis` → `'tis`), digits count as words (`a-b 123` → 3), empty/separator-only text → 0.
+- `topWords` iterates `tokenize(text)` into its `counts` Map, then sorts `b[1] - a[1]` with ties broken alphabetically (`b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)`) before `.slice(0, n)`. Keys are unique so the tie comparator is total.
+
+**3. `src/stats.test.ts`** — keep the existing wordCount test, add (bun:test, import `tokenize` too):
+- `topWords('The the THE cat. Cat, dog!', 2)` → `[['the', 3], ['cat', 2]]` — proves the drift fix.
+- ties: `topWords('b a b a c', 3)` → `[['a', 2], ['b', 2], ['c', 1]]`.
+- `n` slicing: same input with `n = 2` → only two pairs.
+- `wordCount` edges unchanged: `wordCount("a-b 123 'tis")` → `4`, `wordCount('... !!!')` → `0`.
+- `tokenize("Don't stop. DON'T!")` → `["don't", "stop", "don't"]`.
+
+**Check:** `bun test` — all tests pass (old one included). Commit in small steps on `work/main`.
+architect · agent_send(Job: extract a shared tokenizer and fix drifted topWords in …)
+architect → coder Job: extract a shared tokenizer and fix drifted topWords in src/stats.ts (branch work/main; checkout is the workspace ro…
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · tree(src)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Plan sent to coder. What I expect back: the three files (`src/tokenize.ts` new; `src/stats.ts` using `tokenize` in both functions with alphabetical tie-breaking in `topWords`; extended `src/stats.test.ts`), committed on `work/main`, with a `bun test` run showing all tests passing — the pre-existing wordCount test included. Once they report the check passing I'll confirm the job done.
+coder › Now I'll make the changes. First, create `src/tokenize.ts`:
+coder · write(src/tokenize.ts)
+coder › Rework `src/stats.ts` to use it:
+coder · write(import { tokenize } from './tokenize.ts'  /** How many words…)
+coder › Extend the test file:
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 7 tests pass. Now commit in small steps:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Three commits on `work/main`, all tests green.
+
+**What changed**
+
+- **`src/tokenize.ts`** (new): `tokenize(text)` — lower-cased runs of letters, digits and apostrophes via `split(/[^a-z0-9']+/)` + non-empty filter. Verbatim body of the old `wordCount` minus `.length`, as spec'd. `'tis` stays `'tis`, `a-b 123` yields 3 tokens, no trimming of apostrophes.
+- **`src/stats.ts`**: `wordCount(text)` is now `tokenize(text).length`; `topWords(text, n)` counts from `tokenize(text)` into the existing `Map`, sorts by count desc with alphabetical tie-break (`b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)`), then `.slice(0, n)`. This fixes the drift: the old `topWords` never lower-cased, so `'The the THE'` counted as three distinct keys.
+- **`src/stats.test.ts`**: kept the existing wordCount test, added the six spec'd tests (wordCount miscounts → 4 and `'... !!!'` → 0, topWords drift fix, alphabetical ties, n-slicing, tokenize case handling). Imports `tokenize` from `./tokenize.ts`.
+
+**Check output** (`bun test`, bun v1.3.14):
+
+```
+ 7 pass
+ 0 fail
+ 7 expect() calls
+Ran 7 tests across 1 file. [10.00ms]
+```
+
+One small deviation worth flagging: I split the commit into three (tokenize.ts → stats.ts rework → tests) rather than one, since the job asked for small steps; the work tree and branch are otherwise exactly per plan.
+coder → architect Done. Three commits on `work/main`, all tests green.  **What changed**  - **`src/tokenize.ts`** (new): `tokenize(text)` …
+architect · bash(bun test 2>&1 | tail -5 && git log --oneline -3 && git statu…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 34509e4 Merge branch 'work/main'
+architect › Job done. Verified on my checkout: `bun test` gives 7 pass / 0 fail (the pre-existing wordCount test included), three small commits on `work/main`, clean tree. The extraction is in place — `src/tokenize.ts` holds the one tokenizer (lower-case runs of letters, digits, apostrophes), `wordCount` and `topWords` both use it, and `topWords` now counts case-insensitively with alphabetical tie-breaks, so `The`/`the`/`THE` collapse to one word. The three-commit split instead of one is fine; that's what the small-steps rule asked for. Ready for the harness check and merge.
+
+  architect    glm-5.3-flash        2 turns, 20505 tokens
+  coder        deepseek-v4-flash    1 turns, 53106 tokens
+
+main: done
+  bun run test passed
+  merged: 34509e4 Merge branch 'work/main'
+  this job: 74k tokens, 0.2¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"34509e4 Merge branch 'work/main'","cost":"this job: 74k tokens, 0.2¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":4709,"outputTokens":2420,"cacheReadTokens":13376,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5995,"outputTokens":2567,"cacheReadTokens":44544,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

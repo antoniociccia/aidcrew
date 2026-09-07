@@ -1,0 +1,51 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder › Now let me create the new tokenize module and update stats.ts.
+coder · write(src/tokenize.ts)
+coder · write(src/stats.ts)
+coder › Now let me add tests for the tokenize module and the topWords behavior.
+coder · write(src/tokenize.test.ts)
+coder · edit(src/stats.test.ts)
+coder · bash(cd "$(pwd)" && bun test 2>&1)
+coder › All 7 tests pass. Let me verify the wordCount behavior is unchanged by checking the test still passes (it did). Let me also confirm there's no lint/typecheck config to run.
+coder · json(scripts.test)
+coder › The only script is `test`. All checks pass. Let me commit.
+coder · git-log(.)
+coder · error: git log failed: fatal: empty string is not a valid pathspec. please use . instead if you meant to match all paths
+coder · bash(cd "$(pwd)" && git status 2>&1 && git log --oneline -5 2>&1)
+coder · bash(cd "$(pwd)" && git add src/tokenize.ts src/tokenize.test.ts …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3fa2684 Merge branch 'work/main'
+coder › Done. Here's what I changed:
+
+**New module `src/tokenize.ts`** — exports `tokenize(text): string[]`, extracted from `wordCount`'s exact behaviour: lower-cases, treats a word as a run of letters, digits and apostrophes, everything else as a separator, and drops empty words.
+
+**`src/stats.ts`** — both `wordCount` and `topWords` now call `tokenize`. `wordCount`'s behaviour is unchanged (same regex, just moved), so its results are identical. `topWords` was fixed by the extraction: it now counts case-insensitively ('The' and 'the' now collapse to the same word) and returns the n most frequent `[word, count]` pairs, most frequent first, ties broken alphabetically — the tie-break was added since the extraction fixed case but not ordering.
+
+**Tests** — added `src/tokenize.test.ts` (lower-casing, separators, no empty words) and extended `src/stats.test.ts` (case-insensitive counting, most-frequent-first, alphabetical tie-break).
+
+**Check output**:
+```
+7 pass
+0 fail
+8 expect() calls
+Ran 7 tests across 2 files.
+```
+
+Two decisions beyond the literal plan: I added an alphabetical tie-break to `topWords` (the plan describes it in the expected fix, and without it the sort is unstable), and I added tokenize/topWords tests as requested. Nothing else was touched, and no refactor beyond what was asked.
+
+  coder        deepseek-v4-flash    1 turns, 70249 tokens
+
+main: done
+  bun run test passed
+  merged: 3fa2684 Merge branch 'work/main'
+  this job: 70k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3fa2684 Merge branch 'work/main'","cost":"this job: 70k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":8758,"outputTokens":1843,"cacheReadTokens":59648,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

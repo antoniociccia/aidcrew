@@ -1,0 +1,70 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/range.ts)
+architect · glob(*)
+architect · read(package.json)
+architect · glob(**/*.test.*)
+architect · read(src/range.test.ts)
+architect › The current code: `aStart <= bEnd && bStart <= aEnd` — inclusive on both ends, so touching ranges overlap, and `Date.parse` failures (NaN) silently return false. The end being exclusive means the boundary comparisons must be strict, but a zero-length range still needs an explicit early `false`, because strictly-inside moments would otherwise match. package.json's check is `bun test`; there's one existing test file to extend.
+architect · agent_send(Job: fix `overlaps` in src/range.ts (branch work/main, check…)
+architect → coder Job: fix `overlaps` in src/range.ts (branch work/main, checkout /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T…
+coder · read(src/range.ts)
+coder · read(src/range.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · json(package.json)
+coder › Now the implementation change:
+coder · edit(src/range.ts)
+architect › Plan sent to coder. In summary:
+
+- **src/range.ts** — `overlaps` gets a `parseBound` helper that throws `TypeError` naming the offending value for unparseable dates; post-parse `RangeError`s for inverted ranges; an early `return false` for zero-length ranges (needed even with strict comparison, since an empty range strictly inside another would otherwise match); and the final comparison strict (`<`, not `<=`) so touching ranges don't overlap while shared starts do.
+- **src/range.test.ts** — keep the existing test and add cases for touching (both directions), same start instant, zero-length (vs itself, strictly inside, at the boundary), invalid bounds on either range (TypeError, message includes the value), and inverted ranges (RangeError).
+
+Expecting back from coder: the final implementation, the list of added test cases, and the `bun test` summary line showing everything passing.
+coder › Now extend the tests:
+coder · write(src/range.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 14 pass. Committing in two small commits:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Both commits in, tree clean. Reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Done on work/main. Commits: 4f74916 (impl), c42f00f (tests).  Final src/range.ts:    /** A span of time, as ISO 8601 str…
+coder › Done. Summary of the work:
+
+**Implementation** (`src/range.ts`) — added a `parseBound` helper that throws `TypeError` naming the bound and raw value on `Date.parse` NaN; all four bounds are parsed before anything else, then inverted ranges throw `RangeError`, zero-length ranges return `false`, and otherwise the strict `<` comparison with exclusive ends applies.
+
+**Tests** (`src/range.test.ts`) — kept the original overlapping-hours test and added 13 covering: touching in both directions → false, same-start-instant positive length → true, three zero-length cases (self, strictly inside, at other's start) → false, unparseable each of the four bounds (TypeError + message contains value), inverted a and inverted b → RangeError, and parse-error-wins over a doubly-malformed pair.
+
+**Checks** — `npm test` exits 0:
+
+```
+ 14 pass
+ 0 fail
+ 19 expect() calls
+Ran 14 tests across 1 file. [8.00ms]
+```
+
+Committed as `4f74916` (impl) and `c42f00f` (tests), no signature/trailer, tree clean, and the full report was sent to the architect.
+architect › The report checks out against the spec; I'll confirm by running the project's check myself before calling it done.
+architect · bash(git log --oneline -3 && npm test 2>&1 | tail -8)
+verified: bun run test passes on work/main
+merged work/main into the repository: a001cc4 Merge branch 'work/main'
+architect › Job done. Two commits on work/main (4f74916, c42f00f):
+
+- **src/range.ts** — `overlaps` now parses all four bounds first, throwing a `TypeError` naming the offending value and which bound it was; throws a `RangeError` for an end before its start on either range; returns `false` for any zero-length range (so it overlaps nothing, not even itself); and compares with strict `<` in `aStart < bEnd && bStart < aEnd`, so touching ranges don't overlap (end is exclusive) while ranges sharing a start instant do.
+- **src/range.test.ts** — the original shared-hour test kept, plus 13 new tests covering touching (both directions), same start, three zero-length cases, unparseable bounds on each of the four positions (TypeError, message includes the value), inverted ranges on each range (RangeError), and parse errors taking precedence over malformed ranges.
+
+Verified by running `npm test` on the branch myself: 14 pass, 0 fail, exit 0. Ready for the harness check and merge.
+
+  architect    glm-5.3-flash        2 turns, 23702 tokens
+  coder        deepseek-v4-flash    1 turns, 62066 tokens
+
+main: done
+  bun run test passed
+  merged: a001cc4 Merge branch 'work/main'
+  this job: 86k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a001cc4 Merge branch 'work/main'","cost":"this job: 86k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":10721,"outputTokens":3445,"cacheReadTokens":9536,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6343,"outputTokens":4011,"cacheReadTokens":51712,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,79 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/emitter.ts)
+coder · tree()
+coder · glob(**/*.test.*)
+coder · json(scripts)
+coder · read(src/emitter.test.ts)
+coder · json(.)
+coder · edit(src/emitter.ts)
+coder › Now the tests:
+coder · edit(test('calls a listener with the payload', () => {   const em…)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/emitter.test.ts: 120 |     emitter.once('tick', () => s…
+coder › The failure is in my test construction, not the implementation: the adder re-registers a fresh `once` on every emit, so it fires on every emit after it's added — which is correct. Let me make the test add the `once` only once:
+coder · edit(test('once registered during emit fires only on the next emi…)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/emitter.test.ts: 124 |   emitter.on('tick', adder) 125 …
+coder › My guard is wrong — `adder` registers a new `once` every emit until it fires. Use a boolean flag instead:
+coder · edit(test('once registered during emit fires only on the next emi…)
+coder · bash(bun test 2>&1)
+coder › All 11 tests pass. Let me review the final state and commit:
+coder · read(src/emitter.ts)
+coder · bash(git status && git log --oneline -5)
+coder · bash(git add src/emitter.ts src/emitter.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 0db0771 Merge branch 'work/main'
+coder › Done. Here's what I changed and why.
+
+## The fix (`src/emitter.ts`)
+
+The bug in `emit` was that it iterated the live listener array by index, so removing a listener (as `once` does) shifted later listeners down into an already-passed index and they were skipped. The fix is to take a shallow snapshot at the start of `emit` and iterate that:
+
+```ts
+const snapshot = (this.#listeners.get(event) ?? []).slice()
+for (const listener of snapshot) {
+  listener(payload)
+}
+return snapshot.length
+```
+
+This gives exactly the semantics requested:
+- Every listener registered when `emit` began is called exactly once, in registration order, whatever any of them adds or removes meanwhile.
+- A listener added during `emit` isn't in the snapshot, so it's called from the next `emit` on.
+- `once` still fires exactly once — `off` mutates the live list, which the snapshot is unaffected by (and `once`'s `off(event, wrapped)` returns whether it removed anything).
+- `emit` returns `snapshot.length`, i.e. how many listeners it called.
+
+`on`, `once`, and `off` were already correct and unchanged.
+
+## Tests (`src/emitter.test.ts`)
+
+Added 10 tests covering: order, emit return count, `off`'s boolean return, a listener removing the next one, a listener removing itself, a listener removing & adding during the same emit, `once` firing exactly once across emits, `once` before an ordinary listener not silencing it, a listener added during emit being called from the next emit, and a `once` registered during emit firing only on the next emit.
+
+## Checks
+
+`bun test` output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 11 pass
+ 0 fail
+ 23 expect() calls
+Ran 11 tests across 1 file. [14.00ms]
+```
+
+Committed as `7362ec8` on `work/main`.
+
+One decision the plan didn't spell out: the second batch of tests I first wrote were wrong in their *expectations* (the adder re-registered a `once` every emit, which legitimately fires each later emit), not in the implementation — I corrected the test constructions, not the code.
+
+  coder        deepseek-v4-flash    1 turns, 91486 tokens
+
+main: done
+  bun run test passed
+  merged: 0db0771 Merge branch 'work/main'
+  this job: 91k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"0db0771 Merge branch 'work/main'","cost":"this job: 91k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6983,"outputTokens":6167,"cacheReadTokens":78336,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

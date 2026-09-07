@@ -1,0 +1,70 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/paginate.ts)
+coder · tree(.)
+coder · read(src/paginate.test.ts)
+coder · read(package.json)
+coder · edit(src/paginate.ts)
+coder · edit(src/paginate.test.ts)
+coder · bash(bun test)
+not done: work not committed (rc/paginate.test.ts, src/paginate.ts) — the leader is sent back
+coder › Done. Fixed `paginate` in `src/paginate.ts`:
+
+- Start index changed from `page * perPage` to `(page - 1) * perPage`, so page 1 now starts at item 0.
+- Added `RangeError` guards: page below 1 and perPage below 1 both throw.
+- Past-the-end pages now return `[]` via `slice` naturally (unchanged behavior, now correctly verified).
+
+Added tests in `src/paginate.test.ts` covering page 1, the last partial page, a page past the end, and both `RangeError` cases.
+
+Check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 7 expect() calls
+Ran 6 tests across 1 file. [15.00ms]
+```
+coder · bash(git status && git diff --stat)
+coder · bash(git add src/paginate.ts src/paginate.test.ts && git commit -…)
+coder · bash(git status && git log --oneline -1)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9b14a0c Merge branch 'work/main'
+coder › Committed. The checkout is now clean:
+
+```
+On branch work/main
+nothing to commit, working tree clean
+8773530 Fix paginate off-by-one and validate inputs
+```
+
+Changes made and committed:
+
+- **src/paginate.ts** — `paginate` now uses `(page - 1) * perPage` as the start index, so page 1 returns the first `perPage` items, the last page returns whatever remains, and a page past the end returns `[]`. Page below 1 and perPage below 1 each throw `RangeError`.
+- **src/paginate.test.ts** — added tests for page 1, the last partial page, a past-the-end page, and both `RangeError` cases.
+
+Checks:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 7 expect() calls
+Ran 6 tests across 1 file. [15.00ms]
+```
+
+One note: the job mentioned `rc/paginate.test.ts`, but the actual modified test file in this checkout is `src/paginate.test.ts`.
+
+  coder        deepseek-v4-pro      2 turns, 54106 tokens
+
+main: done
+  bun run test passed
+  merged: 9b14a0c Merge branch 'work/main'
+  sent back once
+  this job: 54k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"9b14a0c Merge branch 'work/main'","cost":"this job: 54k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6797,"outputTokens":1869,"cacheReadTokens":45440,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,56 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · glob(**/*range*)
+coder · read(src/range.test.ts)
+coder · read(package.json)
+coder · tree(.)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git checkout -b fix-range-overlaps)
+coder · edit(src/range.ts)
+coder · read(src/range.ts)
+coder · edit(src/range.test.ts)
+coder · bash(bun test)
+coder · bash(git diff)
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Fix…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 812131b Merge branch 'fix-range-overlaps'
+coder › Fixed in `src/range.ts` and added tests in `src/range.test.ts`, on branch `fix-range-overlaps`.
+
+What changed:
+- `overlaps` now uses strict `<` on both sides (`aStart < bEnd && bStart < aEnd`), so touching ranges with an exclusive end no longer overlap.
+- Added a `parseBoundary` helper that throws `TypeError` (message includes the offending string) when `Date.parse` returns `NaN`.
+- Added `RangeError` (message includes both values) when a range's end is before its start.
+- Added a zero-length guard: if either range has `start === end`, it overlaps nothing, including itself.
+
+Tests added:
+- touching ranges do not overlap
+- ranges starting at the same instant overlap
+- zero-length range overlaps nothing, not even itself
+- unparseable start throws `TypeError` naming the value
+- unparseable end throws `TypeError` naming the value
+- end before start throws `RangeError`
+
+Check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 10 expect() calls
+Ran 7 tests across 1 file. [8.00ms]
+```
+
+One decision the plan didn't specify: I validate all four boundaries parse before checking start/end ordering, so an unparseable boundary is reported before a `RangeError` if a range is both malformed and out of order.
+
+  coder        deepseek-v4-pro      1 turns, 86092 tokens
+
+main: done
+  bun run test passed
+  merged: 812131b Merge branch 'fix-range-overlaps'
+  this job: 86k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"812131b Merge branch 'fix-range-overlaps'","cost":"this job: 86k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7195,"outputTokens":4145,"cacheReadTokens":74752,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

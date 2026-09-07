@@ -1,0 +1,81 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/stats.ts)
+architect · glob(src/**/*.ts)
+architect · glob(**/*test*)
+architect · glob(package.json)
+architect · read(src/stats.test.ts)
+architect · read(package.json)
+architect · bash(bun test 2>&1; echo "exit=$?")
+architect › I've read the relevant files and confirmed the current check passes. Here's the plan for coder.
+architect · agent_send(coder)
+architect → coder Implement the tokenizer extraction in the repo (branch work/main is already checked out).  ## What to change  1. Create …
+coder · tree(.)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Plan sent to coder. I'll wait for their report with the `bun test` output and committed files before confirming the job is done.
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · json(.)
+coder › The repo is minimal. Let me create the tokenizer, rework stats.ts, and write tests.
+coder · write(src/tokenize.ts)
+coder · edit(src/stats.ts)
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · edit(import { expect, test } from 'bun:test' import { topWords, w…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All pass. Let me get the verbose output showing each test name, then commit.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Default reporter hides per-test names when all pass, but exit 0 with `5 pass / 0 fail` across the 2 files confirms everything. Now committing in small steps.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Report to the architect:
+coder · agent_send(architect)
+coder → architect Tokenizer extraction implemented on work/main, committed, `bun test` exits 0.  Changes: - New `src/tokenize.ts`: `tokeni…
+coder › Implemented and committed on `work/main`; handed the summary to the architect.
+
+**What changed**
+- `src/tokenize.ts` (new): `tokenize(text)` lowercases and splits on `/[^a-z0-9']+/`, dropping empty strings.
+- `src/stats.ts`: `wordCount` now returns `tokenize(text).length`; `topWords` counts via `tokenize` into a `Map<string, number>` and sorts most-frequent-first, ties alphabetical ascending, sliced to `n` — return type still `[string, number][]`.
+- `src/tokenize.test.ts` (new) and `src/stats.test.ts` (extended, original wordCount test kept), covering lowercase/separator collapse, apostrophe+digit words, no empty strings, topWords case-insensitivity, and alphabetical tie-break.
+
+**Check output** — `bun test` at repo root, exit 0:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 5 expect() calls
+Ran 5 tests across 2 files. [11.00ms]
+```
+(The 5 passing tests are the wordCount case + 2 topWords tests in stats.test.ts, and the 2 tokenize tests; Bun's default reporter prints names only on failure.)
+
+**Commits** on `work/main`:
+- `3e61d99` Extract tokenize and use it in wordCount and topWords
+- `5725eed` Add tokenize tests and topWords case/tie-break tests
+
+Working tree clean.
+architect · bash(bun test 2>&1; echo "exit=$?"; echo "---"; git log --oneline…)
+verified: bun run test passes on work/main
+merged work/main into the repository: c80b897 Merge branch 'work/main'
+architect › Job done.
+
+What changed:
+- New `src/tokenize.ts` exporting `tokenize(text): string[]` with `wordCount`'s behaviour — lowercase, words are runs of letters/digits/apostrophes, no empty strings.
+- `src/stats.ts` now uses `tokenize` in both `wordCount` (results unchanged) and `topWords` (case-insensitive, most frequent first, ties broken alphabetically).
+- Tests added in `src/tokenize.test.ts` and `src/stats.test.ts`.
+
+Verified: `bun test` at repo root exits 0 with `5 pass, 0 fail` across 2 files, covering the original wordCount case plus the new tokenize/topWords case-insensitivity and tie-break tests. Working tree clean, commits `3e61d99` and `5725eed` on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 28117 tokens
+  coder        deepseek-v4-flash    1 turns, 95249 tokens
+
+main: done
+  bun run test passed
+  merged: c80b897 Merge branch 'work/main'
+  this job: 123k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"c80b897 Merge branch 'work/main'","cost":"this job: 123k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7124,"outputTokens":2817,"cacheReadTokens":18176,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":7284,"outputTokens":3357,"cacheReadTokens":84608,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

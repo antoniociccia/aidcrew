@@ -1,0 +1,52 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/ini.ts)
+coder · tree(.)
+coder · read(src/ini.test.ts)
+coder · read(package.json)
+coder · write(src/ini.ts)
+coder · write(src/ini.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/ini.ts && git commit -m "Implement parseIni" && …)
+coder · git-log()
+verified: bun run test passes on work/main
+merged work/main into the repository: 6cf5e4f Merge branch 'work/main'
+coder › Implemented `parseIni` in `src/ini.ts` and added tests in `src/ini.test.ts`.
+
+What changed:
+
+- `parseIni` now splits the text into lines and, for each trimmed line:
+  - skips blank lines and `;`/`#` comments,
+  - treats `[name]` as a section header (name trimmed),
+  - splits `key = value` on the first `=`, trims both sides, and unwraps a double-quoted value while preserving its interior exactly,
+  - records keys under the current section (`''` before any header), with later keys overriding earlier ones,
+  - throws `SyntaxError("Invalid INI on line N")` with the 1-based line number for anything else.
+
+- Added tests covering: keys under sections, keys before any header going under `''`, whitespace trimming, comments/blank lines, quoted values with interior spaces and `;`, first-`=` splitting (`k=b=c`), key override, and the SyntaxError line number.
+
+Checks:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 9 expect() calls
+Ran 8 tests across 1 file. [21.00ms]
+```
+
+Commits (on `work/main`): `75c1cb8 Implement parseIni`, `1651f09 Add parseIni tests`.
+
+One decision not stated in the plan: a comment is recognized after trimming leading whitespace, so an indented `;`/`#` line is also treated as a comment (consistent with blank-line handling).
+
+  coder        deepseek-v4-pro      1 turns, 97331 tokens
+
+main: done
+  bun run test passed
+  merged: 6cf5e4f Merge branch 'work/main'
+  this job: 97k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"6cf5e4f Merge branch 'work/main'","cost":"this job: 97k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5232,"outputTokens":9411,"cacheReadTokens":82688,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

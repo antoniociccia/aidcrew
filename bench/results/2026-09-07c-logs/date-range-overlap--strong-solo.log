@@ -1,0 +1,58 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · bash(ls -la && cat package.json 2>/dev/null; cat tsconfig.json 2>…)
+coder · error: command failed with exit code 1 total 16 drwxr-xr-x@ 6 antonio  staff  192  7 set 15:17 . drwxr-xr-x@ 3 antonio  staff  …
+coder · bash(find src -type f -maxdepth 4 | sort && cat .git 2>/dev/null …)
+coder · read(src/range.test.ts)
+coder · edit(src/range.ts)
+coder · edit(src/range.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short --branch)
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Fix…)
+coder · edit(src/range.ts)
+coder · edit(src/range.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Val…)
+coder · read(src/range.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: c1e074c Merge branch 'work/main'
+coder › Done. Summary of changes:
+
+- `src/range.ts`
+  - Added a `timestamp` helper that calls `Date.parse` and throws `TypeError` (message includes the offending value) when the result is `NaN`.
+  - Added a `validate` helper that parses both endpoints and throws `RangeError` when `end < start`.
+  - `overlaps` now validates both ranges, returns `false` when either range is zero-length (`start === end`), and uses strict `<` comparisons (`aStart < bEnd && bStart < aEnd`) so the exclusive end is respected and merely-touching ranges no longer overlap.
+
+- `src/range.test.ts`
+  - Kept the existing overlapping-ranges test and added tests for:
+    - touching ranges → `false`
+    - same start instant → `true`
+    - zero-length range → `false` against itself and against a containing range
+    - unparseable start/end → `TypeError` whose message contains the offending value
+    - reversed range (first or second argument) → `RangeError`
+
+Checks run:
+
+```
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 11 expect() calls
+Ran 7 tests across 1 file. [17.00ms]
+```
+
+Decisions beyond the plan: I validate both arguments before the zero-length early return, so an invalid second range still throws even when the first is zero-length. The package has no typecheck/lint scripts, only `bun test`.
+
+  coder        deepseek-v4-pro      1 turns, 112884 tokens
+
+main: done
+  bun run test passed
+  merged: c1e074c Merge branch 'work/main'
+  this job: 113k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"c1e074c Merge branch 'work/main'","cost":"this job: 113k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6430,"outputTokens":5334,"cacheReadTokens":101120,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

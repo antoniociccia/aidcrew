@@ -1,0 +1,112 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && find . -maxdepth 2 -type f -not -path './node_modu…)
+architect · read(package.json)
+architect · read(src/config.ts)
+architect · read(src/index.ts)
+architect · read(src/index.test.ts)
+architect · bash(ls -la src && cat .aidcrew/config.toml 2>/dev/null; ls -la n…)
+architect · bash(bun test 2>&1 | tail -20)
+architect › Baseline is green (`bun test`: 1 pass). Here's the plan for the coder.
+
+---
+
+**Job: add env layer + validate to config resolution**
+
+Files to touch:
+
+1. **`src/env.ts` (new)** — export `fromEnv(env: Record<string, string | undefined>, prefix = 'APP_'): Partial<Config>`.
+   - For each variable, read `env[prefix + 'PORT']`, `env[prefix + 'HOST']`, `env[prefix + 'DEBUG']`, `env[prefix + 'NAME']`.
+   - Skip (leave out of the returned object) any variable whose value is `undefined` or `''`.
+   - `PORT`: `Number(raw)`; if `Number.isNaN(...)`, `throw new TypeError(`${key} must be a number`)` where `key` is the actual variable name read (e.g. `APP_PORT`). Otherwise store as number.
+   - `DEBUG`: compare `raw.toLowerCase()` — `'true' | '1' | 'yes'` → `true`, `'false' | '0' | 'no'` → `false`, anything else `throw new TypeError(`${key} must be true or false`)`. No trimming.
+   - `HOST`, `NAME`: store the raw string as-is.
+   - Return the built `Partial<Config>`.
+
+2. **`src/config.ts`** — add `validate(config: Config): Config` that returns `config` or throws `TypeError`:
+   - `port` not `Number.isInteger(config.port)` or not in `1..65535` → `new TypeError('port must be an integer between 1 and 65535')`.
+   - `host === ''` → `new TypeError('host must not be empty')`.
+   - `name === ''` → `new TypeError('name must not be empty')`.
+   - Return the same config object unchanged.
+
+3. **`src/index.ts`** — change `resolveConfig` to `resolveConfig(file: Partial<Config> = {}, env: Record<string, string | undefined> = process.env): Config`, implemented as `validate(merge(merge(DEFAULTS, file), fromEnv(env)))` (file over defaults, env over both, then validate). Import `fromEnv` and `validate`.
+
+4. **Tests** — add `src/env.test.ts` (for `fromEnv`: numeric port, string host/name, all true/false debug spellings case-insensitively, absent/empty left out, bad `APP_PORT` throws a TypeError whose message contains `APP_PORT`, bad `APP_DEBUG` throws one containing `APP_DEBUG`, custom prefix) and `src/config.test.ts` (for `validate`: valid passes through, non-integer/out-of-range port throws naming `port`, empty host/name throw naming `host`/`name`). Update `src/index.test.ts` to cover `resolveConfig(file, env)`: file over defaults, env over file, and invalid resolved config throws.
+
+**Check:** `bun test` — all tests pass, 0 fail.
+
+---
+
+I'll send this to the coder.
+architect · agent_send(coder)
+architect → coder Implement this change on the current branch (work/main). Baseline `bun test` is green (1 pass).  Add an environment laye…
+architect › Plan sent to coder. I'll wait for their report with the `bun test` result before calling the job done.
+coder · tree(.)
+coder · glob(**/*.ts)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+coder › Now I understand the structure. Let me create `src/env.ts` and add `validate` to `src/config.ts`.
+coder · write(src/env.ts)
+coder · edit(src/config.ts)
+coder · write(import { type Config, DEFAULTS, merge, validate } from './co…)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { fromEnv } f…)
+coder · write(import { expect, test } from 'bun:test' import { validate, t…)
+coder · write(import { expect, test } from 'bun:test' import { resolveConf…)
+coder · bash(bun test 2>&1)
+coder › All green — 16 pass, 0 fail. Now committing:
+coder · bash(git add -A && git commit -q -m "Layer environment variables …)
+coder › Done, committed as `c2657af`.
+
+**Changed**
+- `src/env.ts` (new): `fromEnv(env, prefix = 'APP_')` reads `PORT`, `HOST`, `DEBUG`, `NAME`; skips `undefined`/`''`; numeric port or `TypeError(\`${key} must be a number\`)` with the actual var name; debug lowercased (no trimming), `true|1|yes` → true, `false|0|no` → false, else `TypeError(\`${key} must be true or false\`)`; host/name stored raw.
+- `src/config.ts`: added `validate(config)` — non-integer or out-of-range (1–65535) port throws `'port must be an integer between 1 and 65535'`, empty host/name throw `'host must not be empty'`/`'name must not be empty'`, valid config returned as-is.
+- `src/index.ts`: `resolveConfig(file = {}, env = process.env)` now `validate(merge(merge(DEFAULTS, file), fromEnv(env)))`; imports `fromEnv` and `validate`.
+- Tests: new `src/env.test.ts` (8 tests), new `src/config.test.ts` (5), updated `src/index.test.ts` (file-over-defaults, env-over-file, validation throws).
+
+**`bun test` output**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 16 pass
+ 0 fail
+ 34 expect() calls
+Ran 16 tests across 3 files. [19.00ms]
+```
+
+One judgment call not in the plan: in `config.test.ts` I asserted the thrown values are `TypeError`s for the non-integer port and empty host/name (the spec says they throw a `TypeError`, so I checked it). Everything else follows the plan exactly.
+coder → architect Done, committed as `c2657af`.  **Changed** - `src/env.ts` (new): `fromEnv(env, prefix = 'APP_')` reads `PORT`, `HOST`, `…
+architect · bash(bun test 2>&1 | tail -20)
+verified: bun run test passes on work/main
+merged work/main into the repository: eb23465 Merge branch 'work/main'
+architect › Job done.
+
+**What changed**
+- `src/env.ts` (new): `fromEnv(env, prefix = 'APP_')` reads `APP_PORT`, `APP_HOST`, `APP_DEBUG`, `APP_NAME`; skips absent/empty values; parses port to a number (non-numeric throws a `TypeError` naming the variable); parses debug case-insensitively from `true/1/yes` and `false/0/no` (anything else throws naming the variable); host/name stay raw strings.
+- `src/config.ts`: added `validate(config)` — rejects non-integer or out-of-range (1–65535) port, and empty host/name, each with a `TypeError` naming the field.
+- `src/index.ts`: `resolveConfig(file = {}, env = process.env)` now layers file over defaults, environment over both, then validates.
+- Tests: new `src/env.test.ts` and `src/config.test.ts`, plus updated `src/index.test.ts` for the file/env/validate layering.
+
+**Verified** with the project's own check — `bun test`:
+```
+16 pass
+0 fail
+34 expect() calls
+Ran 16 tests across 3 files.
+```
+
+  architect    deepseek-v4-pro      2 turns, 39860 tokens
+  coder        deepseek-v4-flash    1 turns, 69872 tokens
+
+main: done
+  bun run test passed
+  merged: eb23465 Merge branch 'work/main'
+  this job: 110k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"eb23465 Merge branch 'work/main'","cost":"this job: 110k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6695,"outputTokens":4749,"cacheReadTokens":28416,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6359,"outputTokens":2969,"cacheReadTokens":60544,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

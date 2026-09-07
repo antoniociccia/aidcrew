@@ -1,0 +1,72 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/slugify.ts)
+coder · tree(.)
+coder · json(package.json)
+coder · read(src/slugify.test.ts)
+coder · json(package.json)
+coder · edit(src/slugify.ts)
+coder · edit(src/slugify.test.ts)
+coder · bash(bun test)
+coder · read(src/slugify.ts)
+not done: work not committed (rc/slugify.test.ts, src/slugify.ts) — the leader is sent back
+coder › Done. I fixed `slugify` in `src/slugify.ts` and added tests to `src/slugify.test.ts`.
+
+What changed:
+- `slugify` now normalizes to NFKD, which decomposes accented Latin letters into base letters plus combining marks, then strips the combining marks with `/\p{M}/gu`. `Crème Brûlée` → `creme-brulee`. The existing lowercasing, non-alphanumeric-run collapsing, and leading/trailing dash trimming are unchanged.
+
+Tests added:
+- accented letters reduce to base letters (`Crème Brûlée` → `creme-brulee`)
+- digits are preserved (`Version 2.0` → `version-2-0`)
+- runs of non-letter/non-digit collapse into one dash
+- leading/trailing dashes are dropped
+- empty string returns `''`
+- punctuation-only string returns `''`
+
+Check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 7 expect() calls
+Ran 7 tests across 1 file. [21.00ms]
+```
+coder · bash(git status && git branch --show-current)
+coder · bash(git add src/slugify.ts src/slugify.test.ts && git commit -m …)
+coder · bash(git status && git log --oneline -3)
+verified: bun run test passes on work/main
+merged work/main into the repository: 24e8e54 Merge branch 'work/main'
+coder › Committed and re-verified.
+
+- Branch: `work/main`
+- Commit: `f062005` — "Fix slugify to strip accented Latin letters"
+- Working tree is clean: `nothing to commit, working tree clean`
+
+Both changed files are on the branch now:
+- `src/slugify.ts` — `normalize('NFKD')` + strip combining marks so `slugify('Crème Brûlée')` returns `creme-brulee`.
+- `src/slugify.test.ts` — 6 new tests covering accents, digits, dash collapsing, dash trimming, empty input, and punctuation-only input.
+
+Checks remain green:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 7 expect() calls
+Ran 7 tests across 1 file. [21.00ms]
+```
+
+  coder        deepseek-v4-pro      2 turns, 66417 tokens
+
+main: done
+  bun run test passed
+  merged: 24e8e54 Merge branch 'work/main'
+  sent back once
+  this job: 66k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"24e8e54 Merge branch 'work/main'","cost":"this job: 66k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6993,"outputTokens":2336,"cacheReadTokens":57088,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

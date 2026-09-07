@@ -1,0 +1,44 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder · read(src/limiter.test.ts)
+coder › Now I understand the shape. Let me implement the token bucket and add tests.
+coder · write(src/limiter.ts)
+coder · write(import { expect, test } from 'bun:test' import { RateLimiter…)
+coder · bash(bun test 2>&1)
+coder › All 7 tests pass. Let me check the git state and commit.
+coder · bash(git status --short 2>&1; git log --oneline -3 2>&1)
+coder · bash(git add src/limiter.ts src/limiter.test.ts && git commit -q …)
+verified: bun run test passes on work/main
+merged work/main into the repository: dd2dbf5 Merge branch 'work/main'
+coder › Done. Implemented `RateLimiter` in `src/limiter.ts` as a token bucket and added tests.
+
+**Implementation** (`src/limiter.ts`)
+- Constructor starts the bucket **full** (`tokens = capacity`) and records `last = now()` as the refill baseline.
+- Refill is **lazy**: each `tryTake`/`available` computes elapsed milliseconds since `last`, converts to seconds at `refillPerSecond`, adds the product, and caps at `capacity`. Refill only runs when time has advanced, so repeated reads in the same instant never double-count.
+- `tryTake(n)` refuses `n > capacity` outright (and `n <= 0` returns true, taking nothing), otherwise refills and, if `tokens >= n`, deducts and returns true; otherwise returns false and leaves the bucket untouched.
+- `available` refills up to the current time and returns the (possibly fractional) balance.
+
+**Tests** (`src/limiter.test.ts`) use a controllable clock injected via the `now` constructor argument, covering: starts full, stays at capacity after a partial refill while full, refuses more than capacity without taking anything, takes when available and refuses (leaving balance) when short, refills continuously over time at the configured rate, never refills beyond capacity, and reports/takes fractional balances.
+
+**Checks**
+- `bun test`: 7 pass, 0 fail, 22 expect calls.
+
+**Notes on choices the plan didn't specify**
+- `n <= 0` (e.g. `tryTake(0)`) returns true without mutating the bucket, as the natural reading of "0 tokens are available".
+- Fractional `now` deltas and fractional token balances are supported by the arithmetic (ms → seconds conversion), which the tests exercise with a 250 ms advance.
+
+  coder        deepseek-v4-flash    1 turns, 61773 tokens
+
+main: done
+  bun run test passed
+  merged: dd2dbf5 Merge branch 'work/main'
+  this job: 62k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"dd2dbf5 Merge branch 'work/main'","cost":"this job: 62k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5150,"outputTokens":4143,"cacheReadTokens":52480,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

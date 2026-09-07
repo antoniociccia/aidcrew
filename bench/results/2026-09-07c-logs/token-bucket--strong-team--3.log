@@ -1,0 +1,31 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/limiter.ts)
+architect · bash(ls -la && cat package.json)
+architect · bash(ls -R src && find . -name '*.test.ts' -not -path './node_mod…)
+architect · bash(bun --version 2>/dev/null || echo "no bun")
+architect · read(src/limiter.test.ts)
+architect · bash(cat > src/limiter.ts <<'EOF' /** A token bucket: a burst up …)
+architect · bash(git status --short && git add src/limiter.ts src/limiter.tes…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 7aca55c Merge branch 'work/main'
+architect › The job is done.
+
+- **`src/limiter.ts`** — implemented `RateLimiter` as a token bucket: starts full, refills continuously at `refillPerSecond` based on the injected `now()` (ms), clamps to `capacity`, `tryTake(n)` only deducts when enough tokens are present, refuses any `n > capacity`, and `available` refills up to the current time and may be fractional.
+- **`src/limiter.test.ts`** — added tests covering starts-full, exact take, continuous fractional refill, capacity ceiling, `n > capacity` refusal, and that a failed take takes nothing.
+
+Verified with the project's own check: `bun test` → 6 pass, 0 fail. Committed on `work/main` as `f4e6421`.
+
+  architect    deepseek-v4-pro      1 turns, 29416 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+main: done
+  bun run test passed
+  merged: 7aca55c Merge branch 'work/main'
+  this job: 29k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"7aca55c Merge branch 'work/main'","cost":"this job: 29k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":3165,"outputTokens":5771,"cacheReadTokens":20480,"unstatedTurns":1},"turns":1},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":0,"outputTokens":0},"turns":0}],"kept":[],"exitCode":0}
+
+--- stderr ---

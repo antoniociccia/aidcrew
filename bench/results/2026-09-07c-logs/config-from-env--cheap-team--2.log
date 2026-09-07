@@ -1,0 +1,76 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/config.ts)
+architect · read(src/index.ts)
+architect · glob(**/*.test.ts)
+architect · bash(ls && cat package.json 2>/dev/null; ls src)
+architect · read(src/index.test.ts)
+architect › The job is clear from `src/config.ts`, `src/index.ts` and the existing test style. Sending the plan to coder.
+architect · agent_send(Add environment-variable support on top of the existing file…)
+architect → coder Add environment-variable support on top of the existing file-over-defaults config. Bun project, run tests with `bun test…
+coder · tree(.)
+coder · stat(src/config.ts)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · json(package.json)
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder · json(scripts)
+architect › Plan sent to coder. Expected back: the new `src/env.ts` with `fromEnv`, `validate` added in `src/config.ts`, `resolveConfig(file, env)` in `src/index.ts`, tests in `src/env.test.ts` and extended `src/index.test.ts`, and the full `bun test` output showing everything passes. When their report confirms the check, I'll call the job done.
+coder · bash(bun test 2>&1)
+coder › Baseline passes. Now implementing.
+coder · write(src/env.ts)
+coder · write(src/config.ts)
+coder · write(src/index.ts)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { fromEnv } f…)
+coder · edit(src/index.test.ts)
+coder · bash(bun test 2>&1)
+coder › All pass, no skips. Let me commit in small steps.
+coder · bash(git add src/env.ts src/env.test.ts && git commit -q -m "Add …)
+coder › All tests pass. Reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Done on work/main, three small commits (no signature/trailer): 4790caf "Add fromEnv reading APP_-prefixed variables" (sr…
+coder › Done. Summary of the work on `work/main`:
+
+**Commits** (3, small, no signature/trailer, tree clean):
+- `4790caf` — `src/env.ts` + `src/env.test.ts`: `fromEnv` reads `${prefix}PORT/HOST/DEBUG/NAME` (prefix defaults to `APP_`), omits absent/empty vars, parses PORT via `Number()` (TypeError naming the variable), DEBUG case-insensitively via true/1/yes vs false/0/no (TypeError naming the variable), passes HOST/NAME through as strings.
+- `84ab655` — `src/config.ts`: added `validate(config)` — TypeError naming the field for non-integer/out-of-range port, empty (trimmed) host or name; otherwise returns config unchanged.
+- `531b179` — `src/index.ts` + `src/index.test.ts`: `resolveConfig(file = {}, env = process.env)` = `validate(merge(merge(DEFAULTS, file), fromEnv(env)))`; doc comment updated to say env wins.
+
+**Checks** — full `bun test` output:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 11 pass
+ 0 fail
+ 25 expect() calls
+Ran 11 tests across 2 files. [14.00ms]
+```
+No skipped tests. The project has only the `bun test` script (no typecheck/lint), so that is the complete check.
+
+Deviations from the brief: one extra test (custom-prefix case) beyond the listed ones, since `prefix` is part of the public API. Handed off to the architect.
+verified: bun run test passes on work/main
+merged work/main into the repository: 77d71f8 Merge branch 'work/main'
+architect › Job done. On `work/main`, three small commits:
+
+- **src/env.ts** — new `fromEnv(env, prefix='APP_')`: reads prefixed PORT/HOST/DEBUG/NAME, port as number, debug as case-insensitive true/1/yes vs false/0/no, absent or empty variables omitted, TypeErrors naming `APP_PORT`/`APP_DEBUG` on bad values.
+- **src/config.ts** — added `validate(config)`: returns the config or throws a TypeError naming the field when port isn't an integer in 1–65535 or host/name is empty.
+- **src/index.ts** — `resolveConfig(file, env = process.env)` now layers env over file over defaults and validates the result.
+- **Tests** — new `src/env.test.ts` plus extended `src/index.test.ts` covering precedence, omission, type coercion and error cases (11 tests).
+
+Verified by the project's check: `bun test` — 11 pass, 0 fail.
+
+  architect    glm-5.3-flash        2 turns, 15384 tokens
+  coder        deepseek-v4-flash    1 turns, 87842 tokens
+
+main: done
+  bun run test passed
+  merged: 77d71f8 Merge branch 'work/main'
+  this job: 103k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"77d71f8 Merge branch 'work/main'","cost":"this job: 103k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":4528,"outputTokens":1768,"cacheReadTokens":9088,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6527,"outputTokens":6179,"cacheReadTokens":75136,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

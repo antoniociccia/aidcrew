@@ -1,0 +1,62 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(**/*)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · read(package.json)
+coder · bash(git status && git log --oneline -5 2>/dev/null; which bun &&…)
+coder › Now I'll implement the token bucket in `src/limiter.ts`.
+coder · write(src/limiter.ts)
+coder › Now add tests covering the specified behavior.
+coder · write(src/limiter.test.ts)
+coder › The fractional test currently lands exactly on capacity; let me make it genuinely fractional.
+coder · edit(src/limiter.test.ts)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/limiter.test.ts: 32 |   expect(limiter.available).toBeC…
+coder › My test's time handling was wrong: `tryTake` at t=1000 advanced `lastRefill` to 1000, so setting time back to 500 (my "1.5s" note was a miscount) refills nothing. Fix the timeline to be monotonic and correct.
+coder · edit(time = 1500 // half a second after the take above   expect(l…)
+coder · bash(bun test 2>&1)
+coder › All 6 tests pass. Let me commit the work.
+coder · bash(git add src/limiter.ts src/limiter.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 2bc19fc Merge branch 'work/main'
+coder › Done. Implemented the token bucket and added tests on branch `work/main`.
+
+## What changed
+
+**`src/limiter.ts`** — implemented `RateLimiter` using lazy refill-on-read:
+- Starts full: `tokens` initialized to `capacity`, `lastRefill` to `this.now()`.
+- `tryTake(n)`: refuses immediately when `n > capacity` (so even a full bucket can't hand out more than capacity); otherwise refills to the current time, then takes `n` if `this.tokens >= n` — otherwise returns `false` and leaves the bucket untouched.
+- `available`: refills to `this.now()` and returns the bucket contents, which can be fractional (e.g. 250 ms at 1 token/s yields 0.25).
+- The private `refill()` adds `elapsedMs / 1000 * refillPerSecond` and caps with `Math.min(capacity, …)`, so the bucket never exceeds capacity. It also ignores backwards clock moves (`now <= lastRefill`).
+
+**`src/limiter.test.ts`** — kept the original "starts full" test and added: refuses to take more than capacity (takes nothing), takes nothing when not enough are available, continuous refill over time, fractional `available`, and never refilling beyond capacity.
+
+## Checks
+
+`bun test` (the project's only script):
+
+```
+ 6 pass
+ 0 fail
+ 21 expect() calls
+Ran 6 tests across 1 file. [15.00ms]
+```
+
+## Notes / decisions not spelled out in the plan
+
+- Refill is computed lazily on each `tryTake`/`available` call rather than on a timer, which is the standard way to honor an injectable `now` — nothing needs a background tick.
+- A backwards clock jump is treated as "no refill yet" (guard `now <= lastRefill`), and `lastRefill` is only advanced when a refill actually happens.
+- `n <= 0` wasn't specified; I left it with the obvious arithmetic behavior (`n = 0` succeeds taking nothing) rather than adding unspecified rules. One test I wrote initially was wrong — I had moved the clock backwards inside a "continuous refill" test — and I fixed it to use a monotonic timeline before committing.
+
+  coder        deepseek-v4-flash    1 turns, 84530 tokens
+
+main: done
+  bun run test passed
+  merged: 2bc19fc Merge branch 'work/main'
+  this job: 85k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"2bc19fc Merge branch 'work/main'","cost":"this job: 85k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5577,"outputTokens":5225,"cacheReadTokens":73728,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

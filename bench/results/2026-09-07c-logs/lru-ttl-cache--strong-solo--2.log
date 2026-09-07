@@ -1,0 +1,56 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(src/**/*.ts)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder · bash(git checkout -b implement-cache)
+coder · write(src/cache.ts)
+coder · write(import { expect, test } from 'bun:test' import { Cache } fro…)
+coder · bash(bun test)
+coder · bash(git add src/cache.ts && git commit -m "Implement LRU cache w…)
+coder · bash(bun test && git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: 71f3ef6 Merge branch 'implement-cache'
+coder › Implemented `Cache` in `src/cache.ts` and expanded `src/cache.test.ts`.
+
+What changed
+- `src/cache.ts`
+  - Backing store is a `Map<K, { value: V; expiresAt: number }>`, whose insertion order encodes recency.
+  - `get` returns `undefined` for missing keys; expired entries are removed and returned as `undefined`; a live hit is re-inserted at the end of the map so it counts as a use.
+  - `set` prunes expired entries, replaces an existing key's value/expiry in place (refreshing recency without evicting), and otherwise evicts the least-recently-used entry when the live size would exceed capacity.
+  - `has` and `delete` treat expired entries as absent; `delete` returns `true` only when it removed a live entry.
+  - `size` counts only non-expired entries.
+  - The constructor throws `RangeError` when `!(capacity >= 1)` — this covers 0, negatives, and also `NaN`.
+  - Expiry is `expiresAt = now() + ttlMs`, with an entry considered expired once `now() >= expiresAt`.
+
+- `src/cache.test.ts`
+  - Added 11 tests covering missing keys, expiry boundaries, set-replace-without-evicting, expiry refresh on set, LRU eviction via `get`, expired-entry pruning before eviction, `has`, `delete`, `size`, the default clock, and `RangeError` for capacity < 1.
+
+Checks
+```
+bun test v1.3.14 (0d9b296a)
+
+ 12 pass
+ 0 fail
+ 29 expect() calls
+Ran 12 tests across 1 file. [14.00ms]
+```
+
+Notes / decisions the plan didn't specify
+- I pruned expired entries inside `set` before deciding whether eviction is needed, so a lingering expired entry can never cause a live entry to be evicted.
+- `get`/`has`/`delete` lazily remove an expired entry when they encounter it; `size` only counts and does not mutate.
+- Work is on branch `implement-cache` with two commits: `Implement LRU cache with expiry` and `Add cache tests`.
+
+  coder        deepseek-v4-pro      1 turns, 163038 tokens
+
+main: done
+  bun run test passed
+  merged: 71f3ef6 Merge branch 'implement-cache'
+  this job: 163k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 21¢, on gpt-5 ≈ 19¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"71f3ef6 Merge branch 'implement-cache'","cost":"this job: 163k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 21¢, on gpt-5 ≈ 19¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5341,"outputTokens":16769,"cacheReadTokens":140928,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

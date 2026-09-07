@@ -1,0 +1,101 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/csv.ts)
+coder · tree()
+coder · read(src/csv.test.ts)
+coder · read(package.json)
+coder › Now I understand the current behavior. The `field` function treats all cells uniformly via `String(cell)`, so a string like `=HYPERLINK(...)` is written unchanged. Requirements:
+
+- String starting with `=`, `+`, `-`, `@`, tab, or CR → prefix a single quote **and** wrap the whole field in double quotes.
+- Number → written plainly, even negative.
+- Existing comma / double-quote / newline quoting stays, with internal double quotes doubled.
+
+Let me implement:
+coder · edit(src/csv.ts)
+coder › Now add tests:
+coder · edit(test('quotes a field with a comma', () => {   expect(toCsv([…)
+coder › The last test contradicts the requirement — `-no leading dash` and `=not a formula?` both start with dangerous characters, so they *would* be protected. Let me fix it:
+coder · edit(test('escapes dangerous characters inside a quoted field', (…)
+coder · read(src/csv.test.ts)
+coder › Line 32 is unnecessarily convoluted. Let me simplify it:
+coder · edit(test('escapes dangerous characters inside a quoted field', (…)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/csv.test.ts: 19 |   '-2+3', 20 |   '@user', 21 |   '\t…
+coder › Good — the test caught the interaction: `=HYPERLINK(...)` contains double quotes, and since it's wrapped in quotes, they must be doubled per CSV rules (matching the requirement "with a double quote inside a quoted field doubled"). My implementation does that correctly; the test's expected string didn't. Let me fix the expectation to escape quotes:
+coder · edit(])('prefixes a quote to a formula-like string %j', (value) =…)
+coder · bash(bun test)
+coder › All 12 tests pass. Let me review the final implementation:
+coder · read(src/csv.ts)
+not done: work not committed (rc/csv.test.ts, src/csv.ts) — the leader is sent back
+coder › Done. Here's what I changed.
+
+## Implementation (`src/csv.ts`)
+
+The `field` function now distinguishes strings from numbers:
+
+```ts
+const DANGEROUS_START = /^[=+\-@\t\r]/
+
+function field(cell: Cell): string {
+  const text = String(cell)
+  const escaped = text.replace(/"/g, '""')
+  if (typeof cell === 'string' && DANGEROUS_START.test(text)) {
+    return `"'${escaped}"`
+  }
+  return /[",\n]/.test(text) ? `"${escaped}"` : text
+}
+```
+
+- A **string** starting with `=`, `+`, `-`, `@`, tab, or CR gets a single quote prefixed and the whole field wrapped in double quotes, so the spreadsheet renders it as text instead of running it.
+- A **number** is written plainly via `String(cell)` — negative or not — because the dangerous-start check is gated on `typeof cell === 'string'`. (This mattered: `-5` as a string would be protected, but `-5` as a number stays bare, which is what the requirement asks for.)
+- The existing comma/double-quote/newline quoting is preserved, with internal double quotes doubled. Because injection-neutralized fields are themselves quoted, any `"` inside them is also doubled, which keeps the CSV well-formed.
+
+The escaping was factored out so the quote-doubling applies to both the injection-neutralized branch and the regular quoting branch.
+
+## Tests (`src/csv.test.ts`)
+
+Added:
+- double-quote doubling inside a quoted field
+- multiline field stays quoted
+- `test.each` covering `=HYPERLINK(...)`, `+SUM(...)`, `-2+3`, `@user`, tab, and carriage-return starts, each written as `"'<value>"` (with inner quotes doubled)
+- negative numbers written plainly (`-5,-1.5,0`)
+- a field that is both injection-dangerous and contains a comma + double quote (`"'=A1,B2"""`)
+- an ordinary string unchanged
+
+## Checks
+
+`bun test` → **12 pass, 0 fail** (12 expect calls).
+
+One test failure during development: my first `test.each` expectation didn't double the double quotes inside `=HYPERLINK("http://example.com", "click")`. Since injection-neutralized fields are quoted, the inner quotes must be doubled per standard CSV quoting — the implementation was correct, and I fixed the test's expected value to match the requirement.
+coder · bash(git status && git branch --show-current)
+coder · bash(git diff)
+coder › The diff is exactly the intended work. Committing it on the current branch:
+coder · bash(git add src/csv.ts src/csv.test.ts && git commit -m "Neutral…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 46c1675 Merge branch 'work/main'
+coder › Committed and re-checked:
+
+## Commit
+
+`810414b` — **"Neutralize formula injection in toCsv string cells"**, on branch `work/main`, 2 files changed (38 insertions, 1 deletion). Working tree is now clean; nothing uncommitted remains.
+
+## Checks
+
+`bun test` → **12 pass, 0 fail** (12 expect calls).
+
+## What changed (summarized)
+
+- **`src/csv.ts`**: a string starting with `=`, `+`, `-`, `@`, tab, or CR is written with a single quote prefixed and the whole field double-quoted (`"'<value>"`, inner `"` doubled); numbers are written plainly whether negative or not; the existing comma/double-quote/newline quoting is unchanged.
+- **`src/csv.test.ts`**: added tests for quote-doubling, multiline fields, the six dangerous starting characters (`test.each`), negative numbers, a field that is both dangerous and contains a comma + quote, and an ordinary string.
+
+  coder        deepseek-v4-flash    2 turns, 112116 tokens
+
+main: done
+  bun run test passed
+  merged: 46c1675 Merge branch 'work/main'
+  sent back once
+  this job: 112k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"46c1675 Merge branch 'work/main'","cost":"this job: 112k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9643,"outputTokens":7497,"cacheReadTokens":94976,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

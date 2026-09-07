@@ -1,0 +1,72 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(**/*.{ts,js})
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · read(package.json)
+coder · write(src/limiter.ts)
+coder · write(src/limiter.test.ts)
+coder · bash(bun test)
+not done: work not committed (rc/limiter.test.ts, src/limiter.ts) — the leader is sent back
+coder › Implemented the token bucket in `src/limiter.ts` and expanded the tests in `src/limiter.test.ts`.
+
+What changed
+- `src/limiter.ts`:
+  - Added private `#tokens` and `#lastRefill` state; the bucket starts full (`tokens = capacity`, `lastRefill = now()`).
+  - `#refill()` adds `elapsedSeconds * refillPerSecond` and clamps to `capacity` (and ignores a clock that moves backwards).
+  - `tryTake(n = 1)` refills, refuses `n > capacity` outright, returns `false` without taking anything when tokens are insufficient, otherwise deducts `n` and returns `true`.
+  - `available` refills up to the current time and returns the (possibly fractional) token count.
+- `src/limiter.test.ts`: kept the existing "starts full" test and added tests for insufficient-token refusal (taking nothing), fractional refill, continuous refill capped at capacity, and `n > capacity` always being refused.
+
+Checks
+- `bun test` (the only script in `package.json`):
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 19 expect() calls
+Ran 4 tests across 1 file. [12.00ms]
+```
+
+One decision not stated in the plan: `#refill()` clamps negative elapsed time to zero so a backwards-moving `now` can't drive the bucket below zero tokens; monotonic clocks (including the test clock) are unaffected.
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/limiter.ts src/limiter.test.ts && git commit -m …)
+coder · bash(git status --short && bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 26a5ce2 Merge branch 'work/main'
+coder › Done. Committed the changes on `work/main`:
+
+- `1c23700` — `Implement token bucket RateLimiter and add tests`
+  - `src/limiter.ts`
+  - `src/limiter.test.ts`
+
+The working tree is now clean (`git status --short` produced no output).
+
+Checks
+- `bun test`:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 19 expect() calls
+Ran 4 tests across 1 file. [13.00ms]
+```
+
+Note: the path on disk is `src/limiter.test.ts` (not `rc/limiter.test.ts`); that is the file I committed.
+
+  coder        deepseek-v4-pro      2 turns, 67681 tokens
+
+main: done
+  bun run test passed
+  merged: 26a5ce2 Merge branch 'work/main'
+  sent back once
+  this job: 68k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"26a5ce2 Merge branch 'work/main'","cost":"this job: 68k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7406,"outputTokens":4851,"cacheReadTokens":55424,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

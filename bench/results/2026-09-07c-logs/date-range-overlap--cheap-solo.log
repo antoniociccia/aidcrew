@@ -1,0 +1,66 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · tree()
+coder · read(src/range.test.ts)
+coder · read(package.json)
+coder › Now I understand the task. Let me look at the requirements carefully:
+
+- **Exclusive ends**: touching ranges (`a.end === b.start`) should not overlap → need strict `<` comparisons.
+- **Same start instant** overlaps → strict comparisons still handle this (non-empty ranges).
+- **Zero-length range** (`start === end`) contains no instants, so it overlaps *nothing*, not even itself. This is the tricky part: the plain strict-interval formula `aStart < bEnd && bStart < aEnd` would report a zero-length range overlapping any range containing its point, so empty ranges must be excluded explicitly.
+- **Parse failure** → `TypeError` naming the offending value.
+- **End before start** → `RangeError`.
+
+Let me implement:
+coder · write(src/range.ts)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { overlaps } …)
+coder · bash(bun test 2>&1 || node --experimental-strip-types --test src/…)
+coder › All 7 tests pass. Let me check git state and commit:
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Fix…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 168cc68 Merge branch 'work/main'
+coder › Done. Committed as `5989869` on `work/main`.
+
+## What changed
+
+**`src/range.ts`** — rewrote `overlaps` plus a small `parse` helper:
+
+- **Touching ranges no longer overlap.** Comparison changed from `<=` to strict `<` (`aStart < bEnd && bStart < aEnd`), reflecting that the end is exclusive.
+- **Same start instant still overlaps.** With non-empty ranges, `a.start === b.start` satisfies both strict checks.
+- **Zero-length ranges overlap nothing, not even itself.** The plain strict-interval formula would wrongly report an empty range as overlapping any range containing its point, so I return `false` up front when either range has `start === end` (an empty range has no moments to share).
+- **Unparseable start or end throws a `TypeError`** whose message includes the offending value (e.g. `` not-a-date does not parse as a date ``). Parse of each field happens before any other check.
+- **End before start throws a `RangeError`**, checked after both ranges parse.
+
+**`src/range.test.ts`** — added tests for each rule: touching (both orders), shared start instant, zero-length vs. itself and vs. a containing range, unparseable start/end throwing `TypeError` with the value in the message, and end-before-start throwing `RangeError`.
+
+## Checks
+
+`bun test` (the project's only script):
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 15 expect() calls
+Ran 7 tests across 1 file. [15.00ms]
+```
+
+## Notes
+
+- Error precedence: a parse failure throws `TypeError` even if the same range would also be end-before-start, since parsing comes first.
+- I chose message texts not specified by the requirements (`... does not parse as a date`, `end is before start`); only the "includes the offending value" part was mandated, and the tests assert that.
+
+  coder        deepseek-v4-flash    1 turns, 71510 tokens
+
+main: done
+  bun run test passed
+  merged: 168cc68 Merge branch 'work/main'
+  this job: 72k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"168cc68 Merge branch 'work/main'","cost":"this job: 72k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":4845,"outputTokens":6633,"cacheReadTokens":60032,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

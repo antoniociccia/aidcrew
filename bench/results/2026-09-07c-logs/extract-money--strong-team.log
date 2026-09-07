@@ -1,0 +1,105 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/invoice.ts)
+architect · read(src/receipt.ts)
+architect · bash(ls -la && cat package.json 2>/dev/null; echo "---"; ls src t…)
+architect · error: command failed with exit code 1 total 16 drwxr-xr-x@ 6 antonio  staff  192  7 set 15:43 . drwxr-xr-x@ 3 antonio  staff  …
+architect · grep(formatInvoiceAmount|formatReceiptAmount|renderInvoice|render…)
+architect · read(src/invoice.test.ts)
+architect · read(src/receipt.test.ts)
+architect · bash(bun test 2>&1 | tail -20)
+architect › I've read the two formatters, the existing tests, and confirmed `bun test` passes currently. Here's the plan.
+
+## Plan
+
+### Files to touch
+
+1. **Create `src/money.ts`** — new module exporting:
+   ```ts
+   export function formatMoney(cents: number, currency: string): string
+   ```
+   with exactly the invoice's current behaviour:
+   - leading `-` only when `cents < 0`
+   - whole part = `Math.floor(Math.abs(cents) / 100)` grouped with commas (`\B(?=(\d{3})+(?!\d))`)
+   - fraction = `Math.abs(cents) % 100` padded to two digits
+   - result = `<sign><grouped>.<fraction> <currency>` (e.g. `-1,250` → `-12.50 EUR`, `123450` → `1,234.50 EUR`)
+
+2. **`src/invoice.ts`** — import `formatMoney`; change `formatInvoiceAmount(cents, currency)` to be a thin wrapper returning `formatMoney(cents, currency)`. Keep it exported. `renderInvoice` stays untouched.
+
+3. **`src/receipt.ts`** — import `formatMoney`; change `formatReceiptAmount(cents, currency)` to a thin wrapper returning `formatMoney(cents, currency)`. Keep it exported. `renderReceipt` stays untouched (it already calls `formatReceiptAmount`, so it's fixed by the extraction).
+
+4. **Add `src/money.test.ts`** — test `formatMoney`:
+   - `formatMoney(123450, 'EUR') === '1,234.50 EUR'` (grouping + two decimals)
+   - `formatMoney(1250, 'EUR') === '12.50 EUR'` (no separator below 1000)
+   - `formatMoney(-1250, 'EUR') === '-12.50 EUR'` (the receipt's old bug case)
+   - `formatMoney(-123450, 'EUR') === '-1,234.50 EUR'` (minus with grouping)
+   - `formatMoney(5, 'USD') === '0.05 USD'` (leading zero)
+
+5. **Extend `src/receipt.test.ts`** — add a test that `renderReceipt([{ name: 'refund', cents: -1250 }], 'EUR')` renders `'refund -12.50 EUR\nTOTAL -12.50 EUR'`, proving the receipt negative-amount bug is fixed. Keep the existing positive test as-is (it still passes, output unchanged for positive amounts).
+
+### Check
+
+```
+bun test
+```
+
+Expected: all tests pass (existing 2 plus new ones). The two existing positive-amount assertions must remain green since `renderInvoice`/`renderReceipt` output is unchanged for them, and the receipt's `-1250` case now renders `-12.50 EUR` instead of the broken `-13.-50 EUR`.
+architect · agent_send(coder)
+architect → coder Implement this extraction. Read the plan below, make the changes, and verify with `bun test` (expect all tests to pass).…
+architect › The plan is sent to the coder. I'll wait for their report that `bun test` passes, then confirm the job is done.
+coder · tree(.)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder › Now I'll make the changes. First, create `src/money.ts`:
+coder · write(src/money.ts)
+coder · write(import { formatMoney } from './money.ts'  /** A line of an i…)
+coder · write(import { formatMoney } from './money.ts'  /** An item on a t…)
+coder · write(import { expect, test } from 'bun:test' import { formatMoney…)
+coder · edit(src/receipt.test.ts)
+coder · bash(bun test)
+coder › All 8 tests pass. Now commit as I go:
+coder · bash(git add src/money.ts src/money.test.ts src/invoice.ts src/re…)
+coder › Done. Committed on `work/main` as `57db5b5`.
+
+**What changed**
+- **`src/money.ts` (new)** — exports `formatMoney(cents, currency)`: leading `-` only when `cents < 0`, whole part from `Math.abs`, comma-grouped with `\B(?=(\d{3})+(?!\d))`, two-digit fraction, ` <sign><grouped>.<fraction> <currency>`.
+- **`src/invoice.ts`** — `formatInvoiceAmount` is now a thin wrapper returning `formatMoney(cents, currency)`; behaviour identical (it already grouped and handled negatives). Still exported; `renderInvoice` untouched.
+- **`src/receipt.ts`** — `formatReceiptAmount` is now a thin wrapper returning `formatMoney(cents, currency)`; this is what fixes the negative bug (old code did `Math.floor(-1250/100)` = `-13` and `-1250 % 100` = `-50`, rendering `-13.-50`). Still exported; `renderReceipt` untouched.
+- **`src/money.test.ts` (new)** — five tests as specified (grouping, no separator below 1000, minus only, minus+grouping, leading-zero cents).
+- **`src/receipt.test.ts`** — added the negative-refund test; existing positive test unchanged.
+
+**Check output** — `bun test`: 8 pass, 0 fail, 8 expect() calls across 3 files.
+
+One thing the plan didn't state but follows from it: receipts above 1000 now also get comma grouping (previously `formatReceiptAmount` didn't group). No existing test exercises that, and it's the intended unification, so I left it.
+coder → architect Done. Committed on `work/main` as `57db5b5`.  **What changed** - **`src/money.ts` (new)** — exports `formatMoney(cents, …
+architect · bash(bun test 2>&1 | tail -20)
+architect · bash(git log --oneline -3 && git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: e8d149a Merge branch 'work/main'
+architect › The job is done. `bun test` passes (8 pass, 0 fail) on `work/main` at commit `57db5b5`.
+
+What changed:
+- New `src/money.ts` exporting `formatMoney(cents, currency)` with the invoice's grouping/decimals/minus/currency behaviour.
+- `formatInvoiceAmount` and `formatReceiptAmount` are now thin wrappers over it, so the receipt's negative-amount bug (`-13.-50 EUR`) is fixed by the extraction.
+- Added `src/money.test.ts` and extended `src/receipt.test.ts` with a negative-refund case; existing positive-amount render output is unchanged.
+
+The receipt now also groups thousands (previously it didn't), which is the intended unification and not covered by any existing positive test.
+
+  architect    deepseek-v4-pro      2 turns, 43833 tokens
+  coder        deepseek-v4-flash    1 turns, 62700 tokens
+
+main: done
+  bun run test passed
+  merged: e8d149a Merge branch 'work/main'
+  this job: 107k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e8d149a Merge branch 'work/main'","cost":"this job: 107k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7415,"outputTokens":3010,"cacheReadTokens":33408,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6548,"outputTokens":2392,"cacheReadTokens":53760,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

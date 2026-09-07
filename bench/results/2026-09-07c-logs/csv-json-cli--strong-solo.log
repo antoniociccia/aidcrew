@@ -1,0 +1,68 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder › Now I understand the structure. Let me write the CSV parser module and update cli.ts.
+coder · write(src/csv.ts)
+coder · edit(src/cli.ts)
+coder › Now let me check the empty input case. `parseCsv('')` produces `[]` because field is empty and row length is 0. Good. But `parseCsv('\n')` should produce `[['']]` — header with one empty field. Let me check the spec: "An empty input, or a header with no rows, prints []".
+
+For header with no rows: input like "a,b\n" → rows = [['a','b']], objects = [], prints `[]\n`. Good.
+
+Now let me add tests and verify the parser handles edge cases correctly.
+coder · write(import { expect, test } from 'bun:test' import { parseCsv } …)
+coder · edit(src/cli.test.ts)
+coder · bash(bun test)
+coder › All 13 tests pass. Let me check how the error message should read — the spec says "prints one line naming the 1-based line number". My message includes the line number, which is what's required. 
+
+Let me also verify the git setup and commit.
+coder · bash(git status 2>&1 | head -20)
+coder · bash(git add -A && git commit -q -m "Add --json flag and CSV pars…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9d3cf7b Merge branch 'work/main'
+coder › Done. Here's what I changed:
+
+## Changes
+
+**`src/csv.ts`** (new) — exports `parseCsv(text: string): string[][]`, a character-by-character RFC-4180-style parser that handles:
+- Quoted fields containing commas
+- Doubled quotes (`""`) inside a quoted field → one quote
+- `\r\n` line endings (the `\r` is skipped)
+
+**`src/cli.ts`** — added a `--json` branch that:
+- Splits `parseCsv` output into header + data rows
+- Prints `JSON.stringify(objects)` + `\n` as a JSON array of objects keyed by header, every value a string
+- Empty input or header-only → `[]\n`, code 0
+- A row whose field count differs from the header → a single line naming the 1-based line number, code 1, and no JSON
+- Updated the usage line to include `--json`
+
+**Tests** — added `src/csv.test.ts` (5 parser tests) and 5 `--json` tests in `src/cli.test.ts`.
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+13 pass
+0 fail
+13 expect() calls
+Ran 13 tests across 2 files. [9.00ms]
+```
+
+## Decisions not in the plan
+
+- The error line reads e.g. `line 2: expected 2 fields, got 1\n` (code 1). The plan only required "one line naming the 1-based line number," so I included the expected/got counts for clarity — easy to simplify if you want just the line number.
+- I placed `--json` last in the check order, matching the existing `--upper` → `--count` pattern. Note that `--count` still counts raw non-empty newline-split lines, untouched as requested.
+
+  coder        deepseek-v4-pro      1 turns, 59217 tokens
+
+main: done
+  bun run test passed
+  merged: 9d3cf7b Merge branch 'work/main'
+  this job: 59k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9d3cf7b Merge branch 'work/main'","cost":"this job: 59k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":12358,"outputTokens":2571,"cacheReadTokens":44288,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

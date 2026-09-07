@@ -1,0 +1,81 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(**/*.ts)
+architect · read(src/wrap.ts)
+architect · bash(bun --version; ls node_modules 2>/dev/null | head -5; wc -l …)
+architect › Spec is clear, project is `bun test`, `src/wrap.ts` is a stub. Plan:
+
+**`src/wrap.ts`** — implement `wrap(text, width)`:
+1. `if (width < 1) throw new RangeError(...)` first.
+2. Split the input into paragraphs on blank lines: `text.split(/\n\s*\n/)` (consumes runs of blank lines as one separator).
+3. Per paragraph, tokenize with `para.trim().split(/\s+/)` — this collapses runs of spaces (and tabs) into one and drops leading/trailing whitespace; filter out empty tokens.
+4. Greedy fill, emitting lines of at most `width` chars:
+   - If a token is longer than `width`, break it into `width`-sized chunks first (so it flows across lines) and treat the chunks as ordinary tokens.
+   - Append token to current line if the line is empty, or `line.length + 1 + token.length <= width`; otherwise flush the line and start a new one.
+   - Joining words with a single `" "` satisfies "no line ends in a space" — never pad, never emit trailing spaces.
+5. A paragraph whose token list is empty contributes one empty line (this is what keeps a blank line between paragraphs when joining).
+6. Join each paragraph's lines with `"\n"`, join paragraphs with `"\n\n"`.
+
+**`src/wrap.test.ts`** (new, bun:test) covering at least:
+- fits on one line: `wrap("Hello world", 11)` → `"Hello world"`
+- breaks at space: `wrap("Hello world", 5)` → `"Hello\nworld"`
+- greedy packing: `wrap("The quick brown fox", 10)` → `"The quick\nbrown fox"`
+- runs of spaces count as one, no trailing space: `wrap("Hello  world", 6)` → `"Hello\nworld"`
+- word longer than width split: `wrap("abcdefghij", 3)` → `"abc\ndef\nghi\nj"`
+- long word mixed with short: `wrap("x abcdefgh", 3)` → `"x\nabc\ndef\ngh"`
+- paragraphs: `wrap("one two\n\nthree four", 10)` → `"one two\n\nthree four"`; also multiple consecutive blank lines collapse to one; blank-line round-trip with narrow width: `wrap("aaa bbb\n\nccc", 3)` → `"aaa\nbbb\n\nccc"`
+- empty-ish input: `wrap("", 5)` → `""`
+- `wrap("x", 0)` and `wrap("x", -1)` throw `RangeError` (`expect(() => ...).toThrow(RangeError)`)
+
+**Check:** `bun test` — all tests pass (print the summary line). Commit the two files.
+architect · agent_send(Implement the task in /private/var/folders/n0/s619yhq953bdp1…)
+architect → coder Implement the task in /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-bench-word-wrap-cheap-team-G94hwr…
+coder · read(src/wrap.ts)
+coder · stat(.)
+architect › Plan sent to coder. Expecting back: the `bun test` summary showing all tests passing and the commit hash for the two files (`src/wrap.ts`, `src/wrap.test.ts`). Once they report success, I'll confirm the job done; if the harness check fails, the output comes back to me and the job stays open until it passes.
+coder · tree(.)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · write(src/wrap.ts)
+coder · write(src/wrap.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 11 tests pass. Committing.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Implemented `wrap` in `src/wrap.ts` and added `src/wrap.test.ts`, committed as `477de94`.
+
+**What changed**
+- `src/wrap.ts`: the check `if (width < 1) throw new RangeError(...)` is the first statement. Paragraphs come from `text.split(/\n\s*\n/)` (runs of blank lines collapse to one separator); tokens per paragraph from `para.trim().split(/\s+/)` with empties filtered out. Greedy fill joins tokens with a single space, flushing when `line.length + 1 + chunk.length > width`; tokens longer than `width` are pre-split into width-sized chunks via a regex match and treated as ordinary tokens. Paragraphs with no tokens contribute one empty line; lines joined with `"\n"`, paragraphs with `"\n\n"`. `wrap("", 5)` returns `""`.
+- `src/wrap.test.ts`: all 11 cases from the plan, using `bun:test` (`describe`/`test`/`expect`), including both RangeError cases.
+
+**Check output**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 11 pass
+ 0 fail
+ 11 expect() calls
+Ran 11 tests across 1 file. [20.00ms]
+```
+
+**Decisions not in the plan**: RangeError message is `width must be at least 1, got ${width}` (message text was unspecified); long-word chunks are produced with a `.{1,width}` regex (matches the spec's chunking behavior; the trailing partial chunk like `j` in `abcdefghij` at width 3 comes out correctly). No other files touched.
+coder → architect Done. Implemented `wrap` in `src/wrap.ts` and added `src/wrap.test.ts`, committed as `477de94`.  **What changed** - `src…
+architect · bash(bun test 2>&1 | tail -6 && git log --oneline -2 && git statu…)
+verified: bun run test passes on work/main
+merged work/main into the repository: d0d6e76 Merge branch 'work/main'
+architect › Verified on my side: `bun test` passes 11/0, commit `477de94` is in, working tree clean.
+
+**Job done.** `wrap(text, width)` implemented in `src/wrap.ts` — RangeError first, blank-line paragraph split (`/\n\s*\n/`), whitespace-run collapsing tokens, greedy fill with width-chunked long words, single-space joins so no line ends in a space, one blank line between paragraphs; 11 cases in `src/wrap.test.ts` covering all the spec behaviors. Verified by the project's own check: `bun test` → 11 pass, 0 fail.
+
+  architect    glm-5.3-flash        2 turns, 20647 tokens
+  coder        deepseek-v4-flash    1 turns, 43060 tokens
+
+main: done
+  bun run test passed
+  merged: d0d6e76 Merge branch 'work/main'
+  this job: 64k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d0d6e76 Merge branch 'work/main'","cost":"this job: 64k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":9439,"outputTokens":2760,"cacheReadTokens":8448,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5732,"outputTokens":3280,"cacheReadTokens":34048,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

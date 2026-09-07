@@ -1,0 +1,66 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/range.ts)
+architect · glob(**/*.test.*)
+architect · read(src/range.test.ts)
+architect · bash(ls && cat package.json 2>/dev/null | head -40)
+architect › The bug is clear: `src/range.ts:10` uses `<=` on both sides, so touching ranges (`aEnd === bStart`) count as overlapping, and `Date.parse` NaN results flow through silently as `false`. Test runner is `bun test`, one existing test in `src/range.test.ts`.
+
+**Plan for `src/range.ts`:**
+
+1. Add a small helper, e.g. `parse(value: string): number`, that does `Date.parse` and on `NaN` throws `new TypeError(\`Invalid date: ${value}\`)` — message must include the offending value.
+2. In `overlaps`, parse all four bounds through the helper (TypeError for any unparseable start or end).
+3. After parsing, for each range: if its end time is before its start time, throw `new RangeError(...)` (e.g. `Range end before start`). End equal to start is fine — that's the zero-length case.
+4. If either range is zero length (`aStart === aEnd` or `bStart === bEnd`), return `false` — it overlaps nothing, not even an identical zero-length range.
+5. Otherwise return `aStart < bEnd && bStart < aEnd` — strict inequalities make touching ranges (one's end exactly the other's start) non-overlapping, while equal start instants with positive length still overlap.
+
+**Plan for `src/range.test.ts`** — keep the existing test and add:
+
+- touching ranges (`end` of one === `start` of other) → `false`
+- two ranges with the same start instant (positive length) → `true`
+- zero-length range vs itself → `false`; zero-length vs a range that would contain its instant → `false`
+- unparseable start → throws `TypeError` with the offending value in the message; same for unparseable end
+- end before start → throws `RangeError`
+
+**Check:** `bun test` — all tests green, including the new cases.
+
+Sending this to coder now; I expect back a report that `bun test` passes with the new cases committed on the job branch.
+architect · agent_send(Fix `overlaps` in src/range.ts (job branch work/main; commit…)
+architect → coder Fix `overlaps` in src/range.ts (job branch work/main; commit as you go, no trailers).  Current behaviour (src/range.ts:5…
+coder · read(src/range.ts)
+coder · read(src/range.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+architect › Plan sent to coder. Waiting for their report: what changed in `src/range.ts` and the new tests in `src/range.test.ts`, with `bun test` output showing all cases (touching, same-start, zero-length, TypeError, RangeError) passing on the job branch.
+coder › Now I'll make the fix in `src/range.ts`.
+coder · write(src/range.ts)
+coder · write(import { expect, test } from 'bun:test' import { overlaps } …)
+coder · bash(bun test 2>&1)
+coder › All 8 tests pass. Now committing.
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "Fix…)
+coder · agent_send(architect)
+coder → architect Done on work/main, commit 410ea98 "Fix overlaps: exclusive ends, throw on bad ranges".  What changed in src/range.ts: - …
+coder › Fixed, tested, and committed on `work/main` (410ea98), with the report sent to the architect.
+
+**What changed:**
+- `src/range.ts` — `overlaps` now uses strict inequalities (`aStart < bEnd && bStart < aEnd`) so touching ranges don't overlap while same-start positive-length ranges do; added `parseBound` (throws `TypeError("Invalid date: ${value}")` on NaN) and `parseRange` (throws `RangeError` when end < start); returns `false` early if either range is zero-length.
+- `src/range.test.ts` — kept the original test and added all six requested cases.
+
+**Check:** `bun test` → 8 pass, 0 fail (output in report). Committed with no trailers.
+verified: bun run test passes on work/main
+merged work/main into the repository: 6fc1725 Merge branch 'work/main'
+architect › Job done. `overlaps` in `src/range.ts` now treats range ends as exclusive: touching ranges no longer overlap, ranges sharing a start instant do, zero-length ranges overlap nothing (guarded before the comparison, so they don't overlap even a range containing their instant), unparseable bounds throw a `TypeError` naming the offending value, and end-before-start throws a `RangeError`. Verified by the project's own check: `bun test` — 8 pass, 0 fail, including the new touching/same-start/zero-length/TypeError/RangeError cases, committed as 410ea98 on work/main for the harness to merge.
+
+  architect    glm-5.3-flash        2 turns, 15085 tokens
+  coder        deepseek-v4-flash    1 turns, 70952 tokens
+
+main: done
+  bun run test passed
+  merged: 6fc1725 Merge branch 'work/main'
+  this job: 86k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"6fc1725 Merge branch 'work/main'","cost":"this job: 86k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":7368,"outputTokens":1829,"cacheReadTokens":5888,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5834,"outputTokens":4702,"cacheReadTokens":60416,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

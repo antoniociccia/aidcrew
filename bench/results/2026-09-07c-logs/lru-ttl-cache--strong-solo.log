@@ -1,0 +1,65 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · read(package.json)
+coder · bash(git log --oneline -5 2>/dev/null || true; git status --short…)
+coder · glob(**/*)
+coder · read(.aidcrew/agents/coder.md)
+coder · read(.aidcrew/config.toml)
+coder · imports(src/cache.ts)
+coder · bash(git branch --show-current; git status --short)
+coder · write(src/cache.ts)
+coder · write(src/cache.test.ts)
+coder · bash(bun test)
+coder · read(src/cache.ts)
+coder · bash(ls -la; command -v tsc || true; bun --version)
+coder · bash(tsc --noEmit --strict src/cache.ts 2>&1 | head -50)
+coder · bash(tsc --noEmit --strict --target es2020 --lib es2020 src/cache…)
+coder · bash(git add src/cache.ts && git commit -q -m "Implement LRU cach…)
+coder · bash(bun test 2>&1)
+coder · bash(git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: 23533c5 Merge branch 'work/main'
+coder › Implemented `Cache` in `src/cache.ts` and added tests in `src/cache.test.ts`.
+
+What changed
+- `Cache<K, V>` now stores live entries in a `Map`, with each entry carrying `{ value, expiresAt }` where `expiresAt = now() + ttlMs` at set time.
+- Constructor throws `RangeError` when `capacity < 1`.
+- `get`: prunes expired entries, returns `undefined` for missing/expired, and re-inserts the entry to mark it most recently used (a successful get counts as a use).
+- `set`: prunes expired entries, replaces an existing key's value and expiry in place (no eviction), and for a new key evicts the least recently used entry while over capacity.
+- `has` / `delete`: behave like `Map`, treating expired entries as absent (`delete` returns `false` for them).
+- `size`: counts only non-expired entries.
+- All methods read the clock through the injected `now` function.
+
+Tests added (13 total, all passing) cover: missing/expired gets, `RangeError` for capacity `< 1`, TTL expiry boundary, get counting as a use, `has` not counting as a use, replace-without-eviction, LRU eviction, expired entries not counting against capacity, `has`/`delete` on expired entries, and `size`.
+
+Decisions worth flagging (the plan didn't specify)
+- `set` on an existing key updates its value and expiry time but does not change its LRU position, since the spec says only a successful get counts as a use.
+- Expired entries are pruned lazily at the start of each operation, so the internal `Map` never holds more than `capacity` live entries.
+
+Exact check output
+```
+bun test v1.3.14 (0d9b296a)
+
+ 13 pass
+ 0 fail
+ 35 expect() calls
+Ran 13 tests across 1 file. [12.00ms]
+```
+
+Committed on `work/main`:
+- `45b35ab Implement LRU cache with TTL expiry`
+- `d43c6b6 Add cache behavior tests`
+
+  coder        deepseek-v4-pro      1 turns, 253703 tokens
+
+main: done
+  bun run test passed
+  merged: 23533c5 Merge branch 'work/main'
+  this job: 254k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 21¢, on gpt-5 ≈ 19¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"23533c5 Merge branch 'work/main'","cost":"this job: 254k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 21¢, on gpt-5 ≈ 19¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6969,"outputTokens":15310,"cacheReadTokens":231424,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

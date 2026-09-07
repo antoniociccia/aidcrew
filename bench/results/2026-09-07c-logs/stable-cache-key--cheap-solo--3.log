@@ -1,0 +1,143 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder › I'll start by reading the relevant files.
+coder · read(src/key.ts)
+coder · read(package.json)
+coder · glob(**/*.test.ts)
+coder · bash(cat bunfig.toml 2>/dev/null; echo "---tsconfig---"; cat tsco…)
+coder · error: command failed with exit code 1 ---tsconfig---
+coder · read(src/key.test.ts)
+coder › Now let me look at how the cache uses the key to understand the interface.
+coder · glob(src/**/*.ts)
+coder › Now let me implement the fix. I need to sort object keys at every depth, keep array order, omit `undefined` and functions from objects (like JSON.stringify), convert Date to ISO string, and NaN/Infinity to null.
+
+The simplest robust approach: write a custom serializer that:
+- For objects: recursively serialize each value, skip undefined/function, sort keys.
+- For arrays: preserve order.
+- For Date: ISO string.
+- For NaN/Infinity: null.
+
+Let me write it.
+
+```ts
+/** One string per distinct value, for a cache to look up. */
+export function cacheKey(value: unknown): string {
+  return stringify(value)
+}
+
+function stringify(value: unknown): string {
+  if (value === null) return 'null'
+  switch (typeof value) {
+    case 'bigint':
+      // JSON.stringify throws on bigint; keep the raw value distinguishable
+      return String(value) + 'n'
+    case 'boolean':
+      return value ? 'true' : 'false'
+    case 'number':
+      if (Number.isNaN(value)) return 'null'
+      if (!Number.isFinite(value)) return 'null'
+      return String(value)
+    case 'string':
+      return JSON.stringify(value)
+    case 'undefined':
+    case 'function':
+    case 'symbol':
+      return 'undefined'
+    case 'object': {
+      if (value instanceof Date) return JSON.stringify(value.toISOString())
+      if (Array.isArray(value)) {
+        const parts = value.map((item) => stringify(item))
+        return '[' + parts.join(',') + ']'
+      }
+      const keys = Object.keys(value).sort()
+      const parts: string[] = []
+      for (const key of keys) {
+        const item = (value as Record<string, unknown>)[key]
+        const rendered = stringify(item)
+        if (rendered === 'undefined') continue
+        parts.push(JSON.stringify(key) + ':' + rendered)
+      }
+      return '{' + parts.join(',') + '}'
+    }
+  }
+}
+```
+
+Wait, there's a subtlety with `stringify` returning `'undefined'` both for an actual `undefined` value and for a string that equals `"undefined"`. Let me check: `stringify('undefined')` returns `JSON.stringify('undefined')` = `'"undefined"'` (with quotes). So a real string "undefined" returns `"\"undefined\""`. Good, no collision. And `stringify(undefined)` returns the bare `'undefined'` without quotes. Good.
+
+But what about a function value inside an object — JSON.stringify omits it from the object. So I use the bare `'undefined'` sentinel to detect omission. Fine.
+
+However, what about a symbol value? JSON.stringify omits symbol values from objects too. So I treat it the same as undefined — that's correct behavior.
+
+What about top-level undefined/function? JSON.stringify returns `undefined` (the actual JS value, not a string). But cacheKey must return a string. Returning the string `'undefined'` is fine, it's just a key.
+
+Let me also consider numbers - JSON.stringify of a large number... fine.
+
+Let me consider the case where an object value renders to 'undefined'. When a value is `undefined` in an object, skip. Also function and symbol. My sentinel approach handles all three since stringify returns 'undefined' for them.
+
+But wait — there's an edge: what about the number representation vs. JSON.stringify? Consider numbers like `1e100`? String gives standard. JSON.stringify of `-0`? String gives "0". Actually String(-0) is "0" while JSON.stringify(-0) is "0". Fine, same.
+
+Now let me also double check the Date ISO string handling - JSON.stringify of a Date gives the ISO string with quotes. My approach: `JSON.stringify(value.toISOString())`. Good.
+
+Let me write the file.
+coder · write(src/key.ts)
+coder › Now let me add tests.
+coder · write(import { expect, test } from 'bun:test' import { cacheKey } …)
+coder › I noticed the "equal values" test uses `new Date(0)` on both sides, which will produce identical ISO strings. Good.
+
+Let me run the tests.
+coder · bash(bun test 2>&1)
+coder › All 8 tests pass. Let me verify the test count matches my expectations — I wrote 8 tests, yes.
+
+Let me commit on a branch.
+coder · bash(git rev-parse --abbrev-ref HEAD 2>&1; git status --short 2>&…)
+coder · bash(git checkout -b fix/cache-key-stable 2>&1 && git add src/key…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 56cee2e Merge branch 'fix/cache-key-stable'
+coder › Done. Here's what I changed.
+
+## What changed
+
+**`src/key.ts`** — replaced the plain `JSON.stringify` with a recursive serializer that:
+
+- **Sorts object keys** at every depth, so `{ a: 1, b: 2 }` and `{ b: 2, a: 1 }` produce the same key. Two inputs differing only in key order now get the same key.
+- **Keeps arrays in order** (map, not sorted keys).
+- **Omits `undefined`, `function`, and symbol values from objects** — exactly as `JSON.stringify` does.
+- **Converts a `Date` to its ISO string** (same as JSON).
+- **Turns `NaN` and `±Infinity` into `null`** (same as JSON).
+
+Primitives and nested structures serialize to valid JSON, keeping the string a faithful "JSON-shaped" key. Top-level `undefined`/functions return the string `"undefined"` (a string return is required), which is safe because a literal string `"undefined"` serializes with quotes (`'"undefined"'`) and so can't collide.
+
+**`src/key.test.ts`** — added 8 tests covering: key-order independence at every depth, array order preservation, omission of `undefined`/functions from objects, Date→ISO string, NaN/Infinity→null, mixed nested equality regardless of order, and primitive serialization matching JSON.
+
+## Checks
+
+`bun test` output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 19 expect() calls
+Ran 8 tests across 1 file.
+```
+
+## Notes / decisions the plan didn't cover
+
+- There is no typecheck or lint script in the package — only `bun test` — so that's the sole check available.
+- The package's test runner is `bun test`; I used its `bun:test` imports as the existing test already did.
+- I kept the `bigint` case (bare `"42n"`), since `JSON.stringify` throws on them — better to produce a stable, distinct key than to crash the cache lookup.
+
+Committed as a single commit on branch `fix/cache-key-stable`.
+
+  coder        deepseek-v4-flash    1 turns, 58946 tokens
+
+main: done
+  bun run test passed
+  merged: 56cee2e Merge branch 'fix/cache-key-stable'
+  this job: 59k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"56cee2e Merge branch 'fix/cache-key-stable'","cost":"this job: 59k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":8165,"outputTokens":3165,"cacheReadTokens":47616,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

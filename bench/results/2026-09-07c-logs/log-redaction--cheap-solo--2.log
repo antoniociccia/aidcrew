@@ -1,0 +1,74 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/logger.ts)
+coder · read(src/logger.test.ts)
+coder · read(package.json)
+coder › Let me create the redact module first.
+coder · write(src/redact.ts)
+coder › Now update logger.ts to pass fields through redact:
+coder · edit(src/logger.ts)
+coder › Now update the logger test and add redact tests:
+coder · edit(src/logger.test.ts)
+coder · write(import { expect, test } from 'bun:test' import { redact } fr…)
+coder › Now run the tests:
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/redact.test.ts:  # Unhandled error between tests ------…
+coder › Two issues:
+
+1. In the redact test, `api-key` needs to be quoted as an object key (it's not a valid identifier due to the hyphen).
+2. In the logger test, the `authorization` key itself contains "authorization" (a sensitive key name), so its value is `[redacted]` — the sensitive key check happens before the string bearer redaction. That's correct behavior per the spec (the key matches). Let me fix both test expectations.
+coder · edit(auth: { token: 'abc', api_key: '123', 'api-key': '456', apik…)
+coder · edit('{"level":"warn","message":"oops","user":{"apiKey":"[redacte…)
+coder › Also, in the redact test, the `authorization: 'Bearer 12345'` key IS sensitive (contains "authorization"), so its whole value becomes `[redacted]` rather than the bearer being redacted. Let me check the test expectation — I have `authorization: '[redacted]'` which is correct.
+
+Let me run the tests again:
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/redact.test.ts: 45 |   expect(redact(value)).toEqual([{…
+coder › My regex `Bearer\s+[^\s]+` replaced the token plus the following comma-space. The token match `[^\s]+` includes the trailing comma, and the replacement drops the comma. Let me make the regex only consume the token characters, not trailing punctuation. Better to match token characters specifically:
+coder · edit(return value.replace(/Bearer\s+[A-Za-z0-9._~+\-/]+/g, 'Beare…)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me check git status and commit.
+coder · bash(git status && git log --oneline -5)
+coder · bash(git add src/redact.ts src/redact.test.ts src/logger.ts src/l…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 49654ed Merge branch 'work/main'
+coder › Done. Here's what I changed:
+
+## `src/redact.ts` (new)
+Exports `redact(value)`, which returns a deep copy with:
+- **Sensitive keys**: any key whose name contains `password`, `passwd`, `secret`, `token`, `apikey`, `api_key`, `api-key`, or `authorization` (case-insensitive) has its value replaced with `'[redacted]'` — at any depth of objects and arrays.
+- **Bearer tokens**: any string containing `Bearer ` followed by a token has that token replaced with `'[redacted]'`.
+
+The input is never mutated — objects and arrays are rebuilt, and the result is a fresh structure (verified by reference and deep-equality tests).
+
+## `src/logger.ts`
+`log()` now passes `fields` through `redact` before writing the JSON line.
+
+## Tests
+- `src/redact.test.ts`: primitives untouched, sensitive keys at any depth (objects and arrays), case-insensitivity, `api-key`/`api_key`/`apikey` variants, bearer-token redaction inside strings, no mutation, fresh reference.
+- `src/logger.test.ts`: added cases for top-level secret redaction, nested secrets in objects/arrays, and non-secret fields staying untouched (e.g. `/x?tokenize=a` is not redacted because "tokenize" contains "token"... wait, actually let me double-check that).
+
+The spec says "every key whose name contains ... token". `tokenize` does contain `token`, so at the key-name level `tokenize` would be redacted. But in my logger test the `tokenize` text appears in a URL *string value*, not in a key name — and the string-level redaction only handles `Bearer <token>`, so `tokenize=a` is correctly left alone. Good.
+
+## Check output
+```
+bun test v1.3.14
+ 13 pass
+ 0 fail
+ 17 expect() calls
+Ran 13 tests across 2 files.
+```
+
+One decision worth noting: a key whose name matches a sensitive term (like `authorization`) is fully redacted, so its `'Bearer xxx'` value becomes `'[redacted]'` rather than `'Bearer [redacted]'`. That matches the spec (key-name redaction takes precedence over string redaction since the value never reaches the string path).
+
+  coder        deepseek-v4-flash    1 turns, 105974 tokens
+
+main: done
+  bun run test passed
+  merged: 49654ed Merge branch 'work/main'
+  this job: 106k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"49654ed Merge branch 'work/main'","cost":"this job: 106k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":15274,"outputTokens":3660,"cacheReadTokens":87040,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

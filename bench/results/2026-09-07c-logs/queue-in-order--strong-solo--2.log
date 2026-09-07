@@ -1,0 +1,62 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/queue.ts)
+coder · bash(ls -la && find . -maxdepth 2 -name 'package.json' -not -path…)
+coder · read(package.json)
+coder · bash(find src -type f | sort)
+coder · read(src/queue.test.ts)
+coder · edit(src/queue.ts)
+coder · write(src/queue.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git log --oneline -5)
+coder · bash(git add src/queue.ts && git commit -m "Run queue jobs sequen…)
+coder · bash(git status --short && bun test)
+coder · read(src/queue.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9f498cd Merge branch 'work/main'
+coder › Done. Both changes are committed on `work/main`.
+
+## What changed
+
+**`src/queue.ts`** — replaced the eager `Promise.all` pending-array with a promise chain:
+
+- `#tail` holds the end of the job chain, starting at `Promise.resolve()`.
+- `push` chains each job onto `#tail` via `.then(() => job())`, so a job only starts after the previous chain finishes, in push order, and never synchronously inside `push`. The chained `.catch` records any error and keeps the chain alive so later jobs still run.
+- `drain` awaits `#tail` in a loop, re-checking after each await so it also waits for jobs pushed while draining (including jobs pushed by a running job).
+
+**`src/queue.test.ts`** — kept the original drain test and added coverage for:
+
+- sequential execution in push order with no overlap (`maxRunning === 1`)
+- no synchronous start inside `push`
+- thrown `Error` recorded, later jobs still run
+- non-`Error` rejection wrapped in an `Error`
+- `drain` waiting for a job pushed after `drain()` is called
+- `drain` waiting for a job pushed by a running job
+- `push` returning `undefined`
+
+## Checks
+
+`bun test`:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 14 expect() calls
+Ran 8 tests across 1 file. [11.00ms]
+```
+
+Working tree is clean. Commits: `137ead2` (queue fix) and `640cba9` (tests).
+
+  coder        deepseek-v4-pro      1 turns, 107213 tokens
+
+main: done
+  bun run test passed
+  merged: 9f498cd Merge branch 'work/main'
+  this job: 107k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9f498cd Merge branch 'work/main'","cost":"this job: 107k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6009,"outputTokens":6612,"cacheReadTokens":94592,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

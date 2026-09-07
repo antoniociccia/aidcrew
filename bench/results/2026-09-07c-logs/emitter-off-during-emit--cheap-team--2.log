@@ -1,0 +1,81 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/emitter.ts)
+architect · glob(**/*.test.*)
+architect · read(src/emitter.test.ts)
+architect · read(package.json)
+architect › The bug is in `emit` (src/emitter.ts:30-38): it iterates the live array while listeners mutate it, so removals shift indices and skip entries — which also lets a `once` wrapper (which removes itself in src/emitter.ts:14-17) silence the listener after it. The fix is snapshot semantics: copy the list when emit starts, iterate the copy. Plan below.
+architect · agent_send(Fix the listener-skipping bug in the Emitter and prove it wi…)
+architect → coder Fix the listener-skipping bug in the Emitter and prove it with tests.  File: src/emitter.ts - Only `emit` needs to chang…
+coder · read(src/emitter.ts)
+coder · read(src/emitter.test.ts)
+coder · edit(src/emitter.ts)
+architect › Plan sent to coder. What I decided and why:
+
+- **Root cause**: `emit` iterates the live listener array by index; any removal during emit shifts entries left and skips the next one. `once` removes itself from inside its wrapper, so it always triggered this — silencing the listener registered right after it.
+- **Fix**: `emit` snapshots the list (`slice()`) before iterating and returns the snapshot length. Everything registered when emit began gets called exactly once in registration order; additions during emit only land in the live list, so they're picked up by the next emit.
+- **Tests**: eight new cases in src/emitter.test.ts covering self-removal, removal of a later listener, the once-before-on bug, once firing exactly once, additions during emit, `off`'s return value, emit's return count, and a combined add/remove-during-emit case.
+
+Expecting back from coder: the emit diff, the test list, and full `bun test` output showing all green. When that arrives, I'll confirm the job is done.
+coder · edit(src/emitter.test.ts)
+coder › Now let me look at the repo context and check whether there's anything else relevant (README, other tests) before finalizing test 8, which the plan describes slightly ambiguously.
+coder · tree()
+coder · glob(**/*.{md,json,ts,toml})
+coder · json(package.json)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now let me review my test file — I need to double-check test 8, which I wrote hastily with a phantom listener.
+coder · read(src/emitter.test.ts)
+coder › Test 8 as I first wrote it is wrong (registers a phantom 4th listener, c never records itself, and expectations wouldn't match). Also I used the `Listener` type without importing it. Let me fix both.
+
+The plan's test-8 numbers — first emit `['a','b','c']` returns 3, second emit `['a','c']` returns 2 — are only consistent if the mutations land on different emits (a removes b during the first, c adds d during the second), otherwise d added on emit 1 would per the plan's own rule 5 be live and called on emit 2. I'll implement it that way so every stated number holds, and add a third emit so d's first call is actually observed.
+coder · edit(src/emitter.test.ts)
+coder · edit(test('listeners adding and removing during emit keep registr…)
+coder · error: invalid arguments for edit: path: Invalid input: expected string, received undefined
+coder · edit(src/emitter.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All green. Now let me verify the new tests actually catch the original bug — temporarily restore the live-array loop and confirm they fail.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › The buggy loop fails 5 of the new tests; the snapshot fix passes all 9. Committing in two small commits.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · agent_send(architect)
+coder → architect Done. The emit diff (src/emitter.ts, only emit changed — on/once/off untouched):  ```   emit(event: string, payload?: un…
+coder › Done. Summary of the work on `work/main`:
+
+**The fix (commit `a74ce78`)** — `emit` in `src/emitter.ts` now snapshots the listener list with `(this.#listeners.get(event) ?? []).slice()` and iterates that, returning `snapshot.length`. `on`, `once`, `off` unchanged.
+
+**The tests (commit `b9f9bbf`)** — 8 new tests added to `src/emitter.test.ts` per the plan: self-removal, removing-a-later-listener, the once-before-on headline bug, once-fires-exactly-once, add-during-emit deferred to next emit, `off` return values, `emit` return counts, and the combined add+remove case.
+
+**One decision the plan didn't settle** — plan's test 8 said "c (adds d): first emit ['a','b','c'] returns 3, second emit ['a','c'] returns 2", but if c adds d during the first emit, d is live for the second (per the plan's own rule that added listeners first fire on the next emit), forcing second emit to be `['a','c','d']`/3. I kept the plan's exact stated numbers by putting the two mutations on separate emits (remove b on emit 1, add d on emit 2) plus a third emit showing d first firing in order. Flagged in the report to the architect with the alternative.
+
+**Checks** — I verified the tests actually catch the bug: restoring the old live-array loop makes 5 of the new tests fail. With the fix, `bun test` reports all green, including the original test. Working tree clean; both commits pushed to the branch, ready for the architect to bring home.
+architect › The test-8 judgment call is right: my wording contradicted my own rule 5, and coder's three-emit version honors the semantics the fix exists to guarantee. Nothing to change. Closing the loop with them and calling it done.
+architect · agent_send(Accepted — your reading of test 8 is the correct one; my phr…)
+architect → coder Accepted — your reading of test 8 is the correct one; my phrasing was inconsistent with the added-during-emit rule and y…
+coder › Acknowledged — glad it landed cleanly. Both commits are on `work/main` (a74ce78 fix, b9f9bbf tests), `bun test` passes 9/9, and the working tree is clean. Handing off here.
+coder → architect Acknowledged — glad it landed cleanly. Both commits are on `work/main` (a74ce78 fix, b9f9bbf tests), `bun test` passes 9…
+verified: bun run test passes on work/main
+merged work/main into the repository: 2f0911f Merge branch 'work/main'
+architect › Job done.
+
+**What changed**
+- **src/emitter.ts — `emit` only**: it now snapshots the listener list (`slice()`) before iterating and returns `snapshot.length`. Every listener registered when emit began is called exactly once, in registration order, regardless of what any listener adds or removes during the emit — this fixes the self-removal skip and the headline bug where a `once` listener (which removes its wrapper) silenced the listener registered after it. Additions during emit land only in the live list, so they're first called by the next emit. `on`, `once`, and `off` are untouched (`off` already returned whether it removed anything).
+- **src/emitter.test.ts**: the original test plus 8 new tests covering self-removal during emit, removal of a later listener, the once-before-on case, once firing exactly once, listeners added during emit, `off`'s boolean return, emit's return count, and a combined mutation case.
+
+**Verification**: `bun test` → 9 pass, 0 fail (28 expect calls). Coder also confirmed the new tests fail (5 of them) against the old live-array loop, so they genuinely pin the fix. Committed on `work/main` as a74ce78 and b9f9bbf, working tree clean.
+
+One judgment call I signed off on: my original test-8 wording was internally inconsistent with the added-during-emit rule, and coder's three-emit version (removals in one emit, an addition in the next) is the correct encoding of the semantics.Nothing further — the job is closed. Final state: `emit` in src/emitter.ts runs from a snapshot (fix commit a74ce78), src/emitter.test.ts carries the original test plus 8 new tests pinning the snapshot semantics (b9f9bbf), `bun test` passes 9/9 on `work/main`, and the working tree is clean. The harness will run the project check on that branch and merge; if it fails I'll be sent back with the output.
+
+  architect    glm-5.3-flash        3 turns, 32070 tokens
+  coder        deepseek-v4-flash    2 turns, 297406 tokens
+
+main: done
+  bun run test passed
+  merged: 2f0911f Merge branch 'work/main'
+  this job: 329k tokens, 1.0¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 37¢, on gpt-5 ≈ 33¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"2f0911f Merge branch 'work/main'","cost":"this job: 329k tokens, 1.0¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 37¢, on gpt-5 ≈ 33¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":10690,"outputTokens":6724,"cacheReadTokens":14656,"unstatedTurns":3},"turns":3},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":16967,"outputTokens":18935,"cacheReadTokens":261504,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

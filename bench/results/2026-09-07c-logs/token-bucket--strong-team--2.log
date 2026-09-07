@@ -1,0 +1,71 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect · glob(src/**/*.ts)
+architect · read(src/limiter.ts)
+architect · read(src/limiter.test.ts)
+architect · read(package.json)
+architect · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect · agent_send(coder)
+architect → coder Implement the token-bucket RateLimiter in this checkout (branch work/main, package "limiter", tests run with bun).  File…
+coder › I'll start by reading the existing files to understand the current state.
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+architect › Plan sent to coder: implement the token bucket in `src/limiter.ts` (private `tokens`/`last` state, refill-on-read, `tryTake` semantics including the `n > capacity` early refusal) and add the controllable-`now` test cases to `src/limiter.test.ts`. Expected back: the `bun test` output showing all tests pass and the commit hash.
+coder › Let me check the repo structure and package.json to confirm the test setup.
+coder · json(package.json)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Let me check the test script:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now let me implement the limiter. Let me write the implementation.
+coder · write(src/limiter.ts)
+coder › Now the tests:
+coder · write(import { expect, test } from 'bun:test' import { RateLimiter…)
+coder › Now let's run the tests:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 8 tests pass with 0 failures. Let me also check the "default n is 1" behavior - the architect mentioned asserting available drops to 2 after it (I did that in the `starts full` test, adding `expect(limiter.available).toBe(2)`). That confirms default n is 1.
+
+Let me commit the change.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. I implemented and committed the token-bucket RateLimiter.
+
+**What I changed:**
+
+1. **`src/limiter.ts`** — Implemented `RateLimiter` with the existing constructor signature preserved (capacity, refillPerSecond, now, all readonly). Added private state `tokens` and `last`, a private `refill()` step, `tryTake(n)` (refusing `n > capacity` immediately, refilling, and subtracting only on success), and `get available()` that refills then returns tokens (fractional allowed). No exports added beyond `RateLimiter`.
+
+2. **`src/limiter.test.ts`** — Kept the existing `starts full` test (and additionally asserted `available` drops to 2, confirming default `n` is 1). Added all seven requested tests: available starts full, taking reduces available, refills over elapsed time, never exceeds capacity, insufficient take returns false and takes nothing, n greater than capacity is always refused, and available may be fractional. Each uses a controllable `now` via closure.
+
+**Check output** — `npm test` (runs `bun test`):
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 18 expect() calls
+Ran 8 tests across 1 file. [7.00ms]
+```
+
+Committed on `work/main` as `c8a702a Implement token-bucket RateLimiter` (no signature/trailer). All 8 tests pass with 0 failures.
+coder → architect Done. I implemented and committed the token-bucket RateLimiter.  **What I changed:**  1. **`src/limiter.ts`** — Implemen…
+architect · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+verified: bun run test passes on work/main
+merged work/main into the repository: f6baa43 Merge branch 'work/main'
+architect › Job done. The `RateLimiter` token bucket is implemented in `src/limiter.ts` with private `tokens`/`last` state, continuous refill capped at capacity, `tryTake(n)` semantics (including immediate refusal when `n > capacity`), and fractional `available` — with the controllable `now` constructor preserved. Tests in `src/limiter.test.ts` cover starting full, taking, refill, capacity cap, insufficient-take, over-capacity refusal, fractional availability, and default `n`.
+
+Verified by running `npm test` myself: `bun test v1.3.14` — **8 pass, 0 fail** across 1 file, committed on `work/main` as `c8a702a`.
+
+  architect    deepseek-v4-pro      2 turns, 27759 tokens
+  coder        deepseek-v4-flash    1 turns, 57679 tokens
+
+main: done
+  bun run test passed
+  merged: f6baa43 Merge branch 'work/main'
+  this job: 85k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"f6baa43 Merge branch 'work/main'","cost":"this job: 85k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5245,"outputTokens":2546,"cacheReadTokens":19968,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9055,"outputTokens":2032,"cacheReadTokens":46592,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

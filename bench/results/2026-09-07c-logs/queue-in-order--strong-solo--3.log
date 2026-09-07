@@ -1,0 +1,59 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/queue.ts)
+coder · bash(ls -la && cat package.json 2>/dev/null)
+coder · bash(find src -type f -maxdepth 3 | sort && echo '---' && cat src…)
+coder · bash(git status --short && git branch --show-current && bun --ver…)
+coder · write(src/queue.ts)
+coder · write(src/queue.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git diff -- src/queue.ts src/queue.tes…)
+coder · bash(git add src/queue.ts src/queue.test.ts && git commit -m 'Ser…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 7695c1a Merge branch 'work/main'
+coder › Done. Committed on `work/main` as `66f7418`.
+
+## What changed
+
+**`src/queue.ts`**
+- Replaced the `#pending` promise array with:
+  - `#pending` as a counter of queued/running jobs.
+  - `#tail`, a promise chain that serializes execution.
+- `push(job)` is still synchronous and returns nothing. It increments the count and appends the job to the chain via `#tail = #tail.then(run, run)`, so a job never starts synchronously and never starts until the previous job settles.
+- Each job is awaited inside `run`; a throw is caught and recorded in `errors`, and `finally` decrements the counter, so one failure can't stop the next job.
+- `drain()` now loops: while there are pending jobs it awaits the current tail, so it also covers jobs pushed from inside other jobs while draining.
+
+**`src/queue.test.ts`**
+Added tests for:
+- `push` not starting the job synchronously and returning `undefined`.
+- Jobs running strictly one at a time and in push order (uses a gate and a max-active counter that would catch concurrent execution).
+- A throwing job being recorded and not blocking later jobs.
+- Non-Error causes being wrapped in `Error`.
+- `drain` waiting for a job pushed while draining (inner job is held behind a gate and `drained` must stay `false` until it's released).
+
+## Checks
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 18 expect() calls
+Ran 5 tests across 1 file. [21.00ms]
+```
+
+## Decisions not in the plan
+
+I updated the `drain()` doc comment to say it also waits for jobs pushed while draining, since that's now guaranteed behavior. I kept the existing behavior of wrapping non-`Error` causes in `Error(String(cause))` and added a test for it.
+
+  coder        deepseek-v4-pro      1 turns, 130859 tokens
+
+main: done
+  bun run test passed
+  merged: 7695c1a Merge branch 'work/main'
+  this job: 131k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"7695c1a Merge branch 'work/main'","cost":"this job: 131k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6899,"outputTokens":11960,"cacheReadTokens":112000,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

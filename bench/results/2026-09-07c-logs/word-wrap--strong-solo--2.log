@@ -1,0 +1,62 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(**/*)
+coder · read(src/wrap.ts)
+coder · read(package.json)
+coder · bash(bun --version && git status --short && git log --oneline -5 …)
+coder · bash(git status --short; git branch --show-current)
+coder · write(src/wrap.ts)
+coder · write(import { describe, expect, test } from "bun:test" import { w…)
+coder · bash(bun test)
+coder · bash(bun -e 'import { wrap } from "./src/wrap.ts"; console.log(JS…)
+coder · bash(git status --short; git diff --stat)
+coder · bash(git add src/wrap.ts && git commit -q -m "Implement wrap() wo…)
+coder · bash(bun test)
+coder · read(src/wrap.ts)
+coder · read(src/wrap.test.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: 904137c Merge branch 'work/main'
+coder › Implemented `wrap(text, width)` in `src/wrap.ts` and added tests in `src/wrap.test.ts`.
+
+What changed
+- `src/wrap.ts` — implemented wrapping:
+  - Throws `RangeError` when `width < 1`.
+  - Splits input into paragraphs on blank lines, keeps one blank line between them, and drops leading/trailing blank lines.
+  - Collapses runs of whitespace within a paragraph to a single space.
+  - Greedily wraps words onto lines of at most `width` characters, breaking at spaces.
+  - Splits words longer than `width` into `width`-sized chunks.
+- `src/wrap.test.ts` — 13 tests covering short text, space breaking, space-run collapsing, paragraph separation, long-word splitting, `width = 1`, empty text, and the `RangeError` cases.
+
+Decisions I made that the plan didn't specify
+- Whitespace-only lines (e.g. `"   "`) count as blank paragraph separators, and tabs/newlines within a paragraph are treated like spaces.
+- Leading/trailing blank lines are dropped; consecutive blank lines collapse to one.
+- When a word exceeds `width`, it first breaks at the preceding space (if a line is already started), then the word is split into `width`-sized chunks; the final chunk can share a line with following words if they fit.
+
+Checks
+Ran the project's test script:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+
+ 13 pass
+ 0 fail
+ 14 expect() calls
+Ran 13 tests across 1 file. [28.00ms]
+```
+
+Commits
+- `400f7dc` Implement wrap() word wrapping
+- `c3f54c0` Add tests for wrap()
+
+  coder        deepseek-v4-pro      1 turns, 196594 tokens
+
+main: done
+  bun run test passed
+  merged: 904137c Merge branch 'work/main'
+  this job: 197k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 21¢, on gpt-5 ≈ 19¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"904137c Merge branch 'work/main'","cost":"this job: 197k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 21¢, on gpt-5 ≈ 19¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6454,"outputTokens":16060,"cacheReadTokens":174080,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

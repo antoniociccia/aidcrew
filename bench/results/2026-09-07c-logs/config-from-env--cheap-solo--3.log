@@ -1,0 +1,54 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+coder · glob(**/tsconfig*.json)
+coder · glob(**/*)
+coder · read(.aidcrew/config.toml)
+coder · read(.aidcrew/agents/coder.md)
+coder · bash(ls -la && git status && git log --oneline -5)
+coder · bash(bun --version && bun test 2>&1 | head -20)
+coder › Now I understand the structure. Let me write the three modules and tests.
+coder · write(src/env.ts)
+coder · edit(src/config.ts)
+coder · write(src/index.ts)
+coder › Now let me update the existing test and add tests for the new functionality.
+coder · write(src/index.test.ts)
+coder · bash(bun test 2>&1 | head -40)
+coder › All tests pass. Let me commit.
+coder · bash(git add -A && git status)
+coder · bash(git commit -q -m "Add env overrides and config validation" &…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 2c429a9 Merge branch 'work/main'
+coder › Done. Here's what I changed:
+
+**`src/env.ts` (new)** — exports `fromEnv(env, prefix = 'APP_')`:
+- `APP_PORT` → parsed with `Number`, set as `port`
+- `APP_HOST` and `APP_NAME` → kept as strings
+- `APP_DEBUG` → `true`/`1`/`yes` ⇒ `true`, `false`/`0`/`no` ⇒ `false`, all case-insensitive via `toLowerCase()`
+- Variables that are absent or `''` are left out
+- Non-numeric `APP_PORT` throws `TypeError` naming `APP_PORT`; a `APP_DEBUG` that is neither true nor false throws `TypeError` naming `APP_DEBUG`
+
+**`src/config.ts`** — added `validate(config: Config): Config`, returning the config or throwing a `TypeError` naming the field when `port` isn't an integer in `1..65535`, or `host`/`name` is empty.
+
+**`src/index.ts`** — `resolveConfig(file, env = process.env)` now layers defaults ← file ← environment and validates: `validate(merge(merge(DEFAULTS, file), fromEnv(env)))`.
+
+**`src/index.test.ts`** — kept existing tests, added coverage for env overrides, absent/empty env values, case-insensitive debug parsing, port/debug TypeError naming, `validate` rejection cases, and that `resolveConfig` validates the merged result.
+
+**Checks:** `bun test` → **11 pass, 0 fail** (29 expect calls). No typecheck/lint script exists in `package.json` (only `test`).
+
+One decision the plan didn't spell out: an `APP_PORT` that's a number-like string but not an integer (e.g. `App_PORT: '80.5'`) — `Number` parses it and validate then rejects it for not being an integer. I treated `fromEnv` as responsible only for "is it a number" (via a `NaN` check) and let `validate` catch non-integer values, so the error still names the field. Let me know if you'd rather have `fromEnv` reject non-integers directly.
+
+  coder        deepseek-v4-flash    1 turns, 94558 tokens
+
+main: done
+  bun run test passed
+  merged: 2c429a9 Merge branch 'work/main'
+  this job: 95k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"2c429a9 Merge branch 'work/main'","cost":"this job: 95k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":10433,"outputTokens":8221,"cacheReadTokens":75904,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

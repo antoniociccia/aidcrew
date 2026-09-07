@@ -1,0 +1,50 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/emitter.ts)
+coder · tree(.)
+coder · read(src/emitter.test.ts)
+coder · read(package.json)
+coder · edit(src/emitter.ts)
+coder · edit(src/emitter.test.ts)
+coder · write(src/emitter.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git diff -- src/emitter.ts src/emitter.test.ts)
+coder · bash(git add src/emitter.ts && git commit -m "Snapshot listeners …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3543c0d Merge branch 'work/main'
+coder › Fixed `src/emitter.ts`: `emit` now snapshots the listener list with `list.slice()` before calling, so mutations during emit (self-removal, removing another listener, `once`'s wrapped removal) don't affect which listeners run or in what order. It returns `snapshot.length` — the number of listeners actually called. `off` already returned a boolean; I left it as is and covered it with tests.
+
+Added tests in `src/emitter.test.ts`:
+- listener removing itself during emit doesn't skip the next listener
+- listener removing a later listener during emit doesn't skip it
+- `once` before an ordinary listener doesn't silence the ordinary one, and `once` fires only once
+- a listener added during emit isn't called until the next emit
+- `off` returns `true`/`false` correctly
+- `emit` returns the count of listeners called
+
+Committed on `work/main`:
+- `026b1e0` Snapshot listeners before emit
+- `7a8bec3` Test emit ordering and removal during emit
+
+Check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 11 expect() calls
+Ran 7 tests across 1 file. [14.00ms]
+```
+
+  coder        deepseek-v4-pro      1 turns, 65731 tokens
+
+main: done
+  bun run test passed
+  merged: 3543c0d Merge branch 'work/main'
+  this job: 66k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3543c0d Merge branch 'work/main'","cost":"this job: 66k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6214,"outputTokens":3197,"cacheReadTokens":56320,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

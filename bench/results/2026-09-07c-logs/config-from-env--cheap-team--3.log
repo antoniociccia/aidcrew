@@ -1,0 +1,92 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/config.ts)
+architect · read(src/index.ts)
+architect · bash(ls && cat package.json && ls src)
+architect · read(src/index.test.ts)
+architect › The job is clear and the codebase is tiny. Plan for the coder:
+architect · agent_send(Job: add environment-variable configuration on top of file-o…)
+architect → coder Job: add environment-variable configuration on top of file-over-defaults, plus validation. Project is Bun ("npm test" = …
+coder · tree(src)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder › Let me check the project structure and package.json.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · error: command failed with exit code 1 {   "name": "config",   "type": "module",   "private": true,   "scripts": {     "test": …
+architect › Plan sent to coder. What I specified:
+
+- **New `src/env.ts`**: `fromEnv(env, prefix = 'APP_')` returning `Partial<Config>`, reading PORT/HOST/DEBUG/NAME under the prefix; port → number, debug → boolean with true/1/yes and false/0/no case-insensitive; absent or empty variables omitted; bad port or debug throws a `TypeError` naming the variable.
+- **`src/config.ts`**: add `validate(config): Config` — integer port 1–65535, non-empty host and name, `TypeError` naming the field otherwise.
+- **`src/index.ts`**: `resolveConfig(file = {}, env = process.env)` layering defaults → file → env → validate, using the existing `merge` plus `fromEnv`.
+- **Tests**: new `src/env.test.ts` and `src/config.test.ts`, plus `index.test.ts` extended for precedence and passing an env explicitly so `process.env` can't perturb the old test.
+
+Expected back: commits on `work/main`, the `bun test` pass count, and any deviations. The check is `bun test` passing at the repo root.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now I understand the project. Let me implement the changes. Start with `src/env.ts`:
+coder · write(src/env.ts)
+coder › Now update `src/config.ts` to add `validate`:
+coder · edit(src/config.ts)
+coder › Now update `src/index.ts`:
+coder · write(import { type Config, DEFAULTS, merge, validate } from './co…)
+coder › Wait, let me reconsider the re-exports. The original index.ts only exported `resolveConfig`. The spec says "Keep existing exports; export validate from index too if convenient". Let me keep it simpler — I could keep the original exports just as `resolveConfig`, and the tests can import validate from config.ts. But re-exporting is fine too. Let me check the original more carefully:
+
+Original index.ts:
+```ts
+import { type Config, DEFAULTS, merge } from './config.ts'
+
+/** The configuration a run starts with. */
+export function resolveConfig(file: Partial<Config> = {}): Config {
+  return merge(DEFAULTS, file)
+}
+```
+
+The original only exported `resolveConfig`. Let me keep the surface minimal but re-exporting is "convenient" as allowed. Actually, re-exporting `Config`, `DEFAULTS`, `merge`, `validate`, and `fromEnv` is quite reasonable and doesn't break anything. I'll keep it.
+
+Now let me write the tests. First `src/env.test.ts`:
+coder · write(import { expect, test } from 'bun:test' import { fromEnv } f…)
+coder › Now `src/config.test.ts`:
+coder · write(import { expect, test } from 'bun:test' import { validate, t…)
+coder › Now update `src/index.test.ts`:
+coder · write(import { expect, test } from 'bun:test' import { resolveConf…)
+coder › Now let's run the tests:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 20 tests pass. Now let me commit in small commits.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Let me make logical commits. First the `fromEnv` implementation and its tests, then validate and config tests, then index wiring.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Let me run the tests once more to confirm everything is green after commits:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All done. Let me report back to the architect.
+coder · agent_send(architect)
+coder → architect Job complete on branch work/main.  Commits: - 698d2a7 add fromEnv to read prefixed config from environment (src/env.ts +…
+coder › Done. I've implemented the changes, committed them in three small commits, and verified with `bun test` that all 20 tests pass with zero failures. My report to the architect has been sent.
+architect · bash(bun test 2>&1 | tail -6 && git log --oneline -4 && git statu…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 6b62d33 Merge branch 'work/main'
+architect › Verified on `work/main`: `bun test` → 20 pass, 0 fail, 38 expect() calls across 3 files; three commits present, working tree clean.
+
+Job done. What changed:
+- **`src/env.ts`** — new `fromEnv(env, prefix = 'APP_'): Partial<Config>`: reads `PORT`/`HOST`/`DEBUG`/`NAME` under the prefix; port → number, debug → boolean from true/1/yes vs false/0/no case-insensitively; absent or empty variables are omitted; a non-numeric port or unrecognised debug throws a `TypeError` naming the variable.
+- **`src/config.ts`** — added `validate(config): Config`: throws a `TypeError` naming the field unless port is an integer in 1–65535 and host/name are non-empty.
+- **`src/index.ts`** — `resolveConfig(file = {}, env = process.env)` now layers defaults → file → env, then validates; re-exports the config API.
+- **Tests** — new `src/env.test.ts` and `src/config.test.ts`; `src/index.test.ts` extended for precedence (env over file over defaults) and pinned to explicit envs so `process.env` can't perturb results.
+
+Verified by running `bun test` at the repo root — all green. The harness check on the branch should pass.
+
+  architect    glm-5.3-flash        2 turns, 22351 tokens
+  coder        deepseek-v4-flash    1 turns, 143495 tokens
+
+main: done
+  bun run test passed
+  merged: 6b62d33 Merge branch 'work/main'
+  this job: 166k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"6b62d33 Merge branch 'work/main'","cost":"this job: 166k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":6730,"outputTokens":2565,"cacheReadTokens":13056,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":14388,"outputTokens":4179,"cacheReadTokens":124928,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

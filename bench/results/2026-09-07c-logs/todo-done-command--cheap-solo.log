@@ -1,0 +1,49 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/cli.ts)
+coder · read(src/store.ts)
+coder · read(src/cli.test.ts)
+coder · json(package.json)
+coder · bash(bun --version && git -C . status --short && git -C . branch …)
+coder › Now I'll make the changes. First, `src/store.ts`:
+coder · edit(src/store.ts)
+coder › Now `src/cli.ts`:
+coder · edit(src/cli.ts)
+coder › Now tests. A new `src/store.test.ts` for `markDone`, plus command tests in `src/cli.test.ts`:
+coder · write(src/store.test.ts)
+coder · write(import { expect, test } from 'bun:test' import { run } from …)
+coder · bash(bun test 2>&1)
+coder · bash(ls -a; test -f tsconfig.json && echo "tsconfig exists" || ec…)
+coder › All 14 tests pass. Let me commit in small logical commits:
+coder · bash(cd "$(git -C . rev-parse --show-toplevel)" && git add src/st…)
+verified: bun run test passes on work/main
+merged work/main into the repository: f721f0f Merge branch 'work/main'
+coder › Done. Here's what I changed:
+
+**`src/store.ts`**
+- Added `markDone(todos, id)`: returns a new list (`map`, so no mutation — the input array and its objects are untouched) with the matching todo's `done` set to `true`, and throws `RangeError('no todo with id <id>')` when no todo has that id.
+- `render` now prints `[x]` for done todos and `[ ]` for the rest, e.g. `1. [x] buy milk`.
+
+**`src/cli.ts`**
+- Added a `done` command: `done <id>` calls `markDone` and prints `done: <text>`. If the id is missing, not a whole number (`/^\d+$/`), or matches no todo, it prints one `error:` line naming the id and returns code 1 with the todos unchanged (the `RangeError` from `markDone` is caught and turned into that error line).
+- Updated the usage string to mention `done`.
+
+**Tests**
+- New `src/store.test.ts`: `markDone` marks the right todo, leaves others alone, doesn't mutate or reuse the given list, throws a `RangeError` naming the id (and on an empty list), and `render` shows `[x]`/`[ ]`.
+- Extended `src/cli.test.ts`: success prints `done: <text>` with code 0; non-whole id (`abc`) and unknown id (`42`) print an `error:` line naming the id with code 1 and unchanged todos; `done` with no id errors; `list` shows `[x]` and `[ ]`.
+
+**Checks**: `bun test` → 14 pass, 0 fail across 2 files. The project has no typecheck/lint script or tsconfig, so the test run is the only project check. Commits: `8332b1d` (store) and `76d7585` (cli).
+
+One decision not spelled out by the plan: the placement/format of the checkbox. I used `1. [x] buy milk` (id, then bracket) as the natural reading of "show done todos as `[x]`". Also, since `markDone` takes a numeric id, whole-number validation lives in the CLI where the raw string arrives. Both are easy to adjust if you'd prefer a different rendering or message wording.
+
+  coder        deepseek-v4-flash    1 turns, 101356 tokens
+
+main: done
+  bun run test passed
+  merged: f721f0f Merge branch 'work/main'
+  this job: 101k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"f721f0f Merge branch 'work/main'","cost":"this job: 101k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5489,"outputTokens":7035,"cacheReadTokens":88832,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

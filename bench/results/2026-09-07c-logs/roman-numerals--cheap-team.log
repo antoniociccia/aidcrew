@@ -1,0 +1,72 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(**/*.ts)
+architect · read(src/roman.ts)
+architect · bash(git status && git log --oneline -5 && ls src/)
+architect › Simple fresh project: `src/roman.ts` has two stubs, tests run with `bun test`. Let me confirm the toolchain is present, then hand the plan to coder.
+architect · bash(bun --version && which bun)
+architect › Toolchain confirmed (bun 1.3.14, `bun test`). The stubs are trivial; here's the plan for coder.
+architect · agent_send(Implement Roman numeral conversion in this fresh project (bu…)
+architect → coder Implement Roman numeral conversion in this fresh project (bun + TypeScript, ESM, `"test": "bun test"`). Only src/roman.t…
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · tree(.)
+coder · read(src/roman.ts)
+coder · json(package.json)
+architect › Plan is with coder. What I did: read `src/roman.ts` (two stubs, no existing tests) and confirmed the check is `bun test` with bun 1.3.14. What's left: coder implements `toRoman`/`fromRoman` (range-checked `toRoman`, case-insensitive regex-validated `fromRoman`), adds `src/roman.test.ts` including a 1–3999 roundtrip, commits both, and reports the green `bun test` output back to me.
+coder · write(src/roman.ts)
+coder · write(import { describe, expect, test } from "bun:test"  import { …)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Tests green: 7 pass / 0 fail. Committing the two files separately.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Both files implemented and committed on `work/main`; `bun test` runs green from the repo root.
+
+**What changed**
+
+- `src/roman.ts` — replaced both stubs, signatures unchanged:
+  - `toRoman(n)`: throws `RangeError` unless `Number.isInteger(n) && n >= 1 && n <= 3999` (catches 0, negatives, ≥4000, 1.5, NaN, ±Infinity); message names the expected range and offending value. Builds greedily from the 13 value/glyph pairs in the specified order (1000 M … 1 I), yielding the standard subtractive forms.
+  - `fromRoman(text)`: uppercases, rejects empty string explicitly, then requires `/^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/`; `SyntaxError` message quotes the original (not uppercased) text, e.g. `fromRoman: not a standard Roman numeral: "IIII"`. Value computed by left-to-right scan subtracting a symbol when smaller than the next, else adding (so `MCMXCIV` → 1994).
+- `src/roman.test.ts` (new) — `bun:test` style: known toRoman values covering every subtractive pair, RangeError cases, case-insensitivity, a subtractive-parse check, SyntaxError cases including message content for `"IIII"`, and a full 1–3999 roundtrip property.
+
+**Decisions beyond the plan**: none of consequence — the plan was fully specified and followed as written. I added one small extra test (`fromRoman` on `MCMXCIV`/`IV`/`CDXLIV`) alongside the roundtrip, which the plan's wording ("to compute the value… must give 1994") already implied.
+
+**Checks**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 4037 expect() calls
+Ran 7 tests across 1 file. [20.00ms]
+```
+
+**Commits** on `work/main`:
+- `44011e9` Implement toRoman and fromRoman
+- `083c9f2` Add roman numeral tests
+
+Nothing further needed — handoff complete.
+coder → architect Done. Both files implemented and committed on `work/main`; `bun test` runs green from the repo root.  **What changed**  …
+architect · bash(bun test 2>&1 | tail -8 && git log --oneline -3 && git statu…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 38837bb Merge branch 'work/main'
+architect › Verified myself: `bun test` from the repo root gives 7 pass / 0 fail (4037 expect calls), the working tree is clean, and both commits sit on `work/main`.
+
+**Job done.**
+- `src/roman.ts` — `toRoman(n)` throws `RangeError` for non-integers or anything outside 1–3999 and otherwise builds the standard numeral greedily from the 13 value/glyph pairs (subtractive forms IV, IX, XL, XC, CD, CM included); `fromRoman(text)` uppercases the input, validates it against the strict standard-numeral regex (empty string rejected explicitly), throws `SyntaxError` quoting the offending text, and parses by the subtract-if-smaller-than-next scan.
+- `src/roman.test.ts` (new) — known-value tests for every subtractive pair, RangeError and SyntaxError cases (including that the message names the text, e.g. `"IIII"`), case-insensitivity, and the full `fromRoman(toRoman(n)) === n` roundtrip for every n from 1 to 3999.
+- Verified by running `bun test` → 7 pass, 0 fail, on commits `44011e9` + `083c9f2` on `work/main`.
+
+  architect    glm-5.3-flash        2 turns, 24313 tokens
+  coder        deepseek-v4-flash    1 turns, 46420 tokens
+
+main: done
+  bun run test passed
+  merged: 38837bb Merge branch 'work/main'
+  this job: 71k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"38837bb Merge branch 'work/main'","cost":"this job: 71k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":4210,"outputTokens":4167,"cacheReadTokens":15936,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5886,"outputTokens":2262,"cacheReadTokens":38272,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

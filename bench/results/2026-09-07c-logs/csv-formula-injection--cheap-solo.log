@@ -1,0 +1,148 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/csv.ts)
+coder · tree(.)
+coder · read(src/csv.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder › I need to distinguish string cells from number cells. Let me update `field` to handle injection characters only for strings.
+coder · write(src/csv.ts)
+coder › Wait, that approach is convoluted. Let me think about the requirements more carefully.
+
+The requirement: a string field that starts with `=`, `+`, `-`, `@`, a tab or a carriage return is written with a single quote prefixed **and the whole field quoted**. So the single quote goes inside the quotes.
+
+Let me write the logic cleanly:
+coder · write(export type Cell = string | number  function field(cell: Cel…)
+coder › Now let me add tests:
+coder · edit(src/csv.test.ts)
+coder › That last test got convoluted with a stray backtick. Let me fix it.
+coder · edit(test('neutralises a field starting with =', () => {   expect…)
+coder › That edit didn't do anything meaningful. Let me just rewrite the test file cleanly.
+coder · write(import { expect, test } from 'bun:test' import { toCsv } fro…)
+coder › Now let me run the tests.
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/csv.test.ts:  # Unhandled error between tests ---------…
+coder › The module resolution seems off. Let me check the file is being read correctly.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › The file looks fine. The error is odd — maybe the test was run from the wrong working directory, which found a stale csv.ts elsewhere. Let me check the workspace root from where I'm running.
+coder · bash(pwd && ls)
+coder · bash(pwd && ls src && cat package.json)
+coder › Let me run bun test from this directory again to reproduce.
+coder · bash(bun test 2>&1 | head -30)
+coder › Strange - it's not finding `toCsv` export. Wait, maybe there's a stale compiled file or something in the path. The error references `.aidcrew/wt/main/src/csv.ts`. Let me check if there's a `.aidcrew` dir in that path containing a cached csv.ts.
+
+The path is `.aidcrew/wt/main/src/csv.ts` but our working dir is already `.aidcrew/wt/main`. So `src/csv.ts` = `.aidcrew/wt/main/src/csv.ts`. That's the same file. But it says export not found.
+
+Wait - maybe bun is reading the file but the export parse fails. Let me check if my file has proper export. It does: `export type Cell` and `export function toCsv`. 
+
+Hmm, could there be a syntax issue? Let me check with bun directly.
+coder · bash(bun -e "import { toCsv } from './src/csv.ts'; console.log(to…)
+coder · error: command failed with exit code 1 SyntaxError: Export named 'toCsv' not found in module '/private/var/folders/n0/s619yhq95…
+coder › That's very strange. A file with `export function toCsv` should export toCsv. Let me check the file bytes more carefully — perhaps there's a BOM or hidden character issue, or the `field` function shadows something.
+
+Wait — actually, could the issue be that `field` redefines... no. Let me check for a type-only re-export issue. Actually in TS, `export type Cell` is a type-only export. That's fine. `export function toCsv` is a value export.
+
+Let me check the raw bytes of the file.
+coder · bash(xxd src/csv.ts | head -40)
+coder › The file looks completely fine. This is puzzling. Let me test if a trivial minimal file exports correctly.
+coder · bash(mkdir -p /tmp/csvtest && cd /tmp/csvtest && printf 'export f…)
+coder › So basic exports work. There's something about the workspace file specifically. Let me check if there is something in the path — maybe the `.aidcrew` path has dot-led directory that confuses bun. But the error resolved to the correct path.
+
+Wait, let me reconsider. Maybe there's a `.git` that is a file (not directory) at workspace root interfering, or maybe there's a build cache. Let me check the `.aidcrew` directory structure.
+
+Actually, let me re-examine. Perhaps there are TWO csv.ts files — maybe there's one loaded from a cache. Let me check whether bun caches. Actually, let me check if maybe there's an issue with the `-.` hyphen in the package name or something. Let me just try copying my file to a temp and importing it.
+coder · bash(cp src/csv.ts /tmp/csvtest/csv2.ts && cd /tmp/csvtest && sed…)
+coder · error: command failed with exit code 1 SyntaxError: Export named 'toCsv2' not found in module '/private/tmp/csvtest/csv2.ts'.  …
+coder › So my file, when copied, fails to export! The bug is in the file itself. The `sed` changed `toCsv` to `toCsv2` but the error says not found. There must be a parse problem. Let me look very carefully at the file content — maybe there's a hidden Unicode character or the regex has an issue.
+
+Wait, `sed -i '' 's/export function toCsv/export function toCsv2/'` — the replacement `toCsv2`... but that shouldn't break the export. Let me reconsider.
+
+Actually wait — in my csv.ts, `toCsv` is the exported function. But in `/tmp/csvtest/csv2.ts`, the sed might not have matched because... let me look at what happened. Actually the more important clue: even the original `toCsv` import failed. Let me test the ORIGINAL file content directly in /tmp.
+coder · bash(cat /tmp/csvtest/csv2.ts && echo "---" && cat /tmp/csvtest/c…)
+coder › The sed didn't add `export function` because the original file has `export function toCsv` on line 10 — but wait, the sed replaced `export function toCsv` with `export function toCsv2`. But the output shows `toCsv` not `toCsv2`, and no `export function` line at all! 
+
+Oh wait — the sed didn't match because in the original file it's `export function toCsv(`. The pattern `s/export function toCsv/export function toCsv2/` should match the substring `export function toCsv`. But the output shows the file has NO `export function toCsv` line at all! 
+
+Wait, look at the output — csv2.ts has no export of toCsv! Where did it go? The original csv.ts I read via `read` showed `export function toCsv` at line 9. But csv2.ts doesn't have it.
+
+Hold on. Let me re-check. The sed command: `sed -i '' 's/export function toCsv/export function toCsv2/' csv2.ts`. If it matched, we'd see `toCsv2`. If it didn't match, we'd see the original `toCsv`. The output shows NEITHER — there's no export line at all in csv2.ts!
+
+Wait, that means the copied file was ALREADY missing the export line. Let me re-read the actual csv.ts via the read tool with line numbers.
+
+Actually wait — the `read` tool earlier on the workspace showed lines 1-11 including `export function toCsv`. But the xxd and cat of the file show it ends at line 11 with the template literal close. The `cat` of csv2.ts shows 11 lines but NO `export function toCsv` line!
+
+Let me re-read the actual file with read tool.
+coder · read(src/csv.ts)
+coder › There it is! The file only has 11 lines. The `read` wrote 11 lines — but where is `export function toCsv`?? The `write` tool's content I provided... let me check. My `write` content was:
+
+```
+export type Cell = string | number
+
+function field(cell: Cell): string {
+  ...
+}
+```
+
+Oh! I **forgot to define `toCsv` entirely** in my rewrite! When I rewrote the file with `write`, I only kept the `field` function but **dropped the `toCsv` function**. That's the bug. Let me verify the original file had `toCsv` at line 9 — yes it did.
+
+I need to add `toCsv` back. Let me rewrite the file correctly.
+coder · write(export type Cell = string | number  function field(cell: Cel…)
+coder › Now let me run the tests again.
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/csv.test.ts: 12 | test('writes a safe string plainly', …
+coder › I see — my test expectations were wrong. The requirement is: the field is **quoted** AND a single quote prefixed. So `=HYPERLINK("x")` becomes `"'=HYPERLINK(""x"")"` — wrapped in double quotes, with the double quotes inside doubled. My implementation is correct (prepending `'` inside the quotes), but my test expectations forgot the outer double quotes.
+
+Let me fix the test expectations.
+coder · edit(test('neutralises a string starting with =', () => {   expec…)
+coder · bash(bun test 2>&1)
+coder › All 8 tests pass. Let me verify the `-` case is handled correctly — note that the `field` function: for a string `-2`, the regex `/^[=+\-@\t\r]/` matches `-`, injectionChar is true, so it becomes `"'-2"`. And a number `-2` (typeof number) is written plainly as `-2`. My test for `-2` uses a string `'-2'` though. Let me make sure the number-negative test covers it — yes I have `toCsv([[42, -7, 0]])` giving `42,-7,0`, covering negative numbers written plainly.
+
+Let me view the final files.
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder › Everything looks good. Now let me commit these changes on a branch.
+
+Let me check git state first.
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · bash(git add src/csv.ts src/csv.test.ts && git commit -m "Neutral…)
+verified: bun run test passes on work/main
+merged work/main into the repository: bf03269 Merge branch 'work/main'
+coder › Done. Here's what I changed and the check output.
+
+## What changed
+
+**`src/csv.ts`** — `field()` now distinguishes cell types:
+- **Number** cells are always written plainly via `String(cell)`, negative or not.
+- **String** cells that start with `=`, `+`, `-`, `@`, a tab, or a carriage return are prefixed with a single quote **and** wrapped in double quotes (`"'=HYPERLINK(...)"`), so a spreadsheet renders them as text instead of running them.
+- The existing quoting rules are preserved: a string containing a comma, double quote, or newline is quoted, and double quotes inside a quoted field are doubled. A single string field can be quoted for both reasons at once — e.g. `=HYPERLINK("x")` becomes `"'=HYPERLINK(""x"")"` (quoted because of the `=` prefix, and its double quotes doubled).
+
+**`src/csv.test.ts`** — added tests for: numbers written plainly (positive, negative, zero); safe strings written plainly; neutralisation of `=`/`+`/`-`/`@`/tab/carriage-return prefixes; double-quote doubling inside a quoted field; and newline-containing fields. Kept the existing comma test.
+
+## Checks
+
+`bun test` passes:
+
+```
+ 8 pass
+ 0 fail
+ 8 expect() calls
+Ran 8 tests across 1 file.
+```
+
+## Notes
+
+- I initially dropped the `toCsv` export by accident while rewriting the file, then restored it — the whole function is unchanged from the original.
+- The requirement says a string field starting with those characters is written "with a single quote prefixed and the whole field quoted", so the single quote sits *inside* the surrounding double quotes (`"'=..."`). That's also what makes it safe in CSV terms: a leading `'` inside a quoted field is shown as literal text, while an unquoted leading `'` would count as the field's opening quote.
+
+Committed on `work/main` as `e9daa4e` (`Neutralise formula injection in CSV string fields`).
+
+  coder        deepseek-v4-flash    1 turns, 222011 tokens
+
+main: done
+  bun run test passed
+  merged: bf03269 Merge branch 'work/main'
+  this job: 222k tokens, 0.6¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 12¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"bf03269 Merge branch 'work/main'","cost":"this job: 222k tokens, 0.6¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 12¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":34083,"outputTokens":5400,"cacheReadTokens":182528,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

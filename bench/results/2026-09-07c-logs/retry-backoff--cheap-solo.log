@@ -1,0 +1,59 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/retry.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder · read(package.json)
+coder › Let me check if there's a test setup or config for TypeScript/bun.
+coder · bash(ls -la && cat bunfig.toml 2>/dev/null; cat tsconfig.json 2>/…)
+coder · error: command failed with exit code 1 total 16 drwxr-xr-x@ 6 antonio  staff  192  7 set 14:56 . drwxr-xr-x@ 3 antonio  staff  …
+coder › Let me implement the retry function.
+coder · write(src/retry.ts)
+coder › Now let me add tests. Let me check what loop it uses — `2 ** (attempt - 1)` = 1, 2, 4... After the first failure waits baseMs, after second waits baseMs*2, etc. That matches: after first failure baseMs*2^0 = baseMs, after second baseMs*2^1 = 2*baseMs. Good.
+coder · write(import { describe, expect, test } from 'bun:test' import { r…)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me commit.
+coder · bash(cd /Users/antonio && git -C /tmp 2>/dev/null; ls -la .git)
+coder · error: refused: that would leave your checkout for /Users/antonio. Your checkout is /private/var/folders/n0/s619yhq953bdp1k85z3…
+coder › The workspace is at the given path. Let me work in the workspace directory.
+coder · bash(pwd && git status && git log --oneline -5)
+coder · bash(pwd && git add src/retry.ts src/retry.test.ts && git commit …)
+verified: bun run test passes on work/main
+merged work/main into the repository: ab0dd96 Merge branch 'work/main'
+coder › Done. Here's what I changed:
+
+## `src/retry.ts`
+Implemented `retry(fn, options)`:
+- Throws a `RangeError` if `attempts < 1`, before running `fn` at all.
+- Calls `fn` up to `attempts` times, returning the first successful result.
+- Between attempts it waits via the passed-in `sleep(ms)` for `baseMs` after the first failure, `baseMs * 2` after the second, and so on, doubling each time (`baseMs * 2 ** (attempt - 1)`).
+- After the last failure, throws an `Error` whose message starts with `gave up after N attempts:` followed by the last error's message, with `cause` set to that last error.
+- `sleep` defaults to a real `setTimeout`-based wait (`defaultSleep`).
+
+## `src/retry.test.ts`
+Added 6 tests, including one where a recording `sleep` captures the wait amounts, verifying the exponential backoff (`[100, 200]` for 3 attempts, `[5, 10, 20]` for 4 attempts), the default real setTimeout path (checks elapsed time), the give-up error message/cause, and the `RangeError` before anything runs.
+
+## Check output
+`bun test`:
+```
+6 pass
+0 fail
+13 expect() calls
+Ran 6 tests across 1 file.
+```
+
+One small thing worth noting: the error message "followed by the last error's message" — for a thrown string/non-`Error` throwable I use `String(lastError)`, so the message is always well-formed.
+
+Committed as `37d7f94 Implement exponential-backoff retry and add tests`.
+
+  coder        deepseek-v4-flash    1 turns, 65394 tokens
+
+main: done
+  bun run test passed
+  merged: ab0dd96 Merge branch 'work/main'
+  this job: 65k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"ab0dd96 Merge branch 'work/main'","cost":"this job: 65k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":12495,"outputTokens":2211,"cacheReadTokens":50688,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

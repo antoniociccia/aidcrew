@@ -1,0 +1,61 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/key.ts)
+coder · glob(**/*key*)
+coder · read(src/key.test.ts)
+coder · bash(ls -la && cat package.json 2>/dev/null || true)
+coder · bash(ls src && cat src/key.ts && cat tsconfig.json 2>/dev/null ||…)
+coder · write(src/key.ts)
+coder · write(src/key.test.ts)
+coder · bash(bun test)
+coder · bash(bun -e " import { cacheKey } from './src/key.ts' const cases…)
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder · bash(git add src/key.ts src/key.test.ts && git commit -m "Make ca…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 0cdf330 Merge branch 'work/main'
+coder › Done. Here's what I changed and the result.
+
+## What changed
+
+**`src/key.ts`** — replaced the single `JSON.stringify` call with a small recursive stringifier that produces a stable key:
+
+- Sorts object keys at every depth.
+- Keeps array element order (and turns `undefined`/functions/symbols in arrays into `null`, as `JSON.stringify` does).
+- Omits `undefined`, function, and symbol values from objects, like `JSON.stringify`.
+- Serializes `Date` via `toISOString()` (invalid dates become `null`, matching `JSON.stringify`).
+- Serializes `NaN`, `Infinity`, and `-Infinity` as `null`.
+- Leaves strings, numbers, booleans, and `null` with normal JSON formatting.
+
+**`src/key.test.ts`** — added tests covering key-order stability (flat and nested), array ordering, omission of `undefined`/functions, `Date`, and `NaN`/`Infinity`.
+
+## Checks
+
+Only check configured is `bun test`:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 12 expect() calls
+Ran 7 tests across 1 file. [20.00ms]
+```
+
+Committed on `work/main` as `c841814 Make cacheKey stable across object key order`.
+
+## Notes / decisions
+
+- I also handled symbol values (skip in objects, `null` in arrays) to keep the behavior aligned with `JSON.stringify`, even though the plan only named `undefined` and functions.
+- Top-level `undefined`/function/symbol still return `undefined` at runtime, exactly as the original `JSON.stringify` did; the declared return type is unchanged.
+- There's no `tsconfig` or typecheck script in the repo, so `bun test` is the full available check.
+
+  coder        deepseek-v4-pro      1 turns, 108289 tokens
+
+main: done
+  bun run test passed
+  merged: 0cdf330 Merge branch 'work/main'
+  this job: 108k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"0cdf330 Merge branch 'work/main'","cost":"this job: 108k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5467,"outputTokens":8870,"cacheReadTokens":93952,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

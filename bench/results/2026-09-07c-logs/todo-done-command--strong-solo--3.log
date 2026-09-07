@@ -1,0 +1,65 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/cli.ts)
+coder · read(src/store.ts)
+coder · bash(ls -la && find . -maxdepth 2 -type f -not -path './node_modu…)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder · edit(src/store.ts)
+coder · edit(src/cli.ts)
+coder · edit(src/cli.ts)
+coder · read(src/cli.ts)
+coder · read(src/store.ts)
+coder · write(src/store.test.ts)
+coder · write(src/cli.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git diff -- src/cli.ts src/store.ts sr…)
+coder · bash(git add src/store.ts && git commit -q -m "store: add markDon…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 351f21c Merge branch 'work/main'
+coder › Done. Changes:
+
+- `src/store.ts`
+  - Added `markDone(todos, id)` — returns a new list with the matching todo `done: true`, throws `RangeError('no todo with id <id>')` when absent, and does not mutate the input.
+  - Updated `render` so done todos show `[x]` and the rest show `[ ]` (e.g. `[x] 1. buy milk`).
+
+- `src/cli.ts`
+  - Added the `done <id>` command: valid ids mark the todo done and print `done: <text>`.
+  - Ids that are not whole numbers (`/^\d+$/` fails) or that don't exist print `error: <id>` and exit with code `1`, leaving `todos` unchanged.
+  - Updated the usage line to include `done <id>`.
+
+- Tests
+  - `src/store.test.ts` — `markDone` returns a new non-mutated list, and throws `RangeError` for an unknown id.
+  - `src/cli.test.ts` — success, invalid id, unknown id, and `[x]`/`[ ]` list rendering.
+
+Exact check output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+
+ 7 pass
+ 0 fail
+ 23 expect() calls
+Ran 7 tests across 2 files. [13.00ms]
+```
+
+Commits on `work/main`:
+
+- `72c971c store: add markDone and [x]/[ ] list rendering`
+- `ed7570f cli: add done command`
+- `7aa802f test markDone and the done command`
+
+One thing the plan didn't specify: I kept the existing `id. text` ordering and put the checkbox before the id (`[x] 1. buy milk`). I also made the whole-number check reject `-1`, decimals, and alphabetic input.
+
+  coder        deepseek-v4-pro      1 turns, 102437 tokens
+
+main: done
+  bun run test passed
+  merged: 351f21c Merge branch 'work/main'
+  this job: 102k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"351f21c Merge branch 'work/main'","cost":"this job: 102k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7299,"outputTokens":6690,"cacheReadTokens":88448,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

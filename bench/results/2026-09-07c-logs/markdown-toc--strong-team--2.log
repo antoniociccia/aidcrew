@@ -1,0 +1,70 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/toc.ts)
+architect · glob(**/*toc*)
+architect · glob(**/*.test.ts)
+architect · glob(package.json)
+architect · read(package.json)
+architect · glob(**/*.test.*)
+architect · glob(**/*.spec.*)
+architect · bash(ls -la && git status --short && git log --oneline -5)
+architect · bash(bun --version 2>&1 || true)
+architect · agent_send(coder)
+architect → coder Implement `toc(markdown)` in `src/toc.ts` and add tests. The repo uses `bun test` (package.json script is `bun test`).  …
+architect › Plan sent to coder. I'll wait for their report that `bun test` passes with the expected output, then confirm the job is done.
+coder · read(src/toc.ts)
+coder · tree()
+coder · read(package.json)
+coder · write(src/toc.ts)
+coder › Now I need to reconsider one detail: the spec says fences are detected after stripping leading whitespace, but headings require "no leading whitespace before the `#`" and are "only recognized with no indentation". So the heading regex must be tested against the raw line, not the whitespace-stripped one.
+coder · write(export type Heading = { level: number; text: string; slug: s…)
+coder › Now the test file:
+coder · write(import { describe, expect, test } from 'bun:test' import { t…)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Committing:
+coder · bash(git add src/toc.ts src/toc.test.ts && git commit -m "Impleme…)
+coder › Done. Implemented `toc` in `src/toc.ts` and added `src/toc.test.ts`.
+
+**What changed**
+- `src/toc.ts`: `toc(markdown)` now splits input on `/\r?\n/`, toggles `inFence` on any line whose `trimStart()` begins with ` ``` ` (both open and close, including ` ```js `), and outside fences matches `^(#{1,6}) +(.*)$` against the **raw** line (so indented headings and `#no-space`/`####### x` are not recognized). Slug = lowercase, `[^a-z0-9]+` runs collapsed to `-`, trimmed of leading/trailing `-`, then de-duplicated via a `Set` with `-2`, `-3`, … suffixes. Kept the existing `Heading` type export.
+- `src/toc.test.ts`: 8 `bun:test` tests covering the required cases (single heading, levels in order, non-headings, fences incl. ` ```js `, slug collapse/trim, duplicates, the `foo`/`foo-2`/`foo` collision, and whitespace trimming).
+
+**One decision beyond the plan**: the spec detects fences on the whitespace-stripped line but says headings are "only recognized with no indentation" / "no leading whitespace before the `#`", so I test the heading regex against the raw (untrimmed) line — an indented `# foo` is not a heading. No listed test distinguishes this, but it matches the stated behavior.
+
+**Check output** (`bun test` from repo root):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 9 expect() calls
+Ran 8 tests across 1 file. [14.00ms]
+```
+
+Committed to `work/main` as `a5d0053 Implement toc and add tests`.
+coder → architect Done. Implemented `toc` in `src/toc.ts` and added `src/toc.test.ts`.  **What changed** - `src/toc.ts`: `toc(markdown)` n…
+architect · bash(bun test 2>&1)
+architect · bash(git status --short && git log --oneline -3)
+verified: bun run test passes on work/main
+merged work/main into the repository: d9b05ef Merge branch 'work/main'
+architect › Job done. `toc(markdown)` is implemented in `src/toc.ts` with tests in `src/toc.test.ts`.
+
+What changed:
+- `toc` parses ATX headings (`#{1,6} `, no indentation) outside ` ``` ` fences (fences toggle on whitespace-stripped lines), produces `{ level, text, slug }`, and dedupes slugs with `-2`, `-3`, … suffixes via a `Set`.
+- Added 8 `bun:test` tests covering levels, non-headings, fences (including ` ```js `), slug collapsing/trimming, duplicates, the `foo`/`foo-2`/`foo` collision, and whitespace trimming.
+
+Verified: `bun test` passes — 8 pass, 0 fail. Committed on `work/main` as `a5d0053`.
+
+  architect    deepseek-v4-pro      2 turns, 37556 tokens
+  coder        deepseek-v4-flash    1 turns, 65877 tokens
+
+main: done
+  bun run test passed
+  merged: d9b05ef Merge branch 'work/main'
+  this job: 103k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d9b05ef Merge branch 'work/main'","cost":"this job: 103k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5427,"outputTokens":6785,"cacheReadTokens":25344,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6180,"outputTokens":4785,"cacheReadTokens":54912,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

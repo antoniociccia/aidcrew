@@ -1,0 +1,63 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/stats.ts)
+coder · bash(ls -la && find . -maxdepth 2 -name 'package.json' -o -maxdep…)
+coder · read(package.json)
+coder · bash(find src -type f -maxdepth 2)
+coder · read(src/stats.test.ts)
+coder · bash(command -v bun && bun --version)
+coder · write(src/tokenize.ts)
+coder · write(src/stats.ts)
+coder · write(src/tokenize.test.ts)
+coder · write(src/stats.test.ts)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/tokenize.test.ts: 19 |   ]) 20 | }) 21 |  22 | test('re…
+coder › My test was wrong — `!!!...''...` tokenizes to `''` because apostrophes are word characters (matching wordCount's behaviour). Let me fix the test, not the code.
+coder · edit(src/tokenize.test.ts)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me commit.
+coder · bash(cd .aidcrew/wt/main 2>/dev/null || true; git status --short …)
+coder · bash(cd .aidcrew/wt/main && git add -A && git commit -q -m "Extra…)
+coder · error: command failed with exit code 1 bash: line 0: cd: .aidcrew/wt/main: No such file or directory
+coder · bash(pwd; ls -la .aidcrew)
+coder › I'm actually already in the `main` worktree directory (the workspace root itself). Let me commit from there.
+coder · bash(git add -A && git commit -q -m "Extract tokenize() from word…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 96eba2c Merge branch 'work/main'
+coder › Done. Here's what I changed and why.
+
+## What changed
+
+1. **New module `src/tokenize.ts`** — extracted `tokenize(text: string): string[]` using exactly `wordCount`'s behaviour: lower-case, a word is a run of letters/digits/apostrophes (`/[^a-z0-9']+/` as separator), and no empty words.
+
+2. **`src/stats.ts`** — `wordCount` now returns `tokenize(text).length` (behaviour unchanged), and `topWords` builds its `Map` from `tokenize(text)` instead of its own `\s+` split + regex clean. This fixes the drift: it now counts case-insensitively and treats apostrophes/separators consistently. I also added alphabetical tie-breaking to `topWords`, and a comparison `(b[1] - a[1]) || alphabetical` so ties are sorted by word rather than left in insertion order.
+
+3. **Tests** — added `src/tokenize.test.ts` (lower-casing, word characters, separators, no empty words) and extended `src/stats.test.ts` with `topWords` cases for case-insensitivity, top-n ordering, and alphabetical ties.
+
+## One decision the plan implied but didn't spell out
+
+The plan asked for "ties broken alphabetically", but the original `topWords` only sorted by count and returned ties in insertion order. I implemented the alphabetical tie-break explicitly rather than relying on `Map` preservation.
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 9 expect() calls
+Ran 8 tests across 2 files. [14.00ms]
+```
+
+Committed as `c4639cc Extract tokenize() from wordCount, use it in topWords`.
+
+  coder        deepseek-v4-pro      1 turns, 96759 tokens
+
+main: done
+  bun run test passed
+  merged: 96eba2c Merge branch 'work/main'
+  this job: 97k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"96eba2c Merge branch 'work/main'","cost":"this job: 97k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":13631,"outputTokens":2872,"cacheReadTokens":80256,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

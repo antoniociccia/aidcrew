@@ -1,0 +1,59 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/slugify.ts)
+coder · tree()
+coder · read(src/slugify.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder › The bug is clear: `/[^a-z0-9]+/g` strips accented characters entirely instead of reducing them to their base letter. The fix is to decompose with Unicode NFD and strip combining marks before the existing logic. Let me look at the test file and make the change.
+coder · edit(src/slugify.ts)
+coder › Now add tests covering the required behavior:
+coder · write(src/slugify.test.ts)
+coder › I accidentally duplicated one test. Let me fix that:
+coder · edit(src/slugify.test.ts)
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && …)
+coder › All 7 tests pass. Let me check git state and commit:
+coder · bash(git rev-parse --is-inside-work-tree 2>&1; git log --oneline …)
+coder · bash(git diff)
+coder · bash(git add src/slugify.ts src/slugify.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: e1e1a06 Merge branch 'work/main'
+coder › Done.
+
+## What changed
+
+**`src/slugify.ts`** — added a Unicode NFD decomposition step followed by stripping combining diacritical marks (`U+0300–U+036f`) before the existing lowercase/dash logic:
+
+```ts
+return text
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+```
+
+So `é` decomposes to `e` + combining acute, the mark is removed, and the base letter flows through the existing `[a-z0-9]` rule. The other three behaviors (run of non-letter/digit → one dash, leading/trailing dashes dropped, empty/punctuation-only → `''`) were already satisfied by the existing regexes.
+
+**`src/slugify.test.ts`** — added tests for: accented Latin reduction (`Crème Brûlée` → `creme-brulee`, plus `Über naïve déjà vu`), runs of punctuation → one dash, runs of whitespace → one dash, leading/trailing dash removal, empty string, and punctuation-only input.
+
+## Checks
+
+`bun test` — **7 pass, 0 fail** (10 expect calls).
+
+## Notes
+
+- I kept the output restricted to ASCII `a-z0-9`/dashes (the function's existing contract), rather than switching to keep all Unicode letters — so non-Latin scripts still collapse into dashes. The task only asked for Latin accents to be reduced to base letters, and this is the minimal change.
+- Ligatures that NFD does not decompose (e.g. `æ`, `œ`, `ß`) are not handled — out of scope for "accented Latin letters".
+- Committed on a branch as `a5ac8d1 Reduce accented letters in slugify`.
+
+  coder        deepseek-v4-flash    1 turns, 78292 tokens
+
+main: done
+  bun run test passed
+  merged: e1e1a06 Merge branch 'work/main'
+  this job: 78k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e1e1a06 Merge branch 'work/main'","cost":"this job: 78k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5592,"outputTokens":4348,"cacheReadTokens":68352,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

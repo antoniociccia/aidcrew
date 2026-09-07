@@ -1,0 +1,67 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/emitter.ts)
+coder · read(src/emitter.test.ts)
+coder · read(package.json)
+coder › The bug is clear: `emit` iterates the *live* array stored in the map, so a `splice` performed by `off` mid-emit shifts later listeners out from under the `at` index and skips one. Let me confirm the behavior before fixing.
+coder · bash(cd "$(pwd)" && bun test 2>&1 | tail -5 && git log --oneline …)
+coder · bash(cd "$(pwd)" && cat > /tmp/repro.ts <<'EOF' import { Emitter …)
+coder · error: command failed with exit code 1 error: Cannot find module './src/emitter.ts' from '/private/tmp/repro.ts'  Bun v1.3.14 (…
+coder · bash(cd "$(pwd)" && cat > /tmp/repro.ts <<'EOF' import { Emitter …)
+coder · bash(cd "$(pwd)" && cat > /tmp/repro.ts <<'EOF' import { Emitter …)
+coder › Confirmed the bug: the first `emit` returns `1` and skips `plain` (only `["once"]`), and `once` never fires on a later emit. Now I'll fix `emit` to iterate over a snapshot taken when emit begins, so removals/additions to the live array can't shift or drop listeners mid-loop.
+coder · edit(src/emitter.ts)
+coder · read(src/emitter.ts)
+coder › Now the tests. I'll add coverage for self-removal, removal of another listener, additions during emit, `once` firing exactly once, `off`'s return value, and `emit`'s count.
+coder · edit(import { expect, test } from 'bun:test' import { Emitter } f…)
+coder › Let me fix the self-removal test — the first listener should remove itself, not an unrelated function.
+coder · edit(test('emit calls every registered listener exactly once in o…)
+coder · bash(cd "$(pwd)" && bun test 2>&1 | tail -20)
+coder › All 8 tests pass, including the original. Let me also re-run the original repro against the fix as a sanity check, then commit.
+coder · bash(cd "$(pwd)" && bun /tmp/repro.ts)
+coder › The fix works as intended: first emit returns 2 and calls both `["once","plain"]`; `once` fired exactly once and `plain` persists, so the second emit calls only `plain`. Now committing.
+coder · bash(cd "$(pwd)" && git add src/emitter.ts src/emitter.test.ts &&…)
+verified: bun run test passes on work/main
+merged work/main into the repository: da88ed8 Merge branch 'work/main'
+coder › Done.
+
+## What changed
+
+**`src/emitter.ts`** — `emit` now snapshots the listener list (`(this.#listeners.get(event) ?? []).slice()`) when it begins, instead of iterating the live array stored in the map. Previously, `off`'s `splice` shifted later listeners left beneath the loop's `at` index, so the next listener was skipped — which is exactly what a `once` wrapper does when it removes itself, silencing the listener registered after it. Now every listener registered at emit time is called exactly once, in registration order, regardless of any adds/removes mid-emit; listeners added during emit go into the live list and are called from the next emit on.
+
+Nothing else needed changing: `once` already removes itself before calling (so it fires exactly once) and `off` already returns whether it removed anything. `emit` already counted each invocation and still returns the correct count.
+
+**`src/emitter.test.ts`** — added 7 tests:
+- `once` before an ordinary listener doesn't silence it (the reported bug)
+- self-removal mid-emit still calls all registered listeners, in order
+- removing *another* listener mid-emit still calls all registered listeners, in order
+- a listener added during emit is not called until the next emit (and the count reflects that)
+- `once` fires exactly once
+- `off` returns `true`/`false` for removed vs. not removed
+- `emit` returns how many listeners it called
+
+## Checks
+
+`bun test` output:
+
+```
+ 8 pass
+ 0 fail
+ 19 expect() calls
+```
+
+I also re-ran the original repro manually: the first emit returned `2` and pushed `["once","plain"]` (previously it returned `1` and pushed only `["once"]`), and the second emit correctly called only the still-registered `plain`.
+
+Committed as `82b0438`. One note: the task said "the listener registered after it" — that's fixed, and likewise any removal mid-emit (not just `once`), since the snapshot covers all of them.
+
+  coder        deepseek-v4-flash    1 turns, 99200 tokens
+
+main: done
+  bun run test passed
+  merged: da88ed8 Merge branch 'work/main'
+  this job: 99k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"da88ed8 Merge branch 'work/main'","cost":"this job: 99k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":10029,"outputTokens":7507,"cacheReadTokens":81664,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

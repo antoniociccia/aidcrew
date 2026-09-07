@@ -1,0 +1,64 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(ls -la && find . -maxdepth 2 -type f -not -path './node_modu…)
+coder · glob(src/toc.ts)
+coder · read(package.json)
+coder · read(src/toc.ts)
+coder · read(.aidcrew/config.toml)
+coder · glob(**/*.test.ts)
+coder · bash(git status && git log --oneline -5 2>/dev/null; echo '---'; …)
+coder · bash(bun --version 2>&1; node --version 2>&1)
+coder · bash(find . -maxdepth 4 -type f -not -path './.git/*' -print)
+coder · bash(git ls-files)
+coder · read(.aidcrew/agents/coder.md)
+coder · bash(git checkout -b toc && git branch --show-current)
+coder · write(src/toc.ts)
+coder · write(import { describe, expect, test } from "bun:test" import { t…)
+coder · bash(bun test)
+coder · bash(git diff -- src/toc.ts src/toc.test.ts && git status --short)
+coder · bash(git add src/toc.ts && git commit -m "Implement toc heading e…)
+coder · bash(git log --oneline -5 && bun test)
+coder · read(src/toc.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: 88c870a Merge branch 'toc'
+coder › Implemented `toc(markdown)` in `src/toc.ts` and added tests in `src/toc.test.ts`.
+
+What changed
+- `src/toc.ts`
+  - Added an ATX heading regex `^(#{1,6}) (.*)$` (1–6 `#` then a literal space).
+  - Splits on `\r?\n`, tracks ``` fences (any line starting with ``` toggles), and skips headings inside them.
+  - `text` is the part after the marker, `.trim()`ed.
+  - `slug` lowercases, collapses runs of non-letters/digits to one dash, and trims dashes from both ends.
+  - Duplicate slugs reuse a `Set`: first stays as-is, later ones get `-2`, `-3`, … (skipping any that already exist).
+- `src/toc.test.ts`
+  - 9 tests covering levels 1–6, non-headings (`#no-space`, 7 `#`s), whitespace trimming, slug generation, duplicate slugs, headings inside fences, fences with info strings/extra backticks, CRLF endings, and the empty `# ` heading.
+
+Decisions the request didn't spell out
+- Headings are recognized only at the start of a line (no indented headings), matching the literal “one to six # characters followed by a space”.
+- “Letters or digits” is treated as ASCII `[a-z0-9]` after lowercasing (the classic slug behavior).
+- Closing `#` sequences (e.g. `## Title ##`) are kept as text, since only the opening marker was specified.
+
+Checks
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 9 expect() calls
+Ran 9 tests across 1 file. [12.00ms]
+```
+
+Committed on branch `toc`:
+- `103ffbf` Implement toc heading extraction
+- `b2f7cc2` Add toc tests
+
+  coder        deepseek-v4-pro      1 turns, 175907 tokens
+
+main: done
+  bun run test passed
+  merged: 88c870a Merge branch 'toc'
+  this job: 176k tokens, 5¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"88c870a Merge branch 'toc'","cost":"this job: 176k tokens, 5¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7028,"outputTokens":12335,"cacheReadTokens":156544,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

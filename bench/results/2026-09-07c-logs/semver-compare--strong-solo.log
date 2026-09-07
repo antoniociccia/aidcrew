@@ -1,0 +1,62 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(ls -la && find . -maxdepth 2 -type f -not -path './node_modu…)
+coder · read(src/semver.ts)
+coder · read(package.json)
+coder · read(.aidcrew/config.toml)
+coder · bash(cat .git; echo '---'; git status --short; echo '---'; git lo…)
+coder · bash(find src -type f; echo '---'; bun --version 2>/dev/null || e…)
+coder · write(src/semver.ts)
+coder · write(import { describe, expect, test } from 'bun:test' import { c…)
+coder · bash(bun test)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/semver.ts src/semver.test.ts && git commit -m "I…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 252e007 Merge branch 'work/main'
+coder › Implemented `compareSemver(a, b)` and added tests.
+
+## What changed
+
+**`src/semver.ts`**
+- Added a strict SemVer 2.0.0 regex parser (`parseSemver`) that validates:
+  - `MAJOR.MINOR.PATCH` with no leading zeroes
+  - optional `-prerelease` with dot-separated numeric (no leading zeroes) or alphanumeric identifiers
+  - optional `+build` metadata (parsed out of the match, then ignored)
+- Invalid versions throw `TypeError` with the offending string in the message, e.g. `not a semantic version: not-a-version`.
+- `compareSemver` compares major/minor/patch numerically, then prereleases by the spec:
+  - no prerelease > prerelease for the same core version
+  - identifiers compared one by one; numeric numerically, alphanumeric lexically
+  - numeric identifier < alphanumeric identifier
+  - shorter identifier list is lower when all shared identifiers are equal
+  - build metadata ignored
+
+**`src/semver.test.ts`** (new)
+- 22 tests covering equality, numeric-vs-lexicographic core comparison, prerelease-vs-release, numeric prerelease ordering, numeric-below-alphanumeric, the full SemVer 2.0.0 precedence chain (`alpha < alpha.1 < alpha.beta < beta < beta.2 < beta.11 < rc.1 < release`), build metadata being ignored, and `TypeError` cases (both naming the invalid string and rejecting malformed inputs like `1.0`, `01.0.0`, `1.0.0-`, `1.0.0-01`, `v1.0.0`, trailing `+`, and empty identifiers).
+
+## Checks
+
+`bun test` (the only script in `package.json`):
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 22 pass
+ 0 fail
+ 55 expect() calls
+Ran 22 tests across 1 file. [21.00ms]
+```
+
+Committed on `work/main` as `a004f50` (`Implement compareSemver with SemVer parsing and tests`).
+
+One decision worth flagging: the core components are compared as `number`s. That matches "compared numerically" for any realistic version, but versions with components beyond `Number.MAX_SAFE_INTEGER` would lose precision. Say the word if you'd prefer a string-length-based or `BigInt` comparison for fully arbitrary precision.
+
+  coder        deepseek-v4-pro      1 turns, 81566 tokens
+
+main: done
+  bun run test passed
+  merged: 252e007 Merge branch 'work/main'
+  this job: 82k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"252e007 Merge branch 'work/main'","cost":"this job: 82k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5356,"outputTokens":7346,"cacheReadTokens":68864,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

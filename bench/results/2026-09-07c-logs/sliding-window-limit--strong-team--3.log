@@ -1,0 +1,52 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/window.ts)
+architect · glob(**/*.test.ts)
+architect · glob(package.json)
+architect · read(package.json)
+architect · glob(**/*)
+architect · read(.aidcrew/agents/coder.md)
+architect · read(.aidcrew/config.toml)
+architect · bash(bun test 2>&1; echo "exit=$?")
+architect · agent_send(coder)
+architect → coder Implement SlidingWindow in src/window.ts and add tests with a controlled clock. The project check is `bun test` (bun v1.…
+architect › Plan sent to coder. I expect back: the implementation in `src/window.ts` and `src/window.test.ts`, committed on `work/main`, with the exact `bun test` output showing all tests passing.
+coder · tree(.)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · read(src/window.ts)
+coder · read(package.json)
+coder › Now let me implement the SlidingWindow class and tests.
+coder · write(src/window.ts)
+coder · write(src/window.test.ts)
+coder › Now let me run the tests:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All tests pass. Let me commit.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now let me report back to the architect.
+coder · agent_send(architect)
+coder → architect Implemented SlidingWindow and tests. Committed as 92f1840 on work/main.  What changed: - src/window.ts: Constructor now …
+coder › Done. The implementation is committed, tests pass, and I've reported back to the architect.
+architect · bash(bun test 2>&1; echo "exit=$?")
+verified: bun run test passes on work/main
+merged work/main into the repository: 3475623 Merge branch 'work/main'
+architect › The job is done.
+
+**What changed** (`work/main`, commit 92f1840):
+- `src/window.ts` — `SlidingWindow` constructor now throws `RangeError` for `limit < 1` or `windowMs < 1`; added a private `Map<string, number[]>` for per-key timestamps, with `allow` pruning to `t - windowMs` (exclusive, so an exactly-`windowMs`-old event no longer counts) and `remaining` returning `limit - list.length`. A small private `prune(key, t)` helper shares the logic.
+- `src/window.test.ts` — new tests using a controlled clock covering constructor validation, allow recording/limits, the exact-window boundary, `remaining`, failed allows recording nothing, and key independence.
+
+**Verified:** `bun test` passes — 7 pass, 0 fail, 25 expect() calls, exit 0.
+
+  architect    deepseek-v4-pro      2 turns, 30063 tokens
+  coder        deepseek-v4-flash    1 turns, 50768 tokens
+
+main: done
+  bun run test passed
+  merged: 3475623 Merge branch 'work/main'
+  this job: 81k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3475623 Merge branch 'work/main'","cost":"this job: 81k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7827,"outputTokens":2140,"cacheReadTokens":20096,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9510,"outputTokens":2090,"cacheReadTokens":39168,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -101,3 +101,23 @@ only case of the harness saying done and the hidden tests disagreeing; the
 strong team's two were a leader that wrote its plan as text and handed it
 to nobody — is where the next work is, which is the point.
 
+**2026-09-07, round three** — `results/2026-09-07c.md`: thirty tasks, every
+configuration three times, 360 runs, on the code with the day's fixes.
+
+| configuration | passed | said done, failed | cost per pass | mean time |
+|---|---|---|---|---|
+| cheap-solo | 57/90 (63%) | 5 | 0.3¢ | 96s |
+| strong-solo | 82/90 (91%) | 8 | 3.1¢ | 102s |
+| cheap-team | 85/90 (94%) | 4 | 0.4¢ | 149s |
+| strong-team | 80/90 (89%) | 4 | 2.1¢ | 100s |
+
+What it says: two cheap models with distinct roles solve more than the
+strong model alone, at an eighth of the cost per solved task; the cheap
+model alone gives up a third of the time, and the harness says so rather
+than calling it done; a strong planner over the cheap coder adds nothing
+over a cheap one. Of the twenty runs the harness called done and the hidden
+tests refuted, ten were one task, `route-match`, whose instruction left
+"however many segments" open to zero — the instruction is fixed, the runs
+stand as they were. Read with the same care as before: one family of
+models, small tasks, list prices.
+

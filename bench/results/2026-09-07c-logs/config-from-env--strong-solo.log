@@ -1,0 +1,56 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(**/*.ts)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+coder · bash(ls -la && find . -maxdepth 2 -name 'tsconfig*' -o -name 'bun…)
+coder · bash(git status --short --branch)
+coder · bash(git checkout -b env-config)
+coder · write(src/env.ts)
+coder · edit(src/config.ts)
+coder · write(src/index.ts)
+coder · write(src/index.test.ts)
+coder · write(src/env.test.ts)
+coder · write(src/config.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git diff)
+coder · bash(git add src/env.ts src/config.ts src/index.ts && git commit …)
+coder · bash(git add src/env.test.ts src/config.test.ts src/index.test.ts…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: b48d52d Merge branch 'env-config'
+coder › Done. Work is on branch `env-config`.
+
+**What changed**
+- `src/env.ts` (new): `fromEnv(env, prefix = 'APP_')` reads `APP_PORT`, `APP_HOST`, `APP_DEBUG`, `APP_NAME`. Port is parsed to a number, debug accepts `true/1/yes` and `false/0/no` case-insensitively, host/name stay strings, and absent or `''` values are omitted. Invalid port/debug throws a `TypeError` naming the variable (using the actual prefix).
+- `src/config.ts`: added `validate(config)` — returns the config, or throws a `TypeError` naming `port` (non-integer or outside 1–65535), `host`, or `name` (empty).
+- `src/index.ts`: `resolveConfig(file, env)` now merges defaults → file → environment, then validates; `env` defaults to `process.env`.
+- Tests added in `src/env.test.ts`, `src/config.test.ts`, and extended `src/index.test.ts`.
+
+**Check output**
+```
+bun test v1.3.14 (0d9b296a)
+
+14 pass
+0 fail
+44 expect() calls
+Ran 14 tests across 3 files. [16.00ms]
+```
+
+**Decisions the plan didn't specify**
+- Error message wording: `port must be an integer between 1 and 65535`, `host must not be empty`, `name must not be empty`, and for env `APP_PORT must be a number` / `APP_DEBUG must be a boolean`.
+- `fromEnv` treats only `''` (not whitespace) as empty, since the spec said "empty"; I didn't add trimming.
+
+  coder        deepseek-v4-pro      1 turns, 133809 tokens
+
+main: done
+  bun run test passed
+  merged: b48d52d Merge branch 'env-config'
+  this job: 134k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"b48d52d Merge branch 'env-config'","cost":"this job: 134k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6777,"outputTokens":7736,"cacheReadTokens":119296,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

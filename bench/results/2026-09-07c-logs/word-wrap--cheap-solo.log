@@ -1,0 +1,17 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/wrap.ts)
+coder · read(package.json)
+coder › Let me check the project setup before writing code.
+coder · bash(ls -la && cat tsconfig.json 2>/dev/null; bun --version 2>/de…)
+coder · bash(git status && git log --oneline -5 2>/dev/null; git branch -…)
+coder · bash(ls -la .aidcrew && cat .aidcrew/* 2>/dev/null | head -50)
+
+  coder        deepseek-v4-flash    1 turns, 44291 tokens
+
+no agent changed any files
+{"jobs":[],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5006,"outputTokens":22133,"cacheReadTokens":17152,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

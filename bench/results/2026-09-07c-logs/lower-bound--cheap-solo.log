@@ -1,0 +1,52 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/search.ts)
+coder · glob(**/*search*)
+coder · glob(**/*.test.*)
+coder · read(src/search.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder · tree()
+coder · edit(src/search.ts)
+coder · edit(test('finds where a new value goes', () => {   expect(insert…)
+coder · bash(bun test 2>&1)
+coder · bash(git status 2>&1; git log --oneline -3 2>&1)
+coder · bash(git add src/search.ts src/search.test.ts && git commit -m "R…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3d264af Merge branch 'work/main'
+coder › Fixed.
+
+## What I changed
+
+**`src/search.ts`** — one line: the binary search condition was `sorted[mid] <= target` (upper bound: low moves past equals, landing after the last equal element). I changed it to `sorted[mid] < target`, so low only advances past elements strictly below target and the search lands on the first equal element — a proper lower bound. Binary structure, `O(log n)`, unchanged.
+
+**`src/search.test.ts`** — added three tests alongside the existing one:
+- target below every element → `0`
+- target above every element → the array length
+- duplicates → index of the first equal element (including target at the head, in the middle, at the tail, and all-equal arrays with below/above targets)
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 12 expect() calls
+Ran 4 tests across 1 file. [13.00ms]
+```
+
+Committed as `afd0879` ("Return first not-below index from insertionIndex").
+
+No decisions beyond the request — the semantics described (0, length, first-of-equals) are exactly the standard lower bound, so the existing `[1, 3, 5], 4 → 2` test still holds, and I left it in place.
+
+  coder        deepseek-v4-flash    1 turns, 56248 tokens
+
+main: done
+  bun run test passed
+  merged: 3d264af Merge branch 'work/main'
+  this job: 56k tokens, 0.1¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3d264af Merge branch 'work/main'","cost":"this job: 56k tokens, 0.1¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5459,"outputTokens":1637,"cacheReadTokens":49152,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

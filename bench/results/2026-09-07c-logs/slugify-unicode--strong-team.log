@@ -1,0 +1,76 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/slugify.ts)
+architect · glob(**/*.test.*)
+architect · glob(**/*.spec.*)
+architect · read(src/slugify.test.ts)
+architect · read(package.json)
+architect › I've read `src/slugify.ts`, `src/slugify.test.ts`, and `package.json`. Here's the plan.
+
+**Files to touch**
+
+1. `src/slugify.ts` — change `slugify` so it:
+   - `.normalize('NFD')` to decompose accented letters into base letter + combining mark,
+   - `.replace(/[\u0300-\u036f]/g, '')` to drop the combining marks (`Crème Brûlée` → `Creme Brulee`),
+   - `.toLowerCase()`,
+   - `.replace(/[^\p{L}\p{N}]+/gu, '-')` so any run of non-letter/non-digit characters (Unicode-aware) becomes one dash,
+   - `.replace(/^-+|-+$/g, '')` to strip leading/trailing dashes.
+   
+   Ordering that works: normalize → strip combining marks → lowercase → collapse non-alphanumerics → trim dashes. (Note the `u` flag on the `\p{L}\p{N}` regex.)
+
+2. `src/slugify.test.ts` — add tests covering:
+   - `slugify('Crème Brûlée')` → `'creme-brulee'`
+   - accented letters generally, e.g. `'Héllo, wörld!'` → `'hello-world'`
+   - digits are kept: `'Room 101'` → `'room-101'`
+   - leading/trailing dashes dropped: `'---Hello World---'` → `'hello-world'`
+   - empty string → `''`
+   - only punctuation → `''` (e.g. `'!!! ...'`)
+
+**Check**
+
+Run `bun test` in the checkout root. It should pass, printing a summary like `N pass, 0 fail` where N includes the existing test plus the new ones.
+architect · agent_send(coder)
+architect → coder Fix slugify in src/slugify.ts and add tests. Current file:  ```ts export function slugify(text: string): string {   retu…
+coder · bash(pwd && git status && git branch --show-current)
+coder · tree(.)
+architect › Plan sent to coder. I expect back: the implemented `src/slugify.ts` and `src/slugify.test.ts`, the commit made, and the `bun test` output showing 0 failures.
+coder · read(src/slugify.ts)
+coder · read(src/slugify.test.ts)
+coder · json(package.json)
+coder · edit(src/slugify.ts)
+coder · edit(test('joins words with dashes', () => {   expect(slugify('He…)
+coder · bash(bun test)
+coder · bash(git add src/slugify.ts src/slugify.test.ts && git commit -m …)
+coder › Done. Reported the result to the architect.
+coder · agent_send(architect)
+coder → architect Slugify fix done and committed on work/main as 21c0a9a "Make slugify Unicode-aware and add tests".  What changed: - src/…
+coder › Implemented and reported. Summary:
+
+- **`src/slugify.ts`** — replaced the ASCII-only pipeline with the requested Unicode-aware one: `normalize('NFD')` → drop combining marks (`/[\u0300-\u036f]/g`) → `toLowerCase()` → collapse non-letter/non-digit runs with the `u`-flagged `/[\p{L}\p{N}]+/gu`... wait, correctly `/[^\p{L}\p{N}]+/gu` → trim leading/trailing dashes.
+- **`src/slugify.test.ts`** — kept the existing test, added the six required assertions.
+- **Check** — `bun test`: **7 pass, 0 fail** (`bun test v1.3.14`, 7 expect() calls, 1 file).
+- **Commit** — `21c0a9a Make slugify Unicode-aware and add tests` on `work/main`, no signature/trailer.
+architect · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: cabf08a Merge branch 'work/main'
+architect › The job is done.
+
+**What changed**
+- `src/slugify.ts`: `slugify` now normalizes to NFD, strips combining marks, lowercases, collapses any non-letter/non-digit run (Unicode-aware, `\p{L}\p{N}` with the `u` flag) into one dash, and trims leading/trailing dashes — so `slugify('Crème Brûlée')` → `'creme-brulee'`.
+- `src/slugify.test.ts`: added tests for accented reduction, punctuation+accents, digits, dash trimming, empty string, and punctuation-only.
+
+**Verified**: `bun test` passes — 7 pass, 0 fail, across 1 file. Committed as `21c0a9a` on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 22316 tokens
+  coder        deepseek-v4-flash    1 turns, 46632 tokens
+
+main: done
+  bun run test passed
+  merged: cabf08a Merge branch 'work/main'
+  this job: 69k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"cabf08a Merge branch 'work/main'","cost":"this job: 69k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6448,"outputTokens":2684,"cacheReadTokens":13184,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5788,"outputTokens":1420,"cacheReadTokens":39424,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

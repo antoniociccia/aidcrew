@@ -1,0 +1,51 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(src/**/*.ts)
+coder · read(src/window.ts)
+coder · read(package.json)
+coder · bash(bun --version && ls -la && git status)
+coder · bash(find .aidcrew -maxdepth 2 -type f -print -exec cat {} \;)
+coder · write(src/window.ts)
+coder · write(src/window.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git diff --stat)
+coder · bash(git add src/window.ts src/window.test.ts && git commit -m "I…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 484cc15 Merge branch 'work/main'
+coder › Implemented `SlidingWindow` in `src/window.ts` and added tests in `src/window.test.ts`.
+
+What changed
+- `src/window.ts`
+  - Constructor now throws `RangeError` when `limit < 1` or `windowMs < 1` (using `!(x >= 1)`, which also rejects `NaN`).
+  - Stores per-key event timestamps in a `Map<string, number[]>`.
+  - `allow(key)` prunes events `>= windowMs` old (an event exactly `windowMs` old no longer counts), records the event only if the key is still under the limit, and returns whether it was recorded.
+  - `remaining(key)` prunes expired events and returns `limit - eventsInWindow`.
+  - Keys are independent.
+
+- `src/window.test.ts`
+  - Controlled clock helper (`now`/`advance`/`set`).
+  - Tests for `RangeError` on invalid `limit`/`windowMs`, allow/remaining up to the limit, rejected calls recording nothing, the exact-`windowMs` boundary, pruning of expired events, and key independence.
+
+Checks
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 30 expect() calls
+Ran 7 tests across 1 file. [15.00ms]
+```
+
+Note: the package has no typecheck or lint scripts (`package.json` only has `test`), so `bun test` is the only project check I ran. Committed on `work/main` as `cbe6817`.
+
+  coder        deepseek-v4-pro      1 turns, 77501 tokens
+
+main: done
+  bun run test passed
+  merged: 484cc15 Merge branch 'work/main'
+  this job: 78k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"484cc15 Merge branch 'work/main'","cost":"this job: 78k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5533,"outputTokens":5408,"cacheReadTokens":66560,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

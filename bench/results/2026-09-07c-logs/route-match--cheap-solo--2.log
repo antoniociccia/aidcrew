@@ -1,0 +1,56 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/router.ts)
+coder · tree()
+coder · read(package.json)
+coder · glob(**/*)
+coder · read(.aidcrew/agents/coder.md)
+coder · bash(cd "$(pwd)" && git status && git branch --show-current && bu…)
+coder · bash(cd "$(pwd)" && git checkout -b match-router)
+coder › Now I'll write the implementation:
+coder · write(src/router.ts)
+coder › Now the tests:
+coder · write(import { describe, expect, test } from 'bun:test' import { m…)
+coder · bash(cd "$(pwd)" && bun test 2>&1)
+coder › All tests pass. Let me commit in two small commits:
+coder · bash(cd "$(pwd)" && git add src/router.ts && git commit -q -m "Im…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 0ce2f1a Merge branch 'match-router'
+coder › Done. Implemented `match` in `src/router.ts` and added tests in `src/router.test.ts`, on branch `match-router` (two commits: `897d14f Implement match in router`, `2f1c16e Add tests for match`).
+
+## What it does
+
+- Splits pattern and path into segments (dropping empty segments from the ends, so leading/trailing slashes don't matter) and strips anything after `?` from the path.
+- `:name` matches exactly one non-empty segment; the value is percent-decoded (`decodeURIComponent`).
+- A final `*` segment captures the remaining segments joined with `/` under the key `rest`, percent-decoded; an empty rest is allowed (`rest: ''`).
+- Mismatch (wrong literal, too many or too few segments, empty segment for a `:name`) returns `undefined`.
+- Any `*` that isn't its own final segment — including `/a/*/b`, `/a*b`, or a second star — throws `TypeError`.
+
+## Checks
+
+`bun test` (the only script in package.json):
+
+```
+ 22 pass
+ 0 fail
+ 31 expect() calls
+Ran 22 tests across 1 file. [12.00ms]
+```
+
+## Decisions the spec didn't pin down
+
+- **Rest may be empty**: `match('/files/*', '/files')` → `{ rest: '' }`, so `/files` and `/files/` both match.
+- **Malformed percent-encoding means no match**: a value like `100%` can't be decoded, so the path returns `undefined` rather than being returned raw or throwing — consistent with "percent-decoded, or undefined when the path does not match".
+- **A star must be its own final segment**: `a*b` or `*x` throws `TypeError` too, read as "a `*` anywhere but (a final `*` segment) last".
+- Literal pattern segments are compared raw against the path (no decoding), and the rest value is decoded as one joined string.
+
+  coder        deepseek-v4-flash    1 turns, 125613 tokens
+
+main: done
+  bun run test passed
+  merged: 0ce2f1a Merge branch 'match-router'
+  this job: 126k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"0ce2f1a Merge branch 'match-router'","cost":"this job: 126k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 16¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5319,"outputTokens":12902,"cacheReadTokens":107392,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

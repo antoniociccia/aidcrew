@@ -1,0 +1,138 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && echo "---" && ls -la src 2>/dev/null && echo "---"…)
+architect · glob(src/**/*.ts)
+architect · read(src/config.ts)
+architect · read(src/index.ts)
+architect · read(src/index.test.ts)
+architect · bash(bun test 2>&1 | head -30)
+architect › I have enough context. Here's the plan.
+
+## Plan
+
+### 1. New module `src/env.ts`
+Export `fromEnv(env: Record<string, string | undefined>, prefix = 'APP_'): Partial<Config>`.
+
+Read keys `${prefix}PORT`, `${prefix}HOST`, `${prefix}DEBUG`, `${prefix}NAME` from `env`.
+
+Rules per variable:
+- A variable that is `undefined` or empty string (`''`) is **left out** (not included in the result).
+- `PORT`: `Number(value)`; if `NaN`, throw `TypeError` naming the variable (e.g. `APP_PORT`).
+- `DEBUG`: case-insensitive parse — `true`, `1`, `yes` → `true`; `false`, `0`, `no` → `false`; anything else throws `TypeError` naming `APP_DEBUG`.
+- `HOST`, `NAME`: stay strings.
+
+### 2. `src/config.ts`
+Add:
+
+```ts
+export function validate(config: Config): Config
+```
+
+Returns `config` unchanged, or throws `TypeError` naming the **field** when:
+- `port` is not an integer between 1 and 65535 (`!Number.isInteger(config.port) || config.port < 1 || config.port > 65535`)
+- `host` is empty (`''` — trim before check)
+- `name` is empty
+
+### 3. `src/index.ts`
+Change `resolveConfig` signature to `resolveConfig(file: Partial<Config> = {}, env: Record<string, string | undefined> = process.env): Config`.
+
+Body: `return validate(merge(DEFAULTS, merge(file, fromEnv(env))))` — i.e. file over defaults, env over both, then validate. (Can be written as `merge(merge(DEFAULTS, file), fromEnv(env))` then `validate`.)
+
+### 4. Tests in `src/index.test.ts` (and/or a new test file)
+Add tests covering:
+- env overrides file; file overrides defaults; defaults when file/env empty.
+- `APP_PORT` numeric parsing; `APP_DEBUG` true/1/yes/TRUE/false/0/no case-insensitive.
+- absent/empty env vars left out (defaults/file preserved).
+- `APP_PORT='abc'` throws `TypeError` naming `APP_PORT`; `APP_DEBUG='maybe'` throws naming `APP_DEBUG`.
+- `validate`: port 0, 65536, 1.5 throw naming `port`; empty host/name throw naming `host`/`name`.
+
+### Check
+`bun test` should print all tests passing (currently 1 pass; expect ~all new tests green, 0 fail).
+
+---
+
+Sending to coder now.
+architect · agent_send(coder)
+architect → coder Implement the following changes and verify with `bun test` (0 fail).  1. Create `src/env.ts` exporting `fromEnv(env: Rec…
+architect › I've planned the change and handed it to the coder. Waiting for their report with `bun test` output.
+coder · tree(.)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · json(.)
+coder · bash(ls -la /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · glob(**/*)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now I'll make the changes. First `src/env.ts`:
+coder · write(src/env.ts)
+coder › Now `src/config.ts` — widen `merge`'s first parameter so the env-over-file merge type-checks, and add `validate`:
+coder · edit(src/config.ts)
+coder › Now `src/index.ts`:
+coder · write(import { type Config, DEFAULTS, merge, validate } from './co…)
+coder › Now the tests in `src/index.test.ts`:
+coder · write(import { expect, test } from 'bun:test' import { DEFAULTS, v…)
+coder › One assertion is wrong: `APP_PORT: '0'` parses to 0 but `validate` then rejects port 0, so `resolveConfig` would throw. Removing it:
+coder · edit(test('APP_PORT is parsed as a number', () => {   expect(reso…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All tests pass. Let me commit:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Committed as `dc6cd13`.
+
+**What I changed**
+- `src/env.ts` (new): `fromEnv(env, prefix = 'APP_')` reads `APP_PORT`, `APP_HOST`, `APP_DEBUG`, `APP_NAME`. Undefined/empty values are skipped. `APP_PORT` → `Number(value)`, throws `TypeError` naming `APP_PORT` if NaN. `APP_DEBUG` parsed case-insensitively (`true/1/yes`/`false/0/no`), anything else throws `TypeError` naming `APP_DEBUG`. HOST/NAME stay strings.
+- `src/config.ts`: added `validate(config)` that returns the config unchanged or throws a `TypeError` naming the field — port not an integer in 1–65535 (`!Number.isInteger(...) || < 1 || > 65535`), or host/name empty after `trim()`. Also widened `merge`'s first parameter from `Config` to `Partial<Config>` (with an `as Config` cast) so the plan's `merge(file, fromEnv(env))` type-checks; behavior unchanged.
+- `src/index.ts`: `resolveConfig(file = {}, env = process.env)` now returns `validate(merge(DEFAULTS, merge(file, fromEnv(env))))`.
+- `src/index.test.ts`: added tests for env-over-file, file-over-defaults, defaults when empty, numeric `APP_PORT`, case-insensitive `APP_DEBUG` (`true/1/yes/TRUE/...` and `false/0/no/...`), absent/empty env left out, `APP_PORT='abc'` → `TypeError` naming `APP_PORT`, `APP_DEBUG='maybe'` → `TypeError` naming `APP_DEBUG`, and `validate` rejecting ports `0`/`-1`/`65536`/`1.5`/`NaN` (naming port) and empty/whitespace host and name (naming host/name).
+
+**Decisions the plan didn't spell out**
+- Kept the existing `index.test.ts` file rather than adding a new one; direct `validate` tests import from `config.ts`.
+- Dropped one self-inconsistent assertion I first wrote (`APP_PORT: '0'` parses to 0 but `validate` then rejects port 0, so `resolveConfig` throws).
+- The `merge` signature widening is the one type-related change needed to express `merge(file, fromEnv(env))` exactly as planned.
+
+**Check output**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 10 pass
+ 0 fail
+ 51 expect() calls
+Ran 10 tests across 1 file. [13.00ms]
+```
+coder · agent_send(architect)
+coder → architect Implemented all four changes on branch work/main, committed dc6cd13. bun test: 10 pass, 0 fail, 51 expect calls.  Change…
+coder › Implemented and verified — all four changes are in, committed as `dc6cd13` on `work/main`, and the architect has been handed off with the full report and the `bun test` output (10 pass, 0 fail).
+architect › The coder reports 10 pass, 0 fail, but also flagged a change I didn't specify — widening `merge`'s first parameter. Let me verify the actual state rather than take it on faith, since a type-change to a public function in a module other than the ones I named is the kind of thing worth confirming is actually necessary and not a sign of something off.
+architect · read(src/config.ts)
+architect · read(src/index.ts)
+architect · read(src/env.ts)
+architect › The implementation is correct and clean. The `merge` signature change is actually necessary (calling `merge(file, fromEnv(env))` requires the first param to accept `Partial<Config>`), and it doesn't alter runtime behavior — the cast is internal. Everything matches spec.
+architect · bash(bun test 2>&1 | tail -15)
+verified: bun run test passes on work/main
+merged work/main into the repository: fa6ef90 Merge branch 'work/main'
+architect › The job is done.
+
+**What changed:**
+- `src/env.ts` (new) — `fromEnv(env, prefix='APP_')` reading `APP_PORT`/`APP_HOST`/`APP_DEBUG`/`APP_NAME`; absent/empty left out; `PORT` parsed to number and `DEBUG` parsed case-insensitively (`true`/`1`/`yes` vs `false`/`0`/`no`), each throwing a `TypeError` naming the variable on bad input.
+- `src/config.ts` — added `validate(config)` returning the config or throwing `TypeError` naming the field when `port` isn't an integer in 1–65535 or `host`/`name` is empty (trimmed).
+- `src/index.ts` — `resolveConfig(file={}, env=process.env)` now resolves file-over-defaults, env-over-both, then validates.
+- `src/index.test.ts` — tests covering all the required cases.
+
+**Verified:** `bun test` → 10 pass, 0 fail, 51 expect calls.
+
+Note: the coder widened `merge`'s first param to `Partial<Config>` (with an internal cast) so `merge(file, fromEnv(env))` type-checks — a necessary and behavior-preserving adjustment.
+
+  architect    deepseek-v4-pro      2 turns, 32989 tokens
+  coder        deepseek-v4-flash    1 turns, 159362 tokens
+
+main: done
+  bun run test passed
+  merged: fa6ef90 Merge branch 'work/main'
+  this job: 192k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 19¢, on gpt-5 ≈ 17¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"fa6ef90 Merge branch 'work/main'","cost":"this job: 192k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 19¢, on gpt-5 ≈ 17¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":13103,"outputTokens":1966,"cacheReadTokens":17920,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6324,"outputTokens":10190,"cacheReadTokens":142848,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

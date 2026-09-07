@@ -1,0 +1,52 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/search.ts)
+coder · glob(**/*search*)
+coder · glob(**/*.test.*)
+coder · read(src/search.test.ts)
+coder · json(package.json)
+coder · glob(*.{json,toml,lock})
+coder · json(package.json)
+coder · bash(ls -la)
+coder · bash(git status && git branch --show-current)
+coder · edit(src/search.ts)
+coder · edit(src/search.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/search.ts src/search.test.ts && git commit -m "F…)
+verified: bun run test passes on work/main
+merged work/main into the repository: b268bdc Merge branch 'work/main'
+coder › Done.
+
+**What changed**
+- `src/search.ts`: changed the binary-search comparison from `<=` to `<`. Now the search advances past elements strictly below `target`, so `low` converges on the *first* element that is not below `target` — the first equal element when duplicates exist.
+- `src/search.test.ts`: added tests for:
+  - first index among duplicates (`[1, 2, 2, 2, 3]` → 1, all-equal lists → 0)
+  - target below every element → 0
+  - target above every element → length
+
+**Checks**
+`bun test`:
+```
+bun test v1.3.14 (0d9b296a)
+
+
+ 4 pass
+ 0 fail
+ 9 expect() calls
+Ran 4 tests across 1 file. [12.00ms]
+```
+
+No typecheck/lint scripts exist in `package.json` (only `test`), so `bun test` was the only project check to run.
+
+Committed on `work/main` as `d371563`.
+
+  coder        deepseek-v4-pro      1 turns, 55861 tokens
+
+main: done
+  bun run test passed
+  merged: b268bdc Merge branch 'work/main'
+  this job: 56k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"b268bdc Merge branch 'work/main'","cost":"this job: 56k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5390,"outputTokens":1447,"cacheReadTokens":49024,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

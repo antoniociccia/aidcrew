@@ -1,0 +1,80 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/stats.ts)
+architect · glob(**/*.test.*)
+architect · read(src/stats.test.ts)
+architect · bash(ls /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Read the two functions, the existing test, and `package.json` (Bun project, `bun test`). The drift is clear: `wordCount` lowercases and splits on runs of non-`[a-z0-9']`, while `topWords` splits on whitespace, strips punctuation per token, and keeps original case — so `The` and `the` count separately, and its ties come out in insertion order rather than alphabetically. Sending the plan to coder.
+architect · agent_send(Job: extract a shared tokenizer in /private/var/folders/n0/s…)
+architect → coder Job: extract a shared tokenizer in /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-bench-extract-tokeni…
+coder · tree(.)
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · json(package.json)
+coder · git-log()
+coder · write(src/tokenize.ts)
+architect › Plan sent to coder. What I expect back: a small set of commits adding `src/tokenize.ts` with the single `tokenize` export (wordCount's exact current logic), `src/stats.ts` with both functions delegating to it — `topWords` gaining case-insensitive counting and alphabetical tie-breaking, `wordCount` unchanged — plus new tests for the tokenizer and the two stats functions, and the `bun test` output showing all tests passing. Once they report the check passing, I'll confirm the job is done.
+coder · write(import { tokenize } from './tokenize.ts'  /** How many words…)
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · write(import { expect, test } from 'bun:test' import { topWords, w…)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/tokenize.ts src/stats.ts && git commit -m "Extra…)
+coder · bash(git diff f1c4590..HEAD --stat && echo --- && git status --sh…)
+coder › Done. Plan matched the code exactly — no conflicts, no improvisation needed.
+
+**What changed** (2 commits on `work/main`):
+
+1. `src/tokenize.ts` (new) — `tokenize(text)` with wordCount's exact behaviour moved verbatim:
+   `text.toLowerCase().split(/[^a-z0-9']+/).filter((word) => word !== '')`
+2. `src/stats.ts` — `wordCount` is now `tokenize(text).length`; `topWords` counts from `tokenize(text)` in a Map and sorts `b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)` before `slice(0, n)`. No regex/splitting left in the file. Return type stays `[string, number][]`.
+3. `src/tokenize.test.ts` (new) — lowercase, letters/digits/apostrophes, separators/no-empty-words, empty/only-punctuation.
+4. `src/stats.test.ts` — kept the existing wordCount test, added the unchanged-check (`"Don't stop. DON'T!"` → 3, `"a1-b2"` → 2) and topWords tests for case-insensitive counting, alphabetical ties, slicing, and n > distinct words.
+
+**Diff summary (`git diff f1c4590..HEAD --stat`):**
+
+```
+ src/stats.test.ts    | 31 ++++++++++++++++++++++++++++++-
+ src/stats.ts         | 19 +++++++++----------
+ src/tokenize.test.ts | 19 +++++++++++++++++++
+ src/tokenize.ts      |  4 ++++
+ 4 files changed, 62 insertions(+), 11 deletions(-)
+```
+
+**`bun test` from the checkout root:**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 10 pass
+ 0 fail
+ 11 expect() calls
+Ran 10 tests across 2 files. [19.00ms]
+```
+
+Tree is clean, nothing merged by hand.
+coder → architect Done. Plan matched the code exactly — no conflicts, no improvisation needed.  **What changed** (2 commits on `work/main`…
+architect · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+verified: bun run test passes on work/main
+merged work/main into the repository: f4b42bc Merge branch 'work/main'
+architect › Verified on the branch myself: tree is clean, the two commits sit on `work/main`, and `bun test` passes — 10 tests, 0 fail.
+
+**Job done.** What changed:
+- **`src/tokenize.ts`** (new): exports `tokenize(text): string[]` — wordCount's exact behaviour moved verbatim (lowercase, split on runs of anything that isn't letters/digits/apostrophes, no empty words).
+- **`src/stats.ts`**: both functions now delegate to it, no splitting logic left in the file. `wordCount` results are unchanged; `topWords` is fixed by the extraction — counts case-insensitively (`The`/`the` no longer separate), returns the n most frequent as `[word, count]` pairs, most frequent first, ties broken alphabetically.
+- **Tests**: new `src/tokenize.test.ts` plus expanded `src/stats.test.ts` covering the drift fix, alphabetical ties, and slicing.
+
+Verified with the project's own check (`bun test`): all 10 tests pass. Ready for the harness to run the check and merge.
+
+  architect    glm-5.3-flash        2 turns, 20299 tokens
+  coder        deepseek-v4-flash    1 turns, 65144 tokens
+
+main: done
+  bun run test passed
+  merged: f4b42bc Merge branch 'work/main'
+  this job: 85k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"f4b42bc Merge branch 'work/main'","cost":"this job: 85k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":3653,"outputTokens":2438,"cacheReadTokens":14208,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":13316,"outputTokens":2036,"cacheReadTokens":49792,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

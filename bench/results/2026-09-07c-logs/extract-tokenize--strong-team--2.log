@@ -1,0 +1,59 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/stats.ts)
+architect · bash(ls -la && cat package.json 2>/dev/null && find . -maxdepth 3…)
+architect · read(src/stats.test.ts)
+architect · agent_send(coder)
+architect → coder Extract a shared tokenizer and fix topWords, in this repo (branch work/main).  Currently src/stats.ts has wordCount and …
+architect › Plan sent to coder. Expect back: files changed (src/tokenize.ts added, src/stats.ts rewritten, tests added) and `bun test` passing.
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · tree(.)
+coder · write(src/tokenize.ts)
+coder · write(src/stats.ts)
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · edit(src/stats.test.ts)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/tokenize.ts src/tokenize.test.ts src/stats.ts sr…)
+coder › Done. Committed as `938eb96` on `work/main`.
+
+**What changed:**
+
+- **`src/tokenize.ts` (new)** — exports `tokenize(text)` using exactly the plan's implementation: `text.toLowerCase().split(/[^a-z0-9']+/).filter((word) => word !== '')`, with a doc comment.
+- **`src/stats.ts`** — both functions now import and use `tokenize`. `wordCount` returns `tokenize(text).length` (results unchanged, since it was the same tokenization). `topWords` counts `tokenize(text)` tokens in a Map and sorts with `(a, b) => b[1] - a[1] || a[0].localeCompare(b[0])`, then `slice(0, n)`; old inline whitespace-split tokenization removed.
+- **`src/stats.test.ts`** — kept the existing `wordCount` test; added: case-insensitive counting (`topWords('The the THE cat', 10)` → `[['the', 3], ['cat', 1]]`) and alphabetical tie-breaking (`topWords('zebra apple mango', 10)` → apple, mango, zebra).
+- **`src/tokenize.test.ts`** (new) — lowercasing and apostrophes kept (`tokenize("Don't stop. DON'T!")` → `["don't", "stop", "don't"]`), and punctuation/spaces as separators with no empty entries (`tokenize('one, two;three   four')`).
+
+**Check output (`bun test`, repo root):**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 5 expect() calls
+Ran 5 tests across 2 files. [16.00ms]
+```
+
+Nothing left over; the branch is ready to merge.
+coder → architect Done. Committed as `938eb96` on `work/main`.  **What changed:**  - **`src/tokenize.ts` (new)** — exports `tokenize(text)…
+architect · bash(bun test 2>&1)
+verified: bun run test passes on work/main
+merged work/main into the repository: 68e8baf Merge branch 'work/main'
+architect › Job done. The tokenizer is now extracted into `src/tokenize.ts` (lowercase, runs of `[a-z0-9']`, no empties), and both `wordCount` and `topWords` in `src/stats.ts` use it. `topWords` now counts case-insensitively and sorts most-frequent first with alphabetical tie-breaking, while `wordCount`'s results are unchanged. Tests were added for `tokenize` and for `topWords`'s case-insensitivity and tie-breaking.
+
+Verified with `bun test`: **5 pass, 0 fail** across 2 files.
+
+  architect    deepseek-v4-pro      2 turns, 21530 tokens
+  coder        deepseek-v4-flash    1 turns, 37151 tokens
+
+main: done
+  bun run test passed
+  merged: 68e8baf Merge branch 'work/main'
+  this job: 59k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"68e8baf Merge branch 'work/main'","cost":"this job: 59k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4773,"outputTokens":1525,"cacheReadTokens":15232,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":7164,"outputTokens":1571,"cacheReadTokens":28416,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

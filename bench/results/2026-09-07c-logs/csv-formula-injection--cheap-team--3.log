@@ -1,0 +1,275 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/csv.ts)
+architect · glob(**/*csv*)
+architect · read(src/csv.test.ts)
+architect · read(package.json)
+architect › The fix is small and contained in `src/csv.ts`; the test file exists and the check is `bun test`. Sending the plan.
+architect · agent_send(Job: neutralise CSV formula injection in src/csv.ts (workspa…)
+architect → coder Job: neutralise CSV formula injection in src/csv.ts (workspace root is the checkout; branch work/main; commit as you go)…
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder › Now let me make the changes:
+coder · edit(src/csv.ts)
+architect › Plan sent to coder. The change is confined to `src/csv.ts` (prefix a single quote and fully quote string fields starting with `=`, `+`, `-`, `@`, tab or CR, keyed off `typeof cell === 'string'` so negative numbers stay plain, with internal double quotes doubled) plus injection-coverage tests in `src/csv.test.ts`. I expect back the diff, the new test list, and a passing `bun test` output; once the report confirms that, the job is done.
+coder · edit(src/csv.test.ts)
+coder › Wait, I need to check the tab literal in the test. The spec says `\ta` → `"'\ta"` (literal tab inside quotes). In my test, `'\ta'` in JS source IS a literal tab character, and the expected `"'\ta"` — let me reconsider. In a JS string literal, `'\t'` is the tab character. So `'\\ta'` in the source would be backslash-t. Let me fix.
+
+The specification says: `'\ta'` → `"'\ta"` (literal tab inside quotes). So the input is a literal tab character followed by 'a'. The expected output is `"'` + tab + `a"`. In JS source, a literal tab can be written as `'\t'`. So:
+
+- Input: `'\ta'` — this is correct, it's a literal tab followed by 'a'.
+- Expected: `'"\'\\ta"'` — hmm, wait.
+
+Let me think carefully. The expected output string contains: `"`, `'`, tab, `a`, `"`. 
+
+In JS source, to represent the output `"'` followed by a literal tab then `a"`, we write: `'"\'\\ta"'`? No. Let me write it out:
+
+Expected output character sequence: `"`, `'`, TAB, `a`, `"`.
+
+As a JS string literal: `"\"'\ta\""` — here `\t` is the tab escape within the string. Actually in a double-quoted string, `\t` represents tab.
+
+So: `'"\'\\ta"'` would be wrong. Let me write it properly.
+
+The expected output is the 5 characters: `"`, `'`, TAB, `a`, `"`.
+
+As a JS string literal using double quotes: `"\"'` — wait, that won't work for embedding tab. Let me use a template approach. The string is `"'` + `\t` + `a"`. So:
+
+```js
+expect(toCsv([['\ta']])).toBe('"\'\\ta"\n')
+```
+
+Wait, `'"\'\\ta"'` — inside single quotes... actually the test is using `'...'` single-quoted JS strings. Let me write the expected as: `"'" + ... no.
+
+Let me just use double quotes for the expected string. The expected character sequence is: `"`, `'`, TAB, `a`, `"`, `\n`.
+
+Using a double-quoted JS literal: `"\"'\ta\"\n"`. Here `\"` is a literal `"`, `'` is a plain quote, `\t` is tab, `a`, `\"` is a literal `"`, `\n` is newline.
+
+Let me verify my current test source:
+
+```js
+expect(toCsv([['\ta']])).toBe('"\'\\ta"\n')
+```
+
+In `'...'` (single-quoted): `'"\'` = `"` `'`. Then `\\t` = backslash `t` — that's WRONG, it produces a literal backslash followed by t, not a tab.
+
+I need `\t` (single backslash t) inside the single-quoted string to get the actual tab. So:
+
+```js
+expect(toCsv([['\ta']])).toBe('"\'\\ta"\n')
+```
+
+Hmm, in a single-quoted JS string `'...'`, `\t` would be a tab (the escape), `\\` would be a literal backslash. So `'"\'\\ta"'` is: `"`, `'`, `\`, `t`, `a`, `"` — with `\\` being a literal backslash and `t` being `t`, giving `\t` as two characters backslash+t. That's wrong.
+
+Let me write it more clearly. I want the expected output string to have these characters: `"`, `'`, TAB, `a`, `"`, newline.
+
+In a single-quoted string, I write: `'"\'\ta"\n'`? No wait, in single-quoted strings `'` needs escaping but `"` doesn't.
+
+So: `'"\'` — hmm, `'` in single quotes: the first char. Let me build: 
+
+`"'" + '\ta' + '"' + '\n'`
+
+Actually the cleanest is to concatenate or use the tab char. Let me just fix the file. The current test has `'"\'\\ta"\n'` for the tab case — let me verify: `'"\'` = `", '` — wait.
+
+`'"\'\\ta"\n'` in single quotes:
+- `"` → `"`
+- `\'` → `'`
+- `\\` → `\`
+- `t` → `t`
+- `a` → `a`
+- `"` → `"`
+- `\n` → newline
+
+So this produces: `"'\ta"\n` where `\t` is literally backslash-t (two chars). That's the WRONG output. The spec wants a literal tab.
+
+Let me fix the test to use a literal tab character. In a single-quoted JS string, `\t` gives the tab character. So the expected should be `'"\'\ta"\n'`:
+
+- `"` → `"`
+- `\'` → `'`
+- `\t` → TAB
+- `a` → `a`
+- `"` → `"`
+- `\n` → newline
+
+That produces: `"`, `'`, TAB, `a`, `"`, newline. Correct!
+
+But wait — actually in a single-quoted string, do I need `\'` or just `'`? Inside single quotes, an unescaped `'` ends the string, so yes I need `\'`.
+
+Let me rewrite the tab and CR tests:
+
+```js
+expect(toCsv([['\ta']])).toBe('"\'\\ta"\n')
+```
+
+This is the CURRENT content. Let me check what I actually wrote in the file.
+coder · read(src/csv.test.ts)
+coder › I need to fix the tab and CR expectations. The expected output should contain literal tab/CR, not backslash-t/backslash-r. Let me use double-quoted strings or explicit escapes.
+
+For `'\ta'` (a literal tab then 'a'), the expected output is: `"`, `'`, TAB, `a`, `"`. In a single-quoted string: `'"\'\ta"\n'`:
+
+- `"` → `"`
+- `\'` → `'`
+- `\t` → TAB
+- `a` → `a`
+- `"` → `"`
+- `\n` → newline
+
+Similarly for CR.
+
+Let me fix lines 17-18:
+coder · edit(src/csv.test.ts)
+coder · error: oldString and newString are identical: nothing to do
+coder › Let me reconsider. In a single-quoted JS string `'"\'\\ta"\n'`:
+
+Parsing char by char:
+1. `"` → `"`
+2. `\'` → `'`
+3. `\\` → `\` (literal backslash)
+4. `t` → `t`
+5. `a` → `a`
+6. `"` → `"`
+7. `\n` → newline
+
+Result: `"'\ta"` + newline, where `\t` is TWO characters (backslash, t). That's wrong — it represents the literal text `\t` in the output, but we want a literal TAB character.
+
+To get a literal TAB, I need `\t` escape (single) inside the string, which means the source must be `\t` not `\\t`. So: `'"\'\ta"\n'`:
+
+1. `"` → `"`
+2. `\'` → `'`
+3. `\t` → TAB
+4. `a` → `a`
+5. `"` → `"`
+6. `\n` → newline
+
+Result: `"` `'` TAB `a` `"` newline. Correct!
+
+Let me fix:
+coder · edit(src/csv.test.ts)
+coder › Wait, let me carefully parse `'"\\\'\ta"\n'`:
+
+1. `"` → `"`
+2. `\\` → `\`
+3. `\'` → `'`
+4. `\t` → TAB
+5. `a` → `a`
+6. `"` → `"`
+7. `\n` → newline
+
+That gives: `"` `\` `'` TAB `a` `"` — that has an extra backslash before the quote! Wrong.
+
+Let me be very careful. I want output: `"`, `'`, TAB, `a`, `"`.
+
+In a single-quoted string I need to escape `'` as `\'` and `"` is fine as-is (double quotes don't need escaping in single-quoted strings).
+
+So the source should be: `'"\'\ta"\n'`
+
+Parsing:
+1. `"` → `"`
+2. `\'` → `'`
+3. `\t` → TAB
+4. `a` → `a`
+5. `"` → `"`
+6. `\n` → newline
+
+That's exactly right. My source should be `'"\'\ta"\n'`. Let me check what's currently in the file now.
+coder · read(src/csv.test.ts)
+coder › I need to fix this. The correct source for the expected value is `'"\'\ta"\n'`. Let me look at the raw bytes carefully. The current line 17 is:
+
+`  expect(toCsv([['\ta']])).toBe('"\\\'\ta"\n')`
+
+Breaking down `'"\\\'\ta"\n'`:
+- `"` 
+- `\\` → `\`
+- `\'` → `'`
+- `\t` → TAB
+- `a`
+- `"`
+- `\n`
+
+Result: `"\` + `'` + TAB + `a` + `"` — that's `"` then `\` then `'`... wrong, extra backslash.
+
+I want just `"`, `'`, TAB, `a`, `"`. So source should be `'"\'\ta"\n'`:
+
+- `"`
+- `\'` → `'`
+- `\t` → TAB
+- `a`
+- `"`
+- `\n`
+
+Let me fix:
+coder · edit(expect(toCsv([['\ta']])).toBe('"\\\'\ta"\n'))
+coder · error: oldString and newString are identical: nothing to do
+coder › I'm confusing myself with escaping. Let me use a different, clearer approach — use double-quoted strings for the expected values, where `"` needs escaping as `\"` but `'` doesn't.
+
+For tab case, expected output = `"`, `'`, TAB, `a`, `"`, newline.
+
+In a double-quoted string: `"\"'\ta\"\n"`:
+- `\"` → `"`
+- `'` → `'`
+- `\t` → TAB
+- `a` → `a`
+- `\"` → `"`
+- `\n` → newline
+
+That's correct! Let me rewrite both lines using double-quoted strings.
+coder · edit(expect(toCsv([['\ta']])).toBe("\"'\ta\"\n")   expect(toCsv([…)
+coder › Let me verify this parses correctly. Line 17 now: `expect(toCsv([['\ta']])).toBe("\"'\ta\"\n")`
+
+`"\"'\ta\"\n"`:
+- `\"` → `"`
+- `'` → `'`
+- `\t` → TAB
+- `a` → `a`
+- `\"` → `"`
+- `\n` → newline
+
+Result: `"` `'` TAB `a` `"` newline. Correct!
+
+Now let me run the tests:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 6 tests pass with 12 expect() calls. Let me verify the final state of both files and commit.
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder › Everything looks correct. Let me verify line 9 and the tab/CR tests one more time by running the tests with verbose output:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Let me also do a quick sanity check on the tab and CR behavior manually, ensuring the expected strings match what the code produces:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · error: command failed with exit code 1 error: Cannot find module './src/csv.ts' from '/private/tmp/sanity.ts'  Bun v1.3.14 (mac…
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › The tests are confirmed correct. Now let me commit:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › The diff looks correct. Let me commit:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Let me confirm the commit is clean and report back:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · agent_send(architect)
+coder → architect Job done. Neutralised CSV formula injection in src/csv.ts and added tests.  ## Diff of src/csv.ts ```diff  function fiel…
+coder › The work is complete. I've:
+
+1. **Modified `src/csv.ts`** — added the formula-injection guard in `field()` that checks `typeof cell === 'string'` (so numbers never get the prefix) and `/^[=+\-@\t\r]/` to catch risky first characters, wrapping them with a leading single quote inside double quotes.
+
+2. **Added 5 tests** (plus kept the existing comma test) covering injection payloads with quotes, every risky first character, numbers (including negative), unchanged existing quoting, and the combined risky-prefix-with-comma case.
+
+3. **Verified** with `bun test` — all 6 tests pass with 12 expect() calls.
+
+4. **Committed** as `1a4c4a6` on branch `work/main`, working tree clean.
+
+Done and reported back to the architect.
+verified: bun run test passes on work/main
+merged work/main into the repository: 9904e1a Merge branch 'work/main'
+architect › Job done. `field` in `src/csv.ts` now guards on `typeof cell === 'string'` and, when the text starts with `=`, `+`, `-`, `@`, tab or CR, returns it fully double-quoted with a single quote prefixed (`"'=…"`), so spreadsheets treat it as text; numbers pass through plainly including negatives, and the existing comma/quote/newline quoting with doubled double quotes is untouched. Verified by the project's check `bun test`: 6 pass, 0 fail — covering the HYPERLINK payload, every risky first character, negative numbers, unchanged existing quoting, and the risky-prefix-plus-comma case. Committed as `1a4c4a6` on `work/main` with a clean tree.
+
+  architect    glm-5.3-flash        2 turns, 17564 tokens
+  coder        deepseek-v4-flash    1 turns, 202463 tokens
+
+main: done
+  bun run test passed
+  merged: 9904e1a Merge branch 'work/main'
+  this job: 220k tokens, 0.5¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9904e1a Merge branch 'work/main'","cost":"this job: 220k tokens, 0.5¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":3795,"outputTokens":2441,"cacheReadTokens":11328,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":17807,"outputTokens":6096,"cacheReadTokens":178560,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

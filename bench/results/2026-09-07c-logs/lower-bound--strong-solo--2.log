@@ -1,0 +1,44 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/search.ts)
+coder · tree(.)
+coder · read(src/search.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current)
+coder · edit(src/search.ts)
+coder · edit(src/search.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/search.ts src/search.test.ts && git commit -m "F…)
+verified: bun run test passes on work/main
+merged work/main into the repository: f368a87 Merge branch 'work/main'
+coder › Done.
+
+Changed `src/search.ts`: the comparison in the binary search was `<=`, which skipped over equal elements and made the returned index point after the last equal. It is now `<`, so `low` lands on the first element that is not below `target` — the first equal element when there are duplicates.
+
+Added tests in `src/search.test.ts` covering:
+- target below every element → 0
+- target above every element → length
+- equal elements → index of the first of them (including all-equal and edge positions)
+
+Checks:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 8 expect() calls
+Ran 4 tests across 1 file. [14.00ms]
+```
+
+Committed as `e83fa73` on `work/main`.
+
+  coder        deepseek-v4-pro      1 turns, 43806 tokens
+
+main: done
+  bun run test passed
+  merged: f368a87 Merge branch 'work/main'
+  this job: 44k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 3¢, on gpt-5 ≈ 2¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"f368a87 Merge branch 'work/main'","cost":"this job: 44k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 3¢, on gpt-5 ≈ 2¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4947,"outputTokens":1099,"cacheReadTokens":37760,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

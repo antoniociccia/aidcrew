@@ -1,0 +1,41 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/slugify.ts)
+coder · bash(ls -la && cat package.json 2>/dev/null)
+coder · glob(**/*slugify*)
+coder · read(src/slugify.test.ts)
+coder · bash(git status --short && git branch --show-current)
+coder · edit(src/slugify.ts)
+coder · edit(src/slugify.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/slugify.ts src/slugify.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: a28fd56 Merge branch 'work/main'
+coder › Fixed `slugify` in `src/slugify.ts` and added tests.
+
+**What changed**
+- `slugify` now calls `.normalize('NFD')` first, then removes combining diacritical marks (`\u0300-\u036f`), so accented Latin letters collapse to their base letter before lowercasing and punctuation handling. The existing `[^a-z0-9]+` → `-` and leading/trailing dash trimming stay unchanged, so runs of non-letter/digit chars still become a single dash.
+- `src/slugify.test.ts` now covers: `Crème Brûlée` → `creme-brulee`, punctuation/dash runs collapsing, leading/trailing dashes, and empty/punctuation-only input returning `''`.
+
+**Checks**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 6 expect() calls
+Ran 5 tests across 1 file. [13.00ms]
+```
+
+Committed on `work/main` as `01db3fa Fix slugify to strip accents and add tests`.
+
+  coder        deepseek-v4-pro      1 turns, 47658 tokens
+
+main: done
+  bun run test passed
+  merged: a28fd56 Merge branch 'work/main'
+  this job: 48k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 3¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a28fd56 Merge branch 'work/main'","cost":"this job: 48k tokens, 1¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 3¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4926,"outputTokens":1644,"cacheReadTokens":41088,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,52 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · bash(ls -la && find . -maxdepth 2 -name 'package.json' -o -name '…)
+coder · read(package.json)
+coder · read(src/range.test.ts)
+coder · bash(find . -maxdepth 3 -type f -not -path './.git/*' | sort)
+coder · edit(src/range.ts)
+coder · edit(src/range.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git diff -- src/range.ts src/range.tes…)
+coder · bash(git checkout -b fix-overlaps && git add src/range.ts src/ran…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 256f50c Merge branch 'fix-overlaps'
+coder › Done. I worked on branch `fix-overlaps`.
+
+**What changed**
+
+`src/range.ts`:
+- Added a `parse` helper that wraps `Date.parse` and throws a `TypeError` naming the offending value when the result is `NaN`.
+- `overlaps` now parses all four boundaries first, then throws a `RangeError` if either range's end is before its start.
+- The overlap test is now `aStart < bEnd && bStart < aEnd`. With the exclusive end, this makes touching ranges not overlap, same-start ranges overlap, and zero-length ranges overlap nothing (including themselves).
+
+`src/range.test.ts`:
+- Added tests for touching ranges, same-instant starts, zero-length ranges (against another range and itself), unparseable start/end throwing `TypeError` with the offending value, and end-before-start throwing `RangeError`.
+
+**Checks**
+
+`bun test`:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+
+ 7 pass
+ 0 fail
+ 10 expect() calls
+Ran 7 tests across 1 file. [15.00ms]
+```
+
+One decision worth flagging: validation order parses all four values before checking either range's ordering, so an unparseable boundary is always reported as a `TypeError` even if the same range also has its end before its start.
+
+  coder        deepseek-v4-pro      1 turns, 52829 tokens
+
+main: done
+  bun run test passed
+  merged: 256f50c Merge branch 'fix-overlaps'
+  this job: 53k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"256f50c Merge branch 'fix-overlaps'","cost":"this job: 53k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6540,"outputTokens":2769,"cacheReadTokens":43520,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

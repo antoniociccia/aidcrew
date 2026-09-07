@@ -1,0 +1,51 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/queue.ts)
+coder · tree(.)
+coder · read(src/queue.test.ts)
+coder · json(.)
+coder › I'll read the task carefully. The current `Queue` starts each job immediately on push (all at once), so jobs overlap. Requirements:
+
+1. Jobs run one after another, in push order.
+2. A job starts only after the one before it has finished.
+3. Jobs never start synchronously inside `push`.
+4. Throwing jobs are recorded in `errors` and don't stop later jobs.
+5. `drain` waits for every job pushed so far, *including* jobs pushed while draining.
+6. `push` stays synchronous, returns nothing.
+
+Let me check the git state before changing anything.
+coder · bash(git status && git log --oneline -5)
+coder › My plan: chain each job onto a tail promise so jobs run strictly in sequence (each starts only after the previous resolves), and make `drain` loop until the tail is idle (so jobs pushed while draining are picked up).
+coder · write(src/queue.ts)
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder · bash(bun test 2>&1)
+coder › All 10 tests pass. Let me commit.
+coder · bash(git add src/queue.ts src/queue.test.ts && git commit -q -m "…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 20e0049 Merge branch 'work/main'
+coder › ## What I changed
+
+**`src/queue.ts`** — replaced the "start each job immediately" design with a serial chain:
+
+- `Queue` now keeps a single `#tail: Promise<void>` (starting as `Promise.resolve()`). Each `push` chains the job with `this.#tail = this.#tail.then(...)`, so a job's callback only runs after the promise of the job before it has resolved — strictly in push order. Because `.then` callbacks are scheduled as microtasks, a job never starts synchronously inside `push` (even for the first job on an already-resolved tail).
+- The job runs inside `try { await job() } catch …`, so a throw is pushed onto `errors` (converting non-`Error` causes the same way the old code did) and the chain stays resolved — later jobs still run, and `drain` never rejects because of a throwing job.
+- `drain` loops: it captures the current `#tail`, awaits it, and returns only when the tail it awaited is still the current one. If a job was pushed while draining (from outside, or by a job itself), `#tail` has moved on, so it awaits the new tail too. `push` is still synchronous and returns `void`.
+
+**`src/queue.test.ts`** — kept the original test and added coverage for: strict push-order execution, never running two jobs at once (max concurrency of 1), no synchronous start inside `push`, a later job starting only after the earlier one finished, a throwing job being recorded while later jobs still run, non-`Error` throws, `drain` resolving despite a throw, and `drain` waiting for jobs pushed while draining — both from outside and from a job itself.
+
+## Checks
+
+`bun test` (the only project script) — **10 pass, 0 fail** (12 `expect` calls).
+
+One thing I decided that the plan didn't spell out: `drain` uses an idle-wait loop (wait for the tail, and if new work was pushed meanwhile, wait again) rather than awaiting a single snapshot, because awaiting just the captured tail would not cover jobs pushed after `drain()` was called. This means `drain` resolves at the first quiescent point after it was invoked, which is the natural reading of "including jobs pushed while draining".
+
+  coder        deepseek-v4-flash    1 turns, 101078 tokens
+
+main: done
+  bun run test passed
+  merged: 20e0049 Merge branch 'work/main'
+  this job: 101k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"20e0049 Merge branch 'work/main'","cost":"this job: 101k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5166,"outputTokens":11944,"cacheReadTokens":83968,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

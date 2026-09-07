@@ -1,0 +1,72 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/cli.ts)
+architect · read(src/store.ts)
+architect · glob(**/*.test.ts)
+architect · bash(ls && cat package.json)
+architect · read(src/cli.test.ts)
+architect › The plan is clear from `src/cli.ts`, `src/store.ts`, and `src/cli.test.ts` (tests run with `bun test`). Sending it to coder.
+architect · agent_send(Job: add a `done <id>` command to the todo CLI. Repo checkou…)
+architect → coder Job: add a `done <id>` command to the todo CLI. Repo checkout: run everything in /private/var/folders/n0/s619yhq953bdp1k…
+coder · bash(pwd && git status && git branch --show-current)
+coder · tree(.)
+coder · read(src/store.ts)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · json(.)
+coder › Small, clean repo. Let me make the changes.
+coder · edit(src/store.ts)
+architect › Plan sent to coder. Waiting on their report: `bun test` passing (new markDone/render/command tests plus the existing one), with the three files changed as specified — `markDone` in store.ts (non-mutating, RangeError naming the id), the `done <id>` branch in cli.ts with `error:`/exit-1 paths, and `[x]`/`[ ]` rendering. Once they report back, I'll have them confirm the check and call the job done.
+coder · edit(src/cli.ts)
+coder › Now the tests:
+coder · write(src/cli.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 8 pass. Let me check whether there's any typecheck config, then commit.
+coder · glob(**/*.json)
+coder · bash(git diff --stat)
+coder › No tsconfig/lint — the project check is `bun test`. Committing in small pieces:
+coder · bash(git add src/store.ts && git commit -q -m "Add markDone and r…)
+coder · bash(bun test 2>&1 && git status --short)
+coder › Done. All three files changed, committed in three small commits on `work/main`, working tree clean.
+
+**What changed**
+
+1. **src/store.ts** — Added `markDone(todos, id)` returning a new array (existing todos passed through by reference; matched one replaced with `{ ...todo, done: true }`; input untouched). Throws `new RangeError(\`no todo with id ${id}\`)` when no match. `render` now emits `${id}. [${done ? 'x' : ' '}] ${text}`.
+
+2. **src/cli.ts** — Added the `done` branch in `run`. Missing arg or non-integer `Number(rest[0])` → `error: ${rest[0]} is not a whole number id\n`, code 1, todos unchanged. Success → `done: ${todo.text}\n`, code 0, todos from `markDone`. `RangeError` → `error: ${err.message}\n`, code 1, todos unchanged. Usage line updated to `usage: todo add <text> | done <id> | list`.
+
+3. **src/cli.test.ts** — Kept the original test; added 7: `markDone` marks-and-returns, doesn't mutate the original, throws a RangeError naming the id; `render` shows `[x]`/`[ ]`; and `run(['done', ...])` happy path, `'abc'` and unknown `'99'` rejection (each one `error:`-prefixed line, code 1, todos unchanged).
+
+**Check output** (`bun test`, the only project script — no lint/tsconfig exists):
+
+```
+bun test v1.3.14 (0d9b296a)
+ 8 pass
+ 0 fail
+ 19 expect() calls
+Ran 8 tests across 1 file. [16.00ms]
+```
+
+One decision the plan left open: when no argument is given at all, `rest[0]` is `undefined`, so per the specified template the error prints `error: undefined is not a whole number id`. I used the template literally rather than inventing a different message for the empty case.
+coder · agent_send(architect)
+coder → architect Job complete: `done <id>` command added to the todo CLI on branch work/main. Three commits (store, cli, tests). `bun tes…
+coder › Handed off to the architect with the check output and the one judgment call (empty-argument error message follows the template literally, printing `undefined`).
+verified: bun run test passes on work/main
+merged work/main into the repository: 97cbc62 Merge branch 'work/main'
+architect › Job done. The `done <id>` command is in on work/main: `markDone(todos, id)` in src/store.ts returns a new list with the todo marked done (original untouched) and throws a RangeError naming the id when absent, `render` shows `[x]`/`[ ]`, and src/cli.ts handles `done <id>` — printing `done: <text>` on success, or one `error:` line with exit code 1 and unchanged todos for a non-whole-number or unknown id. Verified by `bun test`: 8 pass, 0 fail, including the original test, with the tree clean and committed.
+
+The judgment call is fine as is: the spec only requires an `error:` line naming the id with exit 1 and todos unchanged, which `error: undefined is not a whole number id` satisfies for a missing argument — no change needed.
+
+  architect    glm-5.3-flash        2 turns, 19070 tokens
+  coder        deepseek-v4-flash    1 turns, 82091 tokens
+
+main: done
+  bun run test passed
+  merged: 97cbc62 Merge branch 'work/main'
+  this job: 101k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"97cbc62 Merge branch 'work/main'","cost":"this job: 101k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":4414,"outputTokens":3008,"cacheReadTokens":11648,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6869,"outputTokens":3030,"cacheReadTokens":72192,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

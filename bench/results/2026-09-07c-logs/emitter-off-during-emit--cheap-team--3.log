@@ -1,0 +1,68 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/emitter.ts)
+architect · bash(ls && cat package.json)
+architect · glob(**/*.test.ts)
+architect · read(src/emitter.test.ts)
+architect › The bug is in `emit` (src/emitter.ts:30-38): it iterates the **live** array, so when a listener calls `off` during emit — which `once` always does — every later listener shifts down one and the loop skips it. Fixing it means iterating a snapshot taken at the start of emit, which also gives the "added during emit waits until next emit" and "removed by another listener still runs" semantics the spec asks for. Tests live in src/emitter.test.ts (bun test). Sending the plan:
+architect · agent_send(Job: fix Emitter.emit in src/emitter.ts so no listener is sk…)
+architect → coder Job: fix Emitter.emit in src/emitter.ts so no listener is skipped when listeners are added/removed during emit.  BUG (sr…
+coder · read(src/emitter.ts)
+coder · read(src/emitter.test.ts)
+coder › Clear job. Making the fix:
+coder · edit(src/emitter.ts)
+coder › Now the tests:
+coder · edit(test('calls a listener with the payload', () => {   const em…)
+architect › Plan sent to coder. In summary:
+
+**Diagnosis** — `emit` (src/emitter.ts:30-38) iterates the live listener array; any `off` during emit (which every `once` wrapper performs) shifts later entries down, so the loop skips the listener after the removed one.
+
+**Plan** — snapshot the list with `.slice()` before iterating; that single change yields all required semantics: every listener registered when emit began runs exactly once in registration order, additions during emit wait for the next emit, once still fires once, off/emit return values are already correct. Six new tests in src/emitter.test.ts cover the once-before-on case, self-removal, removal by a peer, addition during emit, off's return value, and emit on an unknown event.
+
+**Expect back** — the emit diff, the list of tests added, and full `bun test` output showing all tests (existing + new) passing.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All green. Committing:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Job done: emit snapshot fix, in src/emitter.ts only, on branch work/main.  EMIT DIFF (src/emitter.ts):   emit(event: str…
+coder › Work is complete and committed, and the report has been sent to the architect.
+
+**What changed:**
+- `src/emitter.ts` — `emit` now snapshots the listener list with `.slice()` before iterating, so listeners added/removed during emit can't shift entries out from under the loop. Returned `list.length` since every snapshot entry is invoked exactly once.
+- `src/emitter.test.ts` — kept the existing test and added 6 new ones covering all required semantics.
+
+**Check result:** `bun test` → 7 pass, 0 fail, 16 expect() calls.
+
+**Commits** on `work/main`: `d209537` (the emit fix) and `7db3b9b` (the tests).
+architect › Report looks right. Verifying on my checkout before calling it done — running the project's check and confirming the work is committed:
+architect · bash(bun test)
+architect · bash(git status --short --branch && git log --oneline -4)
+verified: bun run test passes on work/main
+merged work/main into the repository: 01ad042 Merge branch 'work/main'
+architect › Job done.
+
+**What changed**
+- `src/emitter.ts` — `emit` now snapshots the listener list with `.slice()` before iterating, so removing or adding listeners during emit (including `once`'s self-`off`) can't shift the iteration; it returns `list.length`, which is exactly the number of listeners called since each snapshot entry is invoked once. `on`/`once`/`off` untouched.
+- `src/emitter.test.ts` — 6 new tests covering: `once` registered before an ordinary listener no longer silences it (and fires exactly once across two emits), a listener removing itself during emit, one removed by a peer still running for that emit, a listener added during emit waiting for the next emit, `off`'s true/false return values, and `emit` returning 0 with no listeners.
+
+**How it was verified**
+- Ran `bun test` on my checkout of `work/main` after the report: **7 pass, 0 fail** (16 expect calls), matching the reported output.
+- Working tree clean; both commits (`d209537`, `7db3b9b`) present on `work/main` with no signature/trailer.
+
+Coder's deviation from the plan — returning `list.length` instead of counting calls — is sound: every entry in the snapshot is invoked exactly once, so the count equals the length.
+
+  architect    glm-5.3-flash        2 turns, 23158 tokens
+  coder        deepseek-v4-flash    1 turns, 57092 tokens
+
+main: done
+  bun run test passed
+  merged: 01ad042 Merge branch 'work/main'
+  this job: 80k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"01ad042 Merge branch 'work/main'","cost":"this job: 80k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":7434,"outputTokens":2732,"cacheReadTokens":12992,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":7040,"outputTokens":2308,"cacheReadTokens":47744,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

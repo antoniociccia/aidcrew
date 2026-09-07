@@ -1,0 +1,67 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/stats.ts)
+architect · glob(**/*.{test,spec}.ts)
+architect · glob(package.json)
+architect · read(src/stats.test.ts)
+architect · read(package.json)
+architect · agent_send(coder)
+architect → coder Implement this plan. Files to touch:  1. Create src/tokenize.ts exporting exactly:  ```ts /** Split text into lower-case…
+coder · tree(.)
+coder · read(src/stats.ts)
+architect › Plan sent to coder. Expecting back: the exact `bun test` output showing all tests pass, with the commit(s) made.
+coder · read(src/stats.test.ts)
+coder · json(package.json)
+coder · bash(git status && git branch --show-current)
+coder › Now I'll create the tokenize module, edit stats, and add tests.
+coder · write(src/tokenize.ts)
+coder · edit(src/stats.ts)
+coder › Now the tests:
+coder · edit(import { expect, test } from 'bun:test' import { topWords, w…)
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me commit.
+coder · bash(git add src/tokenize.ts src/tokenize.test.ts src/stats.ts sr…)
+coder › Done. Here's what changed:
+
+1. **Created `src/tokenize.ts`** exporting `tokenize(text)`, which lower-cases and splits on runs of non-letter/digit/apostrophe characters, filtering empty words.
+2. **Edited `src/stats.ts`** to import `tokenize` and use it in both functions:
+   - `wordCount(text)` is now `return tokenize(text).length` (same behavior as before).
+   - `topWords(text, n)` builds its Map from `tokenize(text)` (no per-word replace/split logic), and the sort is now `b[1] - a[1] || a[0].localeCompare(b[0])` so ties break alphabetically, case-insensitively. Note this is a behavior change: previously `topWords` was case-sensitive and split on whitespace only, whereas now it uses the same tokenization as `wordCount`.
+3. **Added tests** in `src/stats.test.ts` (case-insensitive counting and frequency/tie-breaking order) and created `src/tokenize.test.ts` (lower-casing and splitting).
+
+**Test output (exact):**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 4 expect() calls
+Ran 4 tests across 2 files. [14.00ms]
+```
+
+All 4 tests pass with no failures. Committed as `88bb6c2`.
+coder → architect Done. Here's what changed:  1. **Created `src/tokenize.ts`** exporting `tokenize(text)`, which lower-cases and splits on…
+architect · bash(bun test)
+architect · bash(git status --short && git log --oneline -3)
+architect · read(src/stats.ts)
+architect · read(src/tokenize.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: f917a29 Merge branch 'work/main'
+architect › Job done. The tokenizer was extracted into `src/tokenize.ts` (`tokenize(text)` lower-cases and splits on runs of non-letter/digit/apostrophe characters, no empty words), and both `wordCount` and `topWords` in `src/stats.ts` now use it. `topWords` is fixed by the extraction: it counts case-insensitively and sorts most-frequent-first with alphabetical tie-breaking; `wordCount` results are unchanged. Tests were added in `src/stats.test.ts` and `src/tokenize.test.ts`.
+
+Verified by running `bun test` myself: **4 pass, 0 fail**, across 2 files. Committed as `88bb6c2` on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 26273 tokens
+  coder        deepseek-v4-flash    1 turns, 48738 tokens
+
+main: done
+  bun run test passed
+  merged: f917a29 Merge branch 'work/main'
+  this job: 75k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"f917a29 Merge branch 'work/main'","cost":"this job: 75k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4796,"outputTokens":2277,"cacheReadTokens":19200,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":12648,"outputTokens":1658,"cacheReadTokens":34432,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

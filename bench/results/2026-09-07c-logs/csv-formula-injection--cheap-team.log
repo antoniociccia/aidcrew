@@ -1,0 +1,68 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/csv.ts)
+architect · glob(**/*test*)
+architect · read(src/csv.test.ts)
+architect · read(package.json)
+architect › The fix is small and the spec is precise. Existing code quotes on `/[",\n]/` and doubles inner quotes; the type is `string | number`, so the guard can key off the field being a string. Tests run with `bun test`.
+architect · agent_send(Fix formula injection in src/csv.ts (workspace /private/var/…)
+architect → coder Fix formula injection in src/csv.ts (workspace /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-bench-cs…
+coder › I'll start by reading the current state of the files.
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder › Straightforward change. Let me update the source and tests.
+coder · edit(src/csv.ts)
+coder · edit(src/csv.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+architect › Plan sent to coder. Summary of the job:
+
+**Change** — `src/csv.ts`: `field()` gains a formula guard — string cells starting with `=`, `+`, `-`, `@`, tab or CR get a `'` prefix and are quoted whole; number cells stay plain (so `-1` is never guarded); existing comma/quote/newline quoting with doubled inner quotes is untouched.
+
+**Tests** — `src/csv.test.ts`: cases for `=HYPERLINK(...)`, `+1`, string `-1` vs number `-1`, `@cmd`, tab/CR-led strings, and the unchanged plain and comma/quote paths.
+
+**Check** — `bun test` printing all tests in `src/csv.test.ts` passing with 0 fail.
+
+Expecting back the check output confirming that, then I'll call the job done.
+coder › All tests pass. Let me commit.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done.
+
+**What I changed:**
+- `src/csv.ts`: `field()` now guards string cells starting with `=`, `+`, `-`, `@`, tab or `\r` by prefixing a single quote and quoting the whole field unconditionally. Number cells are written plainly via `String(cell)` (never guarded/quoted), so `-1` stays `-1`. The existing quoting rule (comma/quote/newline → wrapped, inner quotes doubled) is unchanged. Extended the JSDoc on `toCsv` to mention the guard.
+- `src/csv.test.ts`: added tests for the guard (`=HYPERLINK(...)` with doubled quotes, `+1`, `-1` string, `@cmd`, tab/`\r` starts), number `-1` plain, plain `abc` unchanged, and `a"b` double-quote case. Kept the existing comma test.
+
+**Check output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 10 expect() calls
+Ran 6 tests across 1 file. [15.00ms]
+```
+
+Committed as `86b472d Guard string fields against formula injection` on branch `work/main`.
+coder → architect Done.  **What I changed:** - `src/csv.ts`: `field()` now guards string cells starting with `=`, `+`, `-`, `@`, tab or `\…
+verified: bun run test passes on work/main
+merged work/main into the repository: 01d58e3 Merge branch 'work/main'
+architect › The job is done.
+
+**What changed** — `src/csv.ts`: `field()` now guards string cells that begin with `=`, `+`, `-`, `@`, tab or carriage return by prefixing a single quote and quoting the whole field, so `=HYPERLINK(...)` reaches the spreadsheet as text. Number cells are written plainly (negative numbers included), and the existing comma/quote/newline quoting with doubled inner quotes is unchanged.
+
+**How it was verified** — the project's own check, `bun test`, run by coder on branch `work/main` (commit `86b472d`): 6 tests pass, 0 fail, 10 `expect()` calls, covering the guard cases (`=HYPERLINK` with doubled quotes, `+1`, string `-1` vs number `-1`, `@cmd`, tab/CR starts) plus the preserved plain, comma, and embedded-quote paths.
+
+Ready for the harness to run the check on `work/main` and merge.
+
+  architect    glm-5.3-flash        2 turns, 17311 tokens
+  coder        deepseek-v4-flash    1 turns, 35648 tokens
+
+main: done
+  bun run test passed
+  merged: 01d58e3 Merge branch 'work/main'
+  this job: 53k tokens, 0.2¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"01d58e3 Merge branch 'work/main'","cost":"this job: 53k tokens, 0.2¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":3966,"outputTokens":2465,"cacheReadTokens":10880,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":7175,"outputTokens":1337,"cacheReadTokens":27136,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

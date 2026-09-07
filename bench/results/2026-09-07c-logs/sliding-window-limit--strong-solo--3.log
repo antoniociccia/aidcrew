@@ -1,0 +1,72 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(ls -la && find . -maxdepth 2 -type f -not -path './.git/*' |…)
+coder · read(src/window.ts)
+coder · read(package.json)
+coder · bash(find . -name '*.test.ts' -o -name '*.spec.ts' | sort; bun --…)
+coder · edit(src/window.ts)
+coder · write(src/window.test.ts)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/window.test.ts: 32 |     expect(window.remaining('a'))…
+coder · edit(src/window.test.ts)
+coder · bash(bun test)
+coder · read(src/window.ts)
+not done: work not committed (rc/window.ts, src/window.test.ts) — the leader is sent back
+coder › Implemented `SlidingWindow` in `src/window.ts` and added tests in `src/window.test.ts`.
+
+What changed
+- Constructor now throws `RangeError` when `limit < 1` or `windowMs < 1`.
+- Each key keeps its own array of event timestamps in a private `Map<string, number[]>`.
+- `allow(key)` uses a single `now()` reading, prunes events at or before `now - windowMs` (so an event exactly `windowMs` old no longer counts), records only if the pruned count is below `limit`, and returns `false` without recording otherwise.
+- `remaining(key)` returns `limit` minus the number of in-window events, pruning as it goes and deleting the key when it empties.
+
+Checks
+- `bun test` output:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 21 expect() calls
+Ran 6 tests across 1 file. [10.00ms]
+```
+
+Test coverage: RangeError cases for `limit` and `windowMs`, allow up to the limit then deny without recording (verified by expiring events with a controlled clock), the `windowMs`-exact boundary, `remaining` accounting, and key independence.
+coder · bash(git status && git branch --show-current)
+coder · bash(ls -la; find . -maxdepth 2 -type f -not -path './.git/*' | s…)
+coder · bash(git add src/window.ts src/window.test.ts && git commit -m "I…)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 100b2d1 Merge branch 'work/main'
+coder › Committed and re-verified.
+
+- Branch: `work/main`
+- Commit: `462b4ed` — "Implement SlidingWindow rate limiter with tests"
+- Files committed: `src/window.ts` (modified), `src/window.test.ts` (new)
+- Working tree is now clean (`git status` shows nothing to commit).
+
+Checks, run after the commit:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 21 expect() calls
+Ran 6 tests across 1 file. [16.00ms]
+```
+
+Note: the message said "rc/window.ts", but the actual changed files are `src/window.ts` and `src/window.test.ts` — no `rc/` directory exists in the checkout. Those are the two files I committed.
+
+  coder        deepseek-v4-pro      2 turns, 113349 tokens
+
+main: done
+  bun run test passed
+  merged: 100b2d1 Merge branch 'work/main'
+  sent back once
+  this job: 113k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"100b2d1 Merge branch 'work/main'","cost":"this job: 113k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":10037,"outputTokens":5264,"cacheReadTokens":98048,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

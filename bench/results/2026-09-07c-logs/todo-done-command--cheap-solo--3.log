@@ -1,0 +1,98 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/cli.ts)
+coder · read(src/store.ts)
+coder · read(src/cli.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder › Now let me implement the changes. First, add `markDone` to store.ts and update `render`:
+coder · edit(src/store.ts)
+coder › Now update cli.ts:
+coder · edit(src/cli.ts)
+coder · edit(src/cli.ts)
+coder › Now add tests. Let me add tests for `markDone` in a store test and for the command in cli.test.ts. Let me check if there's a store test file:
+coder · glob(src/*.test.ts)
+coder › There's only cli.test.ts. Let me add tests for `markDone` there, plus command tests:
+coder · edit(import { expect, test } from 'bun:test' import { run } from …)
+coder › Now, the plan says "Add tests for markDone and for the command." The markDone tests are in cli.test.ts. Let me consider whether a non-whole-number check should handle `'-1'`. The spec says "an id that is not a whole number". Negative numbers aren't whole numbers, so `Number('-1')` = -1 which is an integer but not whole. Let me reconsider - the task says "not a whole number". Whole numbers are non-negative integers (0, 1, 2...). So `-1` should be rejected as not a whole number, but `Number(-1)` is an integer. My code uses `Number.isInteger` which would accept -1.
+
+The spec says "an id that is not a whole number ... prints one line ... naming the id". Whole numbers are non-negative integers. Let me handle negatives too. But also, a negative id won't match any todo, so it would hit the RangeError path and print "no such todo: -1" with code 1. That's still acceptable per spec (leaves todos unchanged, exit code 1). But "not a whole number" — should -1 be treated as not-whole-number or as no-such-todo?
+
+The phrase "not a whole number" strongly suggests non-negative integers only. Let me reject negatives explicitly as not whole numbers. Actually, let me reconsider: -1 is an integer but not a whole number. So it should print "not a whole number: -1". Let me adjust the check.
+
+Actually, let me reconsider the test I wrote. I included '-1' in the "not a whole number" test. Let me update the CLI check to reject negatives.
+coder · edit(const id = Number(rest[0])     if (!Number.isInteger(id) || …)
+coder › Now let me run the tests:
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/cli.test.ts:  9 |   if (!todos.some((todo) => todo.id =…
+coder › The test `run(['list'], done.todos)` — I passed `done.todos` but `done` is a Todos[] not a Result. `markDone` returns `Todo[]`, so `done.todos` is undefined. Let me fix the test:
+coder · edit(test('list shows done todos as [x] and the rest as [ ]', () …)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me review the final state of the files:
+coder · read(src/cli.ts)
+coder · read(src/store.ts)
+coder › Let me update the usage string to include done. The current usage says `todo add <text> | list | done <id>`. Let me verify the plan doesn't require a specific usage format — the spec doesn't mention it, so leaving it consistent with the new command is good.
+
+Let me commit the work on a branch:
+coder · bash(cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" …)
+coder · bash(git add src/cli.ts src/store.ts src/cli.test.ts && git commi…)
+coder › The work is committed. Let me check if there's a typecheck/lint script to run (package.json only had `test`):
+
+The `package.json` only has a `test` script, which I ran and it passed (7 pass, 0 fail).
+
+Let me also verify the test run one more time to confirm clean output after the commit:
+coder · bash(bun test 2>&1)
+verified: bun run test passes on work/main
+merged work/main into the repository: 5913511 Merge branch 'work/main'
+coder › Everything is done. Here's a summary of what I changed:
+
+## Changes
+
+**`src/store.ts`**
+- Added `markDone(todos, id)`: returns a new list (using `.map`, leaving the input untouched) with the matching todo's `done` set to `true`. Throws a `RangeError` naming the id (via `String(id)`) when no todo has that id.
+- Updated `render` to show done todos as `[x]` and the rest as `[ ]`.
+
+**`src/cli.ts`**
+- Added a `done` command:
+  - Parses the id with `Number()`. If it isn't a whole number (`!Number.isInteger(id) || id < 0`), prints `error: not a whole number: <id>` and exits with code `1`, leaving todos unchanged.
+  - Calls `markDone`; on success prints `done: <text>` with code `0`. If `markDone` throws a `RangeError` (no such id), prints `error: no such todo: <id>` and exits with code `1`, leaving todos unchanged.
+- Updated the usage line to include `done <id>`.
+
+**`src/cli.test.ts`**
+
+Added tests for:
+- `markDone` returning a new list with the right todo done and not mutating the input.
+- `markDone` throwing a `RangeError` naming the id for a missing todo.
+- `list` showing `[x]`/`[ ]`.
+- The `done` command success path (prints `done: <text>`, list shows `[x]`).
+- The `done` command rejecting non-whole-number ids (`abc`, `1.5`, `-1`) with code 1, an `error:` line naming the id, and unchanged todos.
+- The `done` command rejecting a missing id (`99`) with code 1 and unchanged todos.
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 27 expect() calls
+Ran 7 tests across 1 file. [15.00ms]
+```
+
+## Notes / decisions not in the plan
+
+- The plan said "add tests for markDone and for the command" but didn't say where. Since the repo only had `cli.test.ts` (no separate `store.test.ts`), I put the `markDone` tests in `cli.test.ts` alongside the existing command tests.
+- I treated a negative id as "not a whole number" (whole numbers are non-negative), so `done -1` prints `error: not a whole number: -1` rather than falling through to "no such todo". Either path satisfies the spec (code 1, todos unchanged), but this aligns with the "whole number" wording.
+- The state change is committed on the current branch (`work/main`) as a single commit: `32aaf1a Add done command and markDone state change`.
+
+  coder        deepseek-v4-flash    1 turns, 114899 tokens
+
+main: done
+  bun run test passed
+  merged: 5913511 Merge branch 'work/main'
+  this job: 115k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"5913511 Merge branch 'work/main'","cost":"this job: 115k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":11483,"outputTokens":3832,"cacheReadTokens":99584,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,76 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · read(src/roman.ts)
+architect · bash(ls src/ && bun --version && git status && git log --oneline …)
+architect › Small Bun project (`bun test`), one stub file, no tests yet. The plan is clear enough to hand straight over.
+
+**Plan**
+
+`src/roman.ts`:
+
+- `toRoman(n)`: if `!Number.isInteger(n) || n < 1 || n > 3999`, throw `RangeError` naming `n`. Otherwise greedy subtractive table: `M/1000, CM/900, D/500, CD/400, C/100, XC/90, L/50, XL/40, X/10, IX/9, V/5, IV/4, I/1`, appending as `n` is reduced to 0.
+- `fromRoman(text)`: throw `SyntaxError` naming the text for anything that is not a standard numeral — non-strings included (use `String(text)` in the message so the text always appears). Normalize with `toUpperCase()`, then match `/^(M{0,3})(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/` and require the overall match to be non-empty (that regex alone would accept `""`). Sum the matched parts' values. The regex accepts exactly the canonical forms, so `IIII`, `VX`, `IC`, `IL`, `XM`, `VIV` all fail while round-trip holds by construction.
+
+`src/roman.test.ts` (new, `bun:test`):
+
+- `toRoman` table: 1→I, 4→IV, 9→IX, 14→XIV, 40→XL, 90→XC, 400→CD, 900→CM, 1994→MCMXCIV, 2024→MMXXIV, 3888→MMMDCCCLXXXVIII, 3999→MMMCMXCIX.
+- `toRoman` throws `RangeError` for 0, -1, 4000, 1.5, NaN, Infinity.
+- `fromRoman` table in both cases (e.g. `mcmxciv` and `MCMXCIV` → 1994).
+- `fromRoman` throws `SyntaxError` for `""`, `IIII`, `VX`, `IC`, `IL`, `XM`, `VIV`, `ABC`, `I I`, and the message contains the offending text.
+- Round trip: `fromRoman(toRoman(n)) === n` for every n from 1 to 3999.
+
+**Check**: `bun test` exits 0 with all the above passing.
+architect · agent_send(Implement Roman numerals in this Bun project (test script: `…)
+architect → coder Implement Roman numerals in this Bun project (test script: `bun test`).  FILES 1. src/roman.ts — replace the two stubs: …
+coder · bash(pwd && git status && git branch --show-current && git log --…)
+coder · tree(.)
+coder · read(src/roman.ts)
+coder · json(package.json)
+coder · write(src/roman.ts)
+architect › Plan sent to coder. I read the project (Bun, `bun test`, single stub file), specified the implementation precisely — greedy subtractive table for `toRoman` with a RangeError for anything non-integer or outside 1–3999, and a canonical-form regex plus non-empty match for `fromRoman` with a SyntaxError naming the text — plus a test file covering known values, both error types with messages containing the input, and a full 1–3999 round trip.
+
+Expecting back: a commit on `work/main` with `src/roman.ts` and `src/roman.test.ts`, and a `bun test` run that exits 0 with all tests passing. When the report confirms that, I'll call the job done.
+coder › Wait, my fromRoman implementation splits into individual characters, which would break for two-char symbols like CM, CD, etc. Let me reconsider. The plan says "Sum the matched parts". Let me parse the whole matched string properly.
+
+Let me rewrite it to sum based on the matched groups' values directly:
+coder · write(src/roman.ts)
+coder › Wait, that approach only handles the case where part matches exactly one symbol from the table, but "D?C{0,3}" can match "DCC", "CCC", "DC", "CC", "C" etc., which are combinations. My loop only checks if part === symbol for single table entries. That won't handle "CCC" = 300, or "DCC" = 700.
+
+I need to sum the individual symbol values properly. The cleanest approach: iterate through the TABLE in order, and greedily consume from the matched string. But the matched string itself is already a canonical numeral, so I can just walk it with the table, matching the two-char subtractive forms first.
+
+Let me rewrite using a greedy parse over the full matched string:
+coder · write(src/roman.ts)
+coder › Now let me write the test file.
+coder · write(src/roman.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 34 tests pass. Let me commit the two files.
+coder · bash(git add src/roman.ts src/roman.test.ts && git commit -m "Imp…)
+coder › The work is complete. Let me report back to the architect.
+coder · agent_send(architect)
+coder → architect Implemented Roman numerals as planned, on work/main, committed as 34da012 "Implement Roman numeral conversion".  What ch…
+coder › Done. Implemented both files, verified with `bun test` (34 pass, 0 fail), committed on work/main, and reported back to the architect.
+architect · bash(git log --oneline -3 && git status --short && bun test 2>&1 …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 271ce27 Merge branch 'work/main'
+architect › Job done. Coder implemented both functions per the plan and committed as `34da012` on `work/main` (working tree clean); the report's deviation — summing by greedily re-walking the matched region instead of per-capture-group — is sound, since the regex already guarantees canonical form, so the sum is unambiguous.
+
+What changed:
+- `src/roman.ts` — `toRoman`: RangeError naming `n` for non-integers or outside 1–3999, otherwise greedy subtractive table (M, CM, D, CD, C, XC, L, XL, X, IX, V, IV, I). `fromRoman`: SyntaxError naming the text for non-strings, `""`, or anything failing the canonical regex `^(M{0,3})(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$` (case-insensitive via `toUpperCase`), otherwise sums the matched symbols.
+- `src/roman.test.ts` — table values, both error types (asserting the message names the input), case-insensitive parsing, and the 1–3999 round trip.
+
+Verified by running it myself: `bun test` exits 0 with 34 pass, 0 fail, 4040 expect calls.
+
+  architect    glm-5.3-flash        2 turns, 21155 tokens
+  coder        deepseek-v4-flash    1 turns, 72225 tokens
+
+main: done
+  bun run test passed
+  merged: 271ce27 Merge branch 'work/main'
+  this job: 93k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"271ce27 Merge branch 'work/main'","cost":"this job: 93k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":10931,"outputTokens":2736,"cacheReadTokens":7488,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":11429,"outputTokens":3324,"cacheReadTokens":57472,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,81 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/stats.ts)
+architect · glob(**/*.test.ts)
+architect · read(src/stats.test.ts)
+architect · bash(cat package.json && ls)
+architect › The check here is `bun test` (Bun, no other tooling). The drift is clear: `wordCount` lowercases and splits on non-`[a-z0-9']` runs, while `topWords` splits on whitespace and strips non-word chars — which keeps case and can merge differently. Plan going to coder.
+architect · agent_send(Job: extract a shared tokenizer in /private/var/folders/n0/s…)
+architect → coder Job: extract a shared tokenizer in /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-bench-extract-tokeni…
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · tree(.)
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · json(.)
+coder › Now let me make the changes. First the new tokenizer:
+coder · write(src/tokenize.ts)
+coder · write(import { tokenize } from './tokenize.ts'  /** How many words…)
+architect › Plan sent to coder. Summary of what I decided after reading `src/stats.ts` and the test setup:
+
+- **New module `src/tokenize.ts`** exporting `tokenize(text): string[]` with `wordCount`'s exact behaviour: lowercase, split on runs of anything that isn't `a–z`, `0–9` or `'`, drop empties.
+- **`src/stats.ts`** uses it in both functions: `wordCount` becomes `tokenize(text).length` (results unchanged), and `topWords` tokenizes through it — fixing the `'The'`/`'the'` drift — then returns the n most frequent `[word, count]` pairs, count descending, ties broken alphabetically.
+- **Tests**: a new `src/tokenize.test.ts` (case-folding, apostrophes, separators, no empty words) plus `wordCount` regression and `topWords` tests (case-insensitive counts, alphabetical tie-break, slicing, empty input) in `src/stats.test.ts`.
+
+I expect back a diff summary and the full `bun test` output showing all tests passing, with the existing `wordCount` test untouched. When that report arrives I'll verify and call the job done.
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · write(import { expect, test } from 'bun:test' import { topWords, w…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/tokenize.test.ts:  8 | test('keeps apostrophes inside w…
+coder › My digit expectation was wrong — in the prescribed regex digits are word characters (`0-9` is in the class), so they are kept as tokens, not separators. The behaviour must match `wordCount`'s current one, so I'll fix the test to assert the real behaviour:
+coder · edit(src/tokenize.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 10 tests pass. Now commit in small pieces:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Committed on `work/main` as two commits (`89869ad` extract + refactor, `4fa57ab` tests); nothing merged.
+
+**Changes**
+- `src/tokenize.ts` (new): `tokenize(text)` lowercases, splits on `[^a-z0-9']+`, drops empties — exactly `wordCount`'s former implementation, with a doc comment in the file's style.
+- `src/stats.ts`: imports `tokenize` from `'./tokenize.ts'`; `wordCount` is now `return tokenize(text).length` (results unchanged); `topWords` tokenizes via the shared function and sorts `b[1] - a[1] || a[0].localeCompare(b[0])` then `.slice(0, n)`, fixing the case-insensitivity bug and adding the alphabetical tie-break. Existing doc comments kept.
+- `src/tokenize.test.ts` (new): lowercase, apostrophes kept, punctuation splits while digits stay as words, empty/punctuation-only → `[]`.
+- `src/stats.test.ts`: existing wordCount test kept verbatim; added a wordCount regression test, case-insensitive counting, alphabetical tie-break, n-slicing, and empty-text cases.
+
+**One deviation from the plan I want to flag:** the plan described a tokenize test for "punctuation/digits as separators", but digits are *not* separators in the prescribed regex — `0-9` is in the allowed character class, so `'2'` and `'4'` survive as tokens. Since step 1 mandates that exact behaviour and wordCount results must not change, I wrote the test to assert the real behaviour (`'hi, there! 2 fast 4 you'` → `['hi','there','2','fast','4','you']`) rather than expecting digits to be dropped. If you intended digits to be stripped, that would change wordCount's results, so I didn't do it.
+
+**`bun test` output (full):**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 10 pass
+ 0 fail
+ 11 expect() calls
+Ran 10 tests across 2 files. [10.00ms]
+```
+
+No existing test changed meaning: the original `wordCount("Don't stop. DON'T!") === 3` test is untouched and still passes. Diff: 4 files, +52/−10.
+coder → architect Done. Committed on `work/main` as two commits (`89869ad` extract + refactor, `4fa57ab` tests); nothing merged.  **Change…
+architect › The flagged deviation is correct — my plan's phrase "digits as separators" contradicted the prescribed regex, which keeps `0–9` as word characters. Asserting the real behaviour was the right call since `wordCount`'s results must not change. Verifying by running before I call it done:
+architect · bash(bun test 2>&1 && git log --oneline -3 && git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: b385699 Merge branch 'work/main'
+architect › Job done. On branch `work/main`, two commits (`89869ad`, `4fa57ab`), working tree clean:
+
+- **`src/tokenize.ts`** (new) exports `tokenize(text): string[]` — lowercase, split on `[^a-z0-9']+`, no empty words — exactly `wordCount`'s former behaviour.
+- **`src/stats.ts`** now uses it in both functions: `wordCount` is `tokenize(text).length` (results unchanged), and `topWords` tokenizes through it, fixing the `'The'`/`'the'` drift, returning the n most frequent `[word, count]` pairs sorted count-descending with alphabetical tie-break.
+- **Tests**: new `src/tokenize.test.ts` (case-folding, apostrophes, separators, empty input) and extended `src/stats.test.ts` (wordCount regression, case-insensitive counting, tie-break, slicing, empty text). The original `wordCount` test is untouched. Coder's deviation — asserting digits remain tokens per the mandated regex — is correct and was the right call, since stripping digits would change `wordCount`'s results.
+
+Verified by running `bun test` myself: **10 pass, 0 fail**, across both test files.
+
+  architect    glm-5.3-flash        2 turns, 19444 tokens
+  coder        deepseek-v4-flash    1 turns, 80969 tokens
+
+main: done
+  bun run test passed
+  merged: b385699 Merge branch 'work/main'
+  this job: 100k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"b385699 Merge branch 'work/main'","cost":"this job: 100k tokens, 0.3¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":3685,"outputTokens":1871,"cacheReadTokens":13888,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6847,"outputTokens":3722,"cacheReadTokens":70400,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

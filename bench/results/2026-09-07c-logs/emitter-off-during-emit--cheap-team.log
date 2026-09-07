@@ -1,0 +1,88 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/emitter.ts)
+architect · bash(ls && cat package.json)
+architect · bash(find src -type f | head -50 && ls)
+architect · read(src/emitter.test.ts)
+architect › The bug is clear: `emit` walks the live array, so `once`'s wrapper (which calls `off` on itself before firing) shifts the next listener into the index just passed, and that listener is skipped for that event. The fix is snapshot semantics in `emit`; `once` and `off` already behave correctly once that's in place. Sending the plan to coder.
+architect · agent_send(Fix Emitter emit-skips-listeners bug in /private/var/folders…)
+architect → coder Fix Emitter emit-skips-listeners bug in /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-bench-emitter-o…
+coder · read(src/emitter.ts)
+coder · read(src/emitter.test.ts)
+coder › The code matches the description exactly. Let me apply the emit fix and add the tests.
+coder · edit(src/emitter.ts)
+coder · edit(src/emitter.test.ts)
+architect › Plan sent to coder. The fix is a one-spot change — snapshot the listener array at the top of `emit` and iterate the copy — since `once` and `off` already have the right behavior once `emit` stops walking a live array. I asked for six new tests covering self-removal, the once-before-on case, removing another mid-emit, a listener added during emit, `off`'s return value, and a zero-listener emit.
+
+Expecting back: the `emit` diff, the list of added tests, and `bun test` output showing all tests passing on work/main. I'll verify the suite myself before calling the job done.
+coder · bash(bun test 2>&1)
+coder › All 7 tests pass. Now committing.
+coder · bash(git add src/emitter.ts src/emitter.test.ts && git commit -m …)
+coder › Done. Committed as `5727264` on work/main.
+
+## Emit diff (`src/emitter.ts`)
+
+```diff
+   emit(event: string, payload?: unknown): number {
+-    const list = this.#listeners.get(event) ?? []
++    const snapshot = this.#listeners.get(event)?.slice() ?? []
+     let called = 0
+-    for (let at = 0; at < list.length; at++) {
+-      list[at]?.(payload)
++    for (const listener of snapshot) {
++      listener(payload)
+       called += 1
+     }
+     return called
+   }
+```
+
+`on`/`once`/`off` untouched. `emit` snapshots the registered list at emit start and iterates the copy with `for..of` — no index arithmetic, no `?.` guard, each snapshot listener called exactly once.
+
+## Tests added (`src/emitter.test.ts`)
+
+1. Self-removal doesn't skip the next — emit returns 2, calls `['a','b']`.
+2. once before an ordinary listener — first emit returns 2 with `['once','on']`, second returns 1 with `['once','on','on']`.
+3. Removing another not-yet-called listener mid-emit — emit returns 2, b still called once.
+4. A listener added during emit is not called for that emit — first returns 1 `['a']`, second returns 2 `['a','a','late']`.
+5. off return value — true once, then false, and false for an unknown event.
+6. emit with no listeners returns 0.
+
+Existing 'calls a listener with the payload' test kept.
+
+## `bun test` output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 17 expect() calls
+Ran 7 tests across 1 file. [15.00ms]
+```
+
+No deviations from the plan. The fix is complete and verified; nothing left to hand back to the architect.
+coder → architect Done. Committed as `5727264` on work/main.  ## Emit diff (`src/emitter.ts`)  ```diff    emit(event: string, payload?: un…
+architect › Report received. Verifying the suite myself before calling it done.
+architect · bash(bun test 2>&1 && git log --oneline -2 && git status --porcel…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 5f566ac Merge branch 'work/main'
+architect › The job is done.
+
+**What changed** — `src/emitter.ts` `emit` now snapshots the listener list at the start of the call (`this.#listeners.get(event)?.slice() ?? []`) and iterates the copy with `for..of`, so every listener registered when emit began is called exactly once in registration order, even if an earlier listener removes it mid-emit; listeners added during emit wait for the next emit. `on`, `once`, and `off` were untouched — `once` fires exactly once and `off`'s boolean already behave correctly once `emit` stops walking the live array.
+
+**How it was verified** — `src/emitter.test.ts` gained six tests (self-removal not skipping the next listener; once-before-on firing both, with a second emit calling only the ordinary one; removing another not-yet-called listener mid-emit; a listener added during emit deferred to the next emit; `off` returning true once then false, plus false for an unknown event; emit with no listeners returning 0). I ran `bun test` on work/main myself: **7 pass, 0 fail**, working tree clean, change committed as `5727264`.
+
+  architect    glm-5.3-flash        2 turns, 24420 tokens
+  coder        deepseek-v4-flash    1 turns, 33214 tokens
+
+main: done
+  bun run test passed
+  merged: 5f566ac Merge branch 'work/main'
+  this job: 58k tokens, 0.2¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"5f566ac Merge branch 'work/main'","cost":"this job: 58k tokens, 0.2¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":2733,"outputTokens":3959,"cacheReadTokens":17728,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6069,"outputTokens":1801,"cacheReadTokens":25344,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

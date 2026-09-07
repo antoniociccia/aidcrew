@@ -1,0 +1,67 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(ls -la)
+coder · read(src/logger.ts)
+coder · read(package.json)
+coder · tree(src)
+coder · read(src/logger.test.ts)
+coder · bash(cat .git 2>/dev/null; git -C . status 2>&1 | head -20; git -…)
+coder · bash(ls -la .aidcrew && find . -maxdepth 2 -name 'tsconfig*' -o -…)
+coder · bash(bun --version 2>&1)
+coder · read(.aidcrew/config.toml)
+coder · write(src/redact.ts)
+coder · edit(src/logger.ts)
+coder · write(src/redact.test.ts)
+coder · edit(src/logger.test.ts)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/redact.ts src/logger.ts src/redact.test.ts src/l…)
+coder · read(src/redact.ts)
+coder · read(src/logger.ts)
+coder · bash(git status --short && git status --branch --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: 98a2b4f Merge branch 'work/main'
+coder › Done. Here's what I changed and the result.
+
+## Changes
+
+- **`src/redact.ts`** (new) — exports `redact<T>(value: T): T`.
+  - Deep-copies arrays and plain objects (`Object.create(null)` included); primitives are returned as-is.
+  - For each object key, it lowercases the name and redacts the whole value to `'[redacted]'` if it contains any of `password`, `passwd`, `secret`, `token`, `apikey`, `api_key`, `api-key`, or `authorization`.
+  - Any string value elsewhere has `Bearer <token>` redacted to `Bearer [redacted]` (every occurrence, via `/Bearer \S+/g`).
+  - Input is never mutated; non-sensitive values are unchanged.
+
+- **`src/logger.ts`** — `log()` now builds the line from `{ level, message, ...redact(fields) }`, so fields are redacted before serialization. `message` itself is not passed through `redact`, per the request.
+
+- **`src/redact.test.ts`** (new) — 7 tests: deep nesting, case-insensitive key matching, Bearer token redaction (including multiple tokens per string), unchanged non-sensitive values, input non-mutation, and copy semantics for objects/arrays.
+
+- **`src/logger.test.ts`** — added a test asserting secrets in fields are redacted in the emitted JSON line.
+
+## Check output
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 14 expect() calls
+Ran 9 tests across 2 files. [16.00ms]
+```
+
+Committed on `work/main` as `d98e620` ("Redact secrets in log fields"); working tree is clean.
+
+## Decisions worth flagging
+
+- I applied "in any case" only to the key-name matching, as written; the `Bearer ` match is literal and case-sensitive.
+- I defined a Bearer token as the run of non-whitespace characters after `Bearer `, so `"got Bearer abc123 ok"` becomes `"got Bearer [redacted] ok"`. A token immediately followed by punctuation (e.g. `Bearer abc.`) would have the punctuation consumed as part of the token — say the word if you'd like that boundary tightened.
+- Only the `fields` argument is redacted; `level` and `message` pass through untouched.
+
+  coder        deepseek-v4-pro      1 turns, 131551 tokens
+
+main: done
+  bun run test passed
+  merged: 98a2b4f Merge branch 'work/main'
+  this job: 132k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 13¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"98a2b4f Merge branch 'work/main'","cost":"this job: 132k tokens, 4¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 13¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6485,"outputTokens":11018,"cacheReadTokens":114048,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

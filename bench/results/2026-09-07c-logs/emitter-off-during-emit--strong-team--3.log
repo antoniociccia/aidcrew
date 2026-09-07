@@ -1,0 +1,116 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/emitter.ts)
+architect · glob(**/*emitter*)
+architect · read(src/emitter.test.ts)
+architect · glob(package.json)
+architect · read(package.json)
+architect · bash(bun test 2>&1)
+architect › Baseline check passes (`bun test`: 1 test). Here is the plan.
+
+## Plan: fix emit so mid-emit listener changes never skip or silence listeners
+
+### Files to touch
+
+**1. `src/emitter.ts` — `emit` only**
+
+Replace the loop body of `emit` so it iterates over a snapshot of the listener list taken at the start of the call, not the live array:
+
+```ts
+emit(event: string, payload?: unknown): number {
+  const list = this.#listeners.get(event) ?? []
+  const snapshot = [...list] // listeners registered when emit began, in order
+  let called = 0
+  for (const listener of snapshot) {
+    listener(payload)
+    called += 1
+  }
+  return called
+}
+```
+
+Why this is sufficient:
+- Every listener present when `emit` began is in the snapshot and is called exactly once, in registration order — regardless of `off` calls that mutate the live list mid-emit (no more index-shift skipping).
+- Listeners added by `on` during the emit are not in the snapshot, so they first run on the next emit.
+- `once`'s wrapped listener removes itself and then calls the user listener; the snapshot still contains the wrapped listener, so it fires exactly once and never disturbs later listeners.
+- No change needed to `on`, `off`, or `once`: `off` already returns a boolean, and `emit` already counts calls.
+
+**2. `src/emitter.test.ts` — add tests**
+
+Keep the existing test, and add cases that each fail on the current implementation:
+
+- *self-removal doesn't skip the next listener*: `on(a)` where `a` removes itself, `on(b)`; one `emit` calls both, in order `[a, b]`.
+- *removing a later listener during emit still calls it this emit*: `on(a)` where `a` removes `b`, `on(b)`; that same `emit` calls both `a` and `b`.
+- *a listener added during emit is not called until the next emit*: `a` adds `c` exactly once (guarded by a flag); first `emit` calls `[a, b]`, second calls `[a, b, c]`.
+- *`once` fires exactly once and doesn't silence later listeners*: `once(f)` then `on(g)`; emit twice; `f` called once, `g` called twice.
+- *`off` reports removal*: `on(g)` → `off(g)` is `true`, second `off(g)` is `false`, and `off` on an unknown event is `false`.
+- *`emit` returns the number of listeners called*: two listeners → returns `2`; after removing one → returns `1`.
+
+### Check that proves it
+
+Run `bun test` from the workspace root. It must print:
+
+```
+0 fail
+```
+
+with all of the above tests (existing + new) passing. If any test fails, the current emit still has a skip/silence bug; fix until `0 fail`.
+architect · agent_send(coder)
+architect → coder Implement this plan in the checkout (branch work/main).  1. In src/emitter.ts, change only the body of emit to iterate o…
+coder · read(src/emitter.ts)
+coder · read(src/emitter.test.ts)
+architect › Plan sent to coder. I'll expect back: the `src/emitter.ts` change, the added tests, and a `bun test` run printing `0 fail`.
+coder · tree(.)
+coder · json(package.json)
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder › Clean tree on work/main. Now the changes.
+coder · edit(src/emitter.ts)
+coder · edit(test('calls a listener with the payload', () => {   const em…)
+coder › I introduced a stray line in the last test — fixing it with named listeners.
+coder · edit(test('emit returns the number of listeners it called', () =>…)
+coder · bash(bun test 2>&1)
+coder › All pass. Now let me verify the mutation tests genuinely fail against the old emit (as the plan requires), by temporarily restoring the original body.
+coder · bash(cp src/emitter.ts /tmp/emitter.new.ts && git stash push -- s…)
+coder › The stash pop restored my changes. Notably four of the new tests fail on the old code — including the `once` test, since removing the once-wrapper mid-iteration silenced `g`. Tests 5–6 pass on both implementations (they're regression guarantees for `off`/return value, as the plan lists them). Final state check and commit:
+coder · read(src/emitter.ts)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/emitter.ts src/emitter.test.ts && git commit -q …)
+coder › Done and committed as `9928f5a` on `work/main`. Reporting back.
+coder · agent_send(architect)
+coder → architect Implemented and committed on work/main (9928f5a).  Changed: 1. src/emitter.ts — emit now iterates a snapshot (`const sna…
+architect · bash(bun test 2>&1)
+coder › Done. Summary of the work:
+
+**Changes** (branch `work/main`, commit `9928f5a`):
+- `src/emitter.ts` — `emit` now snapshots the listener list (`const snapshot = [...list]`) and iterates the snapshot, so listeners added/removed mid-emit don't affect the current dispatch. `on`, `off`, `once` unchanged.
+- `src/emitter.test.ts` — kept the existing payload test and added the six tests from the plan: self-removal doesn't skip the next listener, remove-a-later-listener still lets it run this emit, add-during-emit is deferred to the next emit, `once` fires exactly once without silencing later listeners, `off` reports removal truthfully, and `emit` returns the count of listeners called.
+
+**Checks:**
+- New code: `bun test` → **7 pass, 0 fail**, 11 `expect()` calls.
+- Verified the mutation tests actually fail on the pre-change emit (stashed the source change): 4 fail — self-removal, remove-later, add-during-emit, and `once`. The `once` test also fails on the old code since removing the wrapper mid-iteration shifts the later listener past the cursor. The `off`-reporting and `emit`-return-count tests pass under both implementations (they don't exercise mutation), which is expected for the regression tests requested.
+
+One note the plan didn't state: the `once` scenario is itself a mutation-during-emit case, so it behaves as an extra failing-on-old-code test rather than a pure regression. All work is committed; nothing left outstanding.
+architect · bash(git log --oneline -3 && git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: 101044c Merge branch 'work/main'
+architect › Done. The emitter skip bug is fixed and verified.
+
+What changed:
+- `src/emitter.ts` — `emit` now iterates a snapshot (`[...list]`) of the listener list taken at call start, so every listener registered when emit began runs exactly once in order, regardless of mid-emit `off`/`once` removals or `on` additions. `on`/`off`/`once` were left as-is.
+- `src/emitter.test.ts` — added regression tests for self-removal, removing a later listener mid-emit, add-during-emit deferral, `once` firing exactly once without silencing later listeners, `off` returning a boolean, and `emit`'s return count.
+
+Verified: `bun test` on branch `work/main` prints `7 pass / 0 fail`. Work is committed at `9928f5a`.
+
+  architect    deepseek-v4-pro      2 turns, 37164 tokens
+  coder        deepseek-v4-flash    1 turns, 104261 tokens
+
+main: done
+  bun run test passed
+  merged: 101044c Merge branch 'work/main'
+  this job: 141k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 12¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"101044c Merge branch 'work/main'","cost":"this job: 141k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 12¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7950,"outputTokens":3230,"cacheReadTokens":25984,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":7604,"outputTokens":5265,"cacheReadTokens":91392,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

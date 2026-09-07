@@ -1,0 +1,65 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/key.ts)
+architect · bash(ls && cat package.json 2>/dev/null | head -80)
+architect · bash(find src -type f -not -path 'node_modules/*' | sort; echo '-…)
+architect · grep(cacheKey)
+architect · read(src/key.test.ts)
+architect · bash(bun test 2>&1 | head -40)
+architect › The environment is confirmed (`bun test` passes the one existing test). Here is the plan.
+architect · agent_send(coder)
+architect → coder Implement a stable cacheKey in src/key.ts and add tests in src/key.test.ts.  ## What to change  ### src/key.ts Replace t…
+architect › Plan sent to coder with the exact algorithm, the tests to add, and the check (`bun test` passing). I'll review their report when it comes back.
+coder · read(src/key.ts)
+coder · read(src/key.test.ts)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · write(src/key.ts)
+coder · write(src/key.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 7 tests pass. Let me commit the changes.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Let me report back to the architect.
+coder · agent_send(architect)
+coder → architect Implemented stable cacheKey in src/key.ts and added tests in src/key.test.ts.  What changed: - src/key.ts: Replaced the …
+coder › Done. I implemented the stable recursive `cacheKey` serializer in `src/key.ts`, added all the requested tests in `src/key.test.ts`, and verified everything with `bun test` (7 pass, 0 fail). The changes are committed on the `work/main` branch:
+
+- **`src/key.ts`** — `cacheKey` now uses a recursive `stringify` that handles `null`, `Date`, strings, numbers, booleans, `undefined`/`function`/`symbol`, arrays (order preserved), and plain objects (keys sorted at every depth, skipping `undefined`/`function`/symbol values). The public function maps internal `undefined` to the string `"undefined"` so it always returns a string.
+
+- **`src/key.test.ts`** — Added 6 tests covering object key-order normalization, nested sorting, array order preservation, omission of `undefined`/function values, Date vs ISO-string equality, and `NaN`/`Infinity`/`-Infinity` → `"null"`.
+
+**`bun test` output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 10 expect() calls
+Ran 7 tests across 1 file. [14.00ms]
+```
+
+Committed as `881184b` on `work/main`.
+architect · bash(bun test 2>&1 | tail -8 && echo '---DIFF---' && git diff HEA…)
+architect · bash(git diff HEAD~1 -- src/key.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9fb2cf6 Merge branch 'work/main'
+architect › Done. `cacheKey` now produces order-independent keys for objects.
+
+What changed:
+- `src/key.ts` — replaced the `JSON.stringify` body with a recursive serializer: object keys are sorted lexicographically at every depth, arrays keep their order, `undefined`/`function`/`symbol` values are omitted from objects (and become `null` in arrays), `Date` serializes to its ISO string, and `NaN`/`Infinity`/`-Infinity` become `null`, matching JSON.
+- `src/key.test.ts` — added 6 tests covering key-order normalization, nested sorting, array-order preservation, undefined/function omission, Date-vs-ISO equality, and `NaN`/`Infinity`/`-Infinity` → `"null"`.
+
+Verified by running `bun test` from the repo root: **7 pass, 0 fail**. Committed as `881184b` on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 44658 tokens
+  coder        deepseek-v4-flash    1 turns, 40539 tokens
+
+main: done
+  bun run test passed
+  merged: 9fb2cf6 Merge branch 'work/main'
+  this job: 85k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9fb2cf6 Merge branch 'work/main'","cost":"this job: 85k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":8060,"outputTokens":6518,"cacheReadTokens":30080,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9716,"outputTokens":1895,"cacheReadTokens":28928,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

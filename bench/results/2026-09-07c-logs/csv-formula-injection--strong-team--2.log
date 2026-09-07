@@ -1,0 +1,73 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/csv.ts)
+architect · glob(**/*csv*)
+architect · read(src/csv.test.ts)
+architect · read(package.json)
+architect › The change is clear. I'll send the plan to the coder.
+architect · agent_send(coder)
+architect → coder Implement the CSV formula-injection fix in this checkout (branch work/main).  Files to touch:  1. src/csv.ts — change `f…
+architect › Plan sent to the coder. I'll expect back a report that the tests pass.
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder · stat(src)
+coder · edit(src/csv.ts)
+coder › Now the tests:
+coder · edit(test('quotes a field with a comma', () => {   expect(toCsv([…)
+coder › Let me verify the test file — I need to double check the carriage-return escape handling:
+coder · read(src/csv.test.ts)
+coder › Line 33 has a double backslash — it would expect a literal `\r` rather than the carriage return character. Fixing:
+coder · edit(src/csv.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 11 tests pass. Let me review the final csv.ts and commit:
+coder · read(src/csv.ts)
+coder · bash(git status && git diff)
+coder · bash(git add src/csv.ts src/csv.test.ts && git commit -m "Guard C…)
+coder · bash(bun test 2>&1; git log --oneline -1)
+coder › Done. Committed on `work/main` as `31008a3 Guard CSV output against formula injection`.
+
+**What changed**
+
+- `src/csv.ts` — `field()` now treats strings and numbers differently:
+  - Numbers write plainly via `String(cell)` (no prefix, no quoting), so `-5` stays `-5`.
+  - Strings matching `/^[=+\-@\t\r]/` get a `'` prefix and the whole field quoted, with embedded `"` doubled (`text.replace(/"/g, '""')`).
+  - The existing `/[",\n]/` quote-and-double rule is untouched for all other strings.
+- `src/csv.test.ts` — added the 11 tests from the plan covering `=`, `+`, `-`, `@`, tab, CR, negative number staying plain, comma quoting, embedded double quotes, newline quoting, and prefix-plus-doubling (`="a"`). One deviation from the literal text of the plan: I wrote the carriage-return expectation as the JS literal `'"\'\ra"\n'` rather than `"'\ra"\n"`-with-escaped-backslash, since the plan's notation denotes a real CR character in the CSV output, not a literal backslash-r.
+
+**Check output**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 11 pass
+ 0 fail
+ 11 expect() calls
+Ran 11 tests across 1 file. [13.00ms]
+```
+
+All 11 tests pass; the project's only script is `test: bun test`, so that is the full check.
+coder → architect Done. Committed on `work/main` as `31008a3 Guard CSV output against formula injection`.  **What changed**  - `src/csv.ts…
+architect · bash(bun test && git -C . diff HEAD~1 --stat && git -C . show --n…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9bf8c86 Merge branch 'work/main'
+architect › Verified. The implementation is correct and the project's check passes.
+
+**Job done.** `src/csv.ts` now guards against CSV formula injection: string fields starting with `=`, `+`, `-`, `@`, tab, or CR are written with a leading `'` and quoted (with embedded `"` doubled), numbers are written plainly (negatives stay negative), and the existing comma/quote/newline quoting is preserved. Tests were added covering all cases.
+
+Verified with `bun test` (the project's only check script): **11 pass, 0 fail**. Work is committed on `work/main` as `31008a3`.
+
+  architect    deepseek-v4-pro      2 turns, 25494 tokens
+  coder        deepseek-v4-flash    1 turns, 90988 tokens
+
+main: done
+  bun run test passed
+  merged: 9bf8c86 Merge branch 'work/main'
+  this job: 116k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9bf8c86 Merge branch 'work/main'","cost":"this job: 116k tokens, 1¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5234,"outputTokens":2596,"cacheReadTokens":17664,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9566,"outputTokens":4238,"cacheReadTokens":77184,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

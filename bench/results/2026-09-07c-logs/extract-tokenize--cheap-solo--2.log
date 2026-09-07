@@ -1,0 +1,61 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · read(src/stats.ts)
+coder · tree(src)
+coder · read(src/stats.test.ts)
+coder · bash(ls -la && cat package.json 2>/dev/null; cat tsconfig.json 2>…)
+coder · error: command failed with exit code 1 total 16 drwxr-xr-x@ 6 antonio  staff  192  7 set 16:05 . drwxr-xr-x@ 3 antonio  staff  …
+coder · bash(git status --short && git log --oneline -5)
+coder › Now let me create the tokenizer module, update stats, and add tests.
+coder · write(src/tokenize.ts)
+coder · write(import { tokenize } from './tokenize.ts'  /** How many words…)
+coder › Now add tests:
+coder · write(import { expect, test } from 'bun:test' import { wordCount, …)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/stats.test.ts: 41 |   ]) 42 | }) 43 |  44 | test('wordC…
+coder › My test expectation was wrong — `'one two-three'` has 3 words (`one`, `two`, `three`) since the tokenizer treats `-` as a separator. Let me fix the test to reflect the actual unchanged behavior.
+coder · edit(src/stats.test.ts)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me verify the original behavior matched — `'one two-three'` under the original `wordCount` was indeed 3 (the original split on `/`[^a-z0-9']+/` so `-` is a separator). Good.
+
+Let me commit.
+coder · bash(git add src/tokenize.ts src/stats.ts src/stats.test.ts && gi…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 92d60dc Merge branch 'work/main'
+coder › All done. Here's what I changed:
+
+## Changes
+
+**New module `src/tokenize.ts`**
+```ts
+export function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9']+/)
+    .filter((word) => word !== '')
+}
+```
+This is exactly `wordCount`'s original behaviour: lower-casing first, a word being a run of letters, digits and apostrophes, everything else a separator, no empty words.
+
+**`src/stats.ts`**
+- `wordCount` now just returns `tokenize(text).length` — results are unchanged.
+- `topWords` now uses `tokenize` too, so it counts case-insensitively. It returns the `n` most frequent words as `[word, count]`, most frequent first, with ties broken alphabetically (`b[1] - a[1] || a[0].localeCompare(b[0])`).
+
+**`src/stats.test.ts`** — added tests for `tokenize`, for `topWords` being case-insensitive (the `The`/`the` fix), for alphabetical tie-breaking, for punctuation handling, and a regression check that `wordCount` is unchanged.
+
+## Checks
+
+`bun test`: **7 pass, 0 fail**.
+
+One thing worth noting: my first version of a test wrongly asserted `wordCount('one two-three') === 2`, but the original behaviour gives `3` (`-` is a separator, so three words). I corrected the test to match the true unchanged behaviour. `wordCount`'s output is verified unchanged.
+
+  coder        deepseek-v4-flash    1 turns, 66249 tokens
+
+main: done
+  bun run test passed
+  merged: 92d60dc Merge branch 'work/main'
+  this job: 66k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"92d60dc Merge branch 'work/main'","cost":"this job: 66k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":11939,"outputTokens":2214,"cacheReadTokens":52096,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

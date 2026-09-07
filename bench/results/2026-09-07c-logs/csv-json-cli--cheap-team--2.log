@@ -1,0 +1,124 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/cli.ts)
+architect · bash(ls && cat package.json 2>/dev/null && ls src)
+architect · read(src/cli.test.ts)
+architect › Project is a tiny Bun/TypeScript CLI with tests in `src/cli.test.ts`. The spec is complete; here is the plan.
+architect · agent_send(Job: add a --json flag to csvtool. Branch work/main, commit …)
+architect → coder Job: add a --json flag to csvtool. Branch work/main, commit as you go, prove it with `bun test`.  1. NEW FILE src/csv.ts…
+coder · tree(.)
+coder · git-log()
+architect › Plan sent to coder. What they're building:
+
+- **New `src/csv.ts`** — `parseCsv(text: string): string[][]`: splits on commas, honours quoted fields (commas and doubled quotes inside them), strips `\r` for `\r\n` endings, and returns every line as a row — header decisions stay in the caller.
+- **`src/cli.ts`** — a `--json` branch before the usage fallback: first parsed row is the header, each data row becomes an object keyed by header names with string values, printed as `JSON.stringify(...) + '\n'`; empty input or a header with no rows prints `[]\n`; a ragged data row exits 1 with a single `error: line N ...` line (N is the 1-based input line, so the first data row is line 2) and no JSON; usage line becomes `usage: csvtool --upper | --count | --json\n`.
+- **Tests** — new `src/csv.test.ts` for the parser (plain split, quoted commas, doubled quotes, `\r\n`, no trailing newline, empty input) plus new cases in `src/cli.test.ts` for the flag, the empty/header-only `[]`, the ragged-row error, and the usage line.
+
+Expect back: a report of what changed and the tail of a passing `bun test` run. Once it passes I'll call the job done; if the check fails on merge, I'll be sent back with the output.
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · json(.)
+coder › Now I understand the project. Let me create `src/csv.ts`, update `src/cli.ts`, and write the tests.
+coder · write(src/csv.ts)
+coder · write(import { parseCsv } from './csv.ts'  /** What a run of csvto…)
+coder · write(import { expect, test } from 'bun:test' import { parseCsv } …)
+coder · write(import { expect, test } from 'bun:test' import { run } from …)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/csv.test.ts: 21 |     ['1', '1,2'], 22 |   ]) 23 | }) 2…
+coder › The issue is that after a quoted field ends, there may be a trailing comma that produces an empty field. In `'"say ""hi""",b\n'`, after the closing quote of the first field there's a comma then `b`. My parser reads the quoted field, then loops again. At that point `i` points at the `,`. But wait, let me trace: after the closing quote, `i` points at the comma. The while loop continues, `line[i]` is `,`, not `"`, so it goes to the unquoted branch, finds the next comma... there is none, so it pushes `line.slice(i)` = `,b`. That's wrong.
+
+The problem: after the closing quote, I `i++` past the closing quote, then the rest `,b` should be handled. But the loop's next iteration sees `,` and treats it as part of an unquoted field. The spec says "the closing quote may be followed by commas or end of line." So trailing commas after closing quote should be treated as separators — but actually, the simplest fix per spec: after the quoted field ends, the following comma(s) are just field separators.
+
+Let me restructure: after a quoted field closes, skip any following comma. Actually the cleanest approach matching the spec: once a quoted field ends, treat the rest of the line by continuing the normal splitting from the current position — but the position after the closing quote should skip the comma separator.
+
+Let me think about the structure more carefully. The standard CSV rule: after a quoted field's closing quote, next char is either a comma or end of line. Let me modify so that after closing a quoted field, we consume a comma if present (as the separator), and continue.
+
+Let me rewrite splitLine:
+
+```ts
+function splitLine(line: string): string[] {
+  if (line.endsWith('\r')) line = line.slice(0, -1)
+  const fields: string[] = []
+  let i = 0
+  while (i < line.length) {
+    if (line[i] === '"') {
+      i++
+      let value = ''
+      let closed = false
+      while (i < line.length && !closed) {
+        if (line[i] === '"') {
+          if (line[i + 1] === '"') {
+            value += '"'
+            i += 2
+          } else {
+            i++
+            closed = true
+          }
+        } else {
+          value += line[i]
+          i++
+        }
+      }
+      fields.push(value)
+      // after closing quote: consume separator comma if present
+      if (i < line.length && line[i] === ',') i++
+    } else {
+      const next = line.indexOf(',', i)
+      if (next === -1) {
+        fields.push(line.slice(i))
+        return fields
+      }
+      fields.push(line.slice(i, next))
+      i = next + 1
+    }
+  }
+  return fields
+}
+```
+
+Wait, but with the unquoted branch returning early, and handling the quoted branch skipping a comma. Let me check the doubled quote test: `'"say ""hi""",b\n'`. After the newline stripping, the line is `"say ""hi""",b`.
+
+- i=0: `"` → quoted field. i=1.
+- value building: "say ", then at `"` next is `"` (doubled) → value `say "`, i moves to positions... eventually reaches closing `"` followed by `,`. closed=true, i points at `,`.
+- fields: ["say \"hi\""]. i<length and line[i]==',' → i++ to after comma.
+- i now at `b`. Unquoted branch: no comma → push `b`, return.
+
+Result: `['say "hi"', 'b']`. 
+
+Let me also verify the `a,"x,y"\n1,"1,2"\n` case: line `a,"x,y"`.
+- i=0 unquoted: next comma at idx1, push `a`, i=2.
+- i=2 `"` → quoted, build `x,y`, close at final quote, i=length. fields push `x,y`. i<length false.
+- Result: ['a','x,y']. Good.
+
+Let me rewrite the file.
+coder · write(/** Split CSV text into rows of fields. All lines come back …)
+coder · bash(bun test 2>&1)
+coder › All 15 tests pass. Let me commit.
+coder · bash(git status && git add -A && git commit -m "Add --json flag t…)
+coder › Committed. Let me report back to the architect.
+coder · agent_send(architect)
+coder → architect Done. Committed as bb45ee2 "Add --json flag to csvtool" on work/main.  What changed: - NEW src/csv.ts: parseCsv(text) → …
+coder › Done. I implemented the `--json` flag for csvtool, created the CSV parser and both test files, all 15 tests pass, and the changes are committed on `work/main`. I reported back to the architect with the changes, the `bun test` output tail, and the one interpretation I made about how a comma immediately after a closing quote is treated as a field separator.
+verified: bun run test passes on work/main
+merged work/main into the repository: 4f7ecda Merge branch 'work/main'
+architect › Job done. `coder` implemented it as planned and the project's own check passes.
+
+- **`src/csv.ts` (new)** — exports `parseCsv(text: string): string[][]`: comma split with quoted-field support (commas and `""` → one quote inside quotes), `\r`-stripped `\r\n` endings, trailing-newline handling, empty input → `[]`. Header-agnostic; the caller picks row 1.
+- **`src/cli.ts`** — `--json` branch: first row is the header, data rows emitted as a JSON array of objects with string values plus a newline; empty input or header-only prints `[]\n`; a ragged data row exits 1 with one `error: line N …` line and no JSON; usage line now reads `usage: csvtool --upper | --count | --json\n`.
+- **`src/csv.test.ts` (new)** and **`src/cli.test.ts` (extended)** — cover plain split, quoted commas, doubled quotes, `\r\n`, missing trailing newline, empty input, header-only, the ragged-row error with the 1-based line number, string-valued output, and the usage line.
+
+Verified by the suite: `bun test` — **15 pass, 0 fail** across 2 files, committed as `bb45ee2` on `work/main`. Their one interpretation (a comma directly after a closing quote is a separator) matches the spec, so nothing further needed. Ready for the harness check and merge.
+
+  architect    glm-5.3-flash        2 turns, 16599 tokens
+  coder        deepseek-v4-flash    1 turns, 107363 tokens
+
+main: done
+  bun run test passed
+  merged: 4f7ecda Merge branch 'work/main'
+  this job: 124k tokens, 0.5¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"4f7ecda Merge branch 'work/main'","cost":"this job: 124k tokens, 0.5¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 17¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":4767,"outputTokens":2552,"cacheReadTokens":9280,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":17235,"outputTokens":8080,"cacheReadTokens":82048,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

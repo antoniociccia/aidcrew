@@ -1,0 +1,52 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(ls -la && find . -maxdepth 2 -type f -not -path './node_modu…)
+coder · read(src/roman.ts)
+coder · read(package.json)
+coder · read(.aidcrew/config.toml)
+coder · bash(git status && git branch --show-current && bun --version)
+coder · write(src/roman.ts)
+coder · write(src/roman.test.ts)
+coder · bash(bun test)
+coder · bash(git add src/roman.ts src/roman.test.ts && git commit -m "Imp…)
+verified: bun run test passes on work/main
+merged work/main into the repository: ee949be Merge branch 'work/main'
+coder › Done. I implemented both functions in `src/roman.ts` and added `src/roman.test.ts`.
+
+What changed:
+- `toRoman(n)`: validates with `Number.isInteger` plus the `1..3999` range, throwing `RangeError` for anything else (including `NaN`, `Infinity`, and non-integers). Converts greedily using a value table that includes the subtractive forms `CM`, `CD`, `XC`, `XL`, `IX`, `IV`.
+- `fromRoman(text)`: uppercases the input (so both cases work), rejects empty input and any character outside `IVXLCDM` with a `SyntaxError` that includes the offending text. It parses using the subtractive rule (a smaller value before a larger one is subtracted), then round-trips the result through `toRoman` to reject sequences that sum correctly but aren't standard (`IIII`, `VX`, `IC`, `IM`, `MMMM`, etc.).
+
+Decisions not stated in the plan:
+- For `fromRoman` I used parse-then-round-trip validation rather than a strict regex; it keeps the standard-form definition in exactly one place (`toRoman`) and guarantees `fromRoman(toRoman(n)) === n`.
+- Error messages: `RangeError` names the bad input value, and `SyntaxError` names the bad text as required.
+
+Tests added:
+- Spot checks for both functions, including every subtractive form.
+- Case-insensitivity for `fromRoman`.
+- `RangeError` cases for `toRoman` (`0`, `-1`, `4000`, `1.5`, `NaN`, `±Infinity`).
+- `SyntaxError` cases for `fromRoman` (empty, `IIII`, `VX`, `IC`, `IM`, `XM`, `MIM`, `MMMM`, invalid chars, whitespace, `VV`, `LL`), asserting the error message contains the text.
+- A full round-trip loop over `1..3999`.
+
+Checks run:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 72 pass
+ 0 fail
+ 4086 expect() calls
+Ran 72 tests across 1 file. [21.00ms]
+```
+
+Committed on `work/main` as `30810c1`.
+
+  coder        deepseek-v4-pro      1 turns, 66184 tokens
+
+main: done
+  bun run test passed
+  merged: ee949be Merge branch 'work/main'
+  this job: 66k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"ee949be Merge branch 'work/main'","cost":"this job: 66k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5201,"outputTokens":5943,"cacheReadTokens":55040,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

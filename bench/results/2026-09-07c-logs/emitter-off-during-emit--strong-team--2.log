@@ -1,0 +1,64 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/emitter.ts)
+architect · glob(**/*emitter*)
+architect · glob(**/*.test.ts)
+architect · read(src/emitter.test.ts)
+architect · glob(package.json)
+architect · read(package.json)
+architect · bash(bun test 2>&1 | head -30)
+architect · agent_send(coder)
+architect → coder Fix the Emitter's emit so removals during emit don't skip listeners, and add tests.  Context: src/emitter.ts currently i…
+architect › I sent the plan to coder. I expect them back with the implementation committed and `bun test` passing (all tests green). Once they report the check passes, I'll confirm the job is done.
+coder · read(src/emitter.ts)
+coder · read(src/emitter.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · json(package.json)
+coder › Now making the two changes:
+coder · edit(src/emitter.ts)
+coder · edit(test('calls a listener with the payload', () => {   const em…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 7 tests pass. Let me verify my test expectations are correct by reviewing the "listener added during emit" test. The first emit calls `first`, which adds `added`. Snapshot has only `first`, so `seen = ['first']`. Second emit: both `first` and `added` are in the array. `first` runs, adds another `added` (not called this time), pushes 'first'. Then `added` from the first emit runs, pushes 'added'. So `seen = ['first', 'first', 'added']`. Correct.
+
+Now let me commit:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Now let me report back to the architect.
+coder · agent_send(architect)
+coder → architect Done. Emitter fix + tests committed on work/main (commit 07f0427).  Changes: 1. src/emitter.ts — emit now snapshots the …
+coder › Done. 
+
+**What changed:**
+- `src/emitter.ts`: `emit` now snapshots the listeners array with `[...(this.#listeners.get(event) ?? [])]` and iterates it with `for...of`, so a listener removing another (or itself) during emit no longer shifts the live array and skips listeners. `on`, `once`, and `off` are unchanged.
+- `src/emitter.test.ts`: added 6 tests covering all the requested scenarios.
+
+**Check output:**
+```
+bun test v1.3.14 (0d9b296a)
+7 pass
+0 fail
+11 expect() calls
+```
+
+Committed to `work/main` as `07f0427` with the subject "Snapshot listeners in emit so removals during emit don't skip".
+architect · bash(bun test 2>&1 | head -30)
+architect · bash(git log --oneline -1)
+verified: bun run test passes on work/main
+merged work/main into the repository: 2997352 Merge branch 'work/main'
+architect › The job is done.
+
+- **What changed:** `emit` in `src/emitter.ts` now snapshots the listeners registered at the start of the call and iterates that snapshot, so removals during emit (including `once`'s self-removal) no longer shift the live array and skip later listeners. `on`/`once`/`off` behavior is unchanged. Added 6 tests in `src/emitter.test.ts` covering the specified cases (added-during-emit deferred, `once` not silencing a later listener, removing self/other during emit, `off`'s boolean return, `emit`'s count).
+- **Verified:** `bun test` passes — 7 pass, 0 fail. Commit `07f0427` is on `work/main`.
+
+  architect    deepseek-v4-pro      2 turns, 33757 tokens
+  coder        deepseek-v4-flash    1 turns, 51512 tokens
+
+main: done
+  bun run test passed
+  merged: 2997352 Merge branch 'work/main'
+  this job: 85k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"2997352 Merge branch 'work/main'","cost":"this job: 85k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7248,"outputTokens":2189,"cacheReadTokens":24320,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9219,"outputTokens":2229,"cacheReadTokens":40064,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

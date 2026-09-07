@@ -1,0 +1,57 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder › Let me explore the workspace structure first.
+coder · tree(.)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+coder › Now I understand the structure. Let me create the new module and update the existing files.
+
+Let me first create `src/env.ts`:
+coder · write(src/env.ts)
+coder › Now add `validate` to `config.ts`:
+coder · edit(src/config.ts)
+coder › Now update `resolveConfig` in `index.ts`:
+coder · write(src/index.ts)
+coder › Now add tests. Let me add tests for both `env.ts` and `validate`, and expand the `resolveConfig` test:
+coder · write(import { describe, expect, test } from 'bun:test' import { f…)
+coder › Now let me run the tests:
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me also verify there's no typecheck or lint step configured, and double check the TypeScript types are fine with a quick typecheck if available.
+coder · bash(ls src; find . -name "tsconfig*.json" -not -path "./node_mod…)
+coder › No tsconfig, and the package only has a `test` script, so tests are the project's check. Let me commit the changes on a branch.
+coder · bash(git rev-parse --abbrev-ref HEAD; git status --short)
+coder · bash(git checkout -b env-config && git add src/config.ts src/inde…)
+verified: bun run test passes on work/main
+merged work/main into the repository: e17470e Merge branch 'env-config'
+coder › I've implemented all the requested changes.
+
+## What changed
+
+**`src/env.ts` (new)** — exports `fromEnv(env, prefix = 'APP_')`: reads `APP_PORT`, `APP_HOST`, `APP_DEBUG` and `APP_NAME`, returning a `Partial<Config>`. `port` becomes a number, `debug` becomes a boolean (`true`/`1`/`yes` → true, `false`/`0`/`no` → false, case-insensitively), the others stay strings, and absent or empty variables are left out. A non-numeric `APP_PORT` or an `APP_DEBUG` that is neither true nor false throws a `TypeError` naming the variable.
+
+**`src/config.ts`** — added `validate(config): Config`, which returns the config unchanged or throws a `TypeError` naming the field when `port` isn't an integer between 1 and 65535, or `host`/`name` is empty.
+
+**`src/index.ts`** — `resolveConfig` is now `resolveConfig(file, env)`: file over defaults, environment over both, then validated. `env` defaults to `process.env`.
+
+**`src/index.test.ts`** — added tests covering all of `fromEnv`'s behaviors, `validate`'s cases, and that the environment overrides both the file and defaults in `resolveConfig`.
+
+## Checks
+
+`bun test` (the project's only script) — **12 pass, 0 fail**. No tsconfig or lint step exists in the repo.
+
+One small decision not in the plan: for a non-numeric `APP_PORT`, `Number('')` is `NaN`. Since I already treat empty as absent before parsing, that path is unreachable for empty strings, but `Number.isNaN` guards it anyway. The thrown message reads `"APP_PORT is not a number"` and `"APP_DEBUG is neither true nor false"` (each naming the variable, as requested).
+
+Committed on branch `env-config`.
+
+  coder        deepseek-v4-flash    1 turns, 64785 tokens
+
+main: done
+  bun run test passed
+  merged: e17470e Merge branch 'env-config'
+  this job: 65k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e17470e Merge branch 'env-config'","cost":"this job: 65k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":9128,"outputTokens":2665,"cacheReadTokens":52992,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,63 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · json(.)
+coder › Now let me look at the git state and confirm the tooling available.
+coder · bash(git status --short && git branch --show-current && bun --ver…)
+coder · git-log()
+coder › I have what I need. Now I'll create the tokenizer module.
+coder · write(src/tokenize.ts)
+coder › Now update `stats.ts` to use it:
+coder · write(import { tokenize } from './tokenize.ts'  /** How many words…)
+coder › Now add tests — a dedicated test file for the tokenizer, and tests for the fixed `topWords`:
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · edit(src/stats.test.ts)
+coder › Now run the project's tests:
+coder · bash(bun test)
+coder › All 12 tests pass. Let me review the final files and commit:
+coder · read(src/stats.ts)
+coder · read(src/tokenize.ts)
+coder · bash(git add src/tokenize.ts src/stats.ts src/tokenize.test.ts sr…)
+verified: bun run test passes on work/main
+merged work/main into the repository: b88e652 Merge branch 'work/main'
+coder › Done. Committed as `8aa38f0` on `work/main`.
+
+## What changed
+
+**New module `src/tokenize.ts`** — exports `tokenize(text): string[]`, containing exactly `wordCount`'s old logic: lower-case, split on runs of anything that is not a letter, digit or apostrophe, drop empty words.
+
+**`src/stats.ts`** — both functions now go through `tokenize`:
+- `wordCount` is now `tokenize(text).length`; its results are unchanged (same lower-case + split on `[^a-z0-9']+`), and I added a test pinning that a word like `hello,world` still counts as two tokens.
+- `topWords` now counts the lower-cased tokens, so `'The'` and `'the'` no longer differ, and returns the words lower-cased. Sorting is count descending, ties broken alphabetically (the old code had no tie-break at all).
+
+**Tests** — a new `src/tokenize.test.ts` (splitting, apostrophes, digits, no empty words) and additions to `src/stats.test.ts` (most-frequent-first, case-insensitivity + lower-cased output, alphabetical tie-breaks, `n` respected, unchanged `wordCount` behaviour).
+
+## Checks
+
+`bun test` (the only script in package.json — there's no lint or typecheck step):
+
+```
+ 12 pass
+ 0 fail
+ 13 expect() calls
+Ran 12 tests across 2 files. [10.00ms]
+```
+
+## Things the plan didn't say
+
+- `topWords` returns its words **lower-cased** now. That follows necessarily from "counts case-insensitively" via the tokenizer, but it's a visible output change from the old code, which preserved the case as written (e.g. `'The'`). I flagged it rather than silently deciding.
+- The old `topWords` also treated something like `hello,world` as a single word `helloworld` (it split on whitespace first, then deleted commas); with the shared tokenizer it now counts as two words, consistent with `wordCount`. Again a consequence of the extraction rather than a choice I made up.
+- I used plain `<`/`>` for tie-breaks rather than `localeCompare` — deterministic, and the tokenizer only ever produces ASCII letters, digits and apostrophes.
+
+  coder        deepseek-v4-flash    1 turns, 82308 tokens
+
+main: done
+  bun run test passed
+  merged: b88e652 Merge branch 'work/main'
+  this job: 82k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"b88e652 Merge branch 'work/main'","cost":"this job: 82k tokens, 0.2¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5810,"outputTokens":3922,"cacheReadTokens":72576,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

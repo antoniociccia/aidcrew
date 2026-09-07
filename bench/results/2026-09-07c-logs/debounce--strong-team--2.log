@@ -1,0 +1,267 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/debounce.ts)
+architect · glob(**/*.test.ts)
+architect · glob(src/**/*.ts)
+architect · read(src/debounce.test.ts)
+architect · glob(*)
+architect · read(package.json)
+architect › I've read the current `src/debounce.ts`, `src/debounce.test.ts`, and `package.json`. Here's the precise plan for the change.
+
+## Files to touch
+
+1. `src/debounce.ts` — implement the debounce function.
+2. `src/debounce.test.ts` — add tests covering trailing-edge timing, reset, cancel, flush, and the RangeError.
+
+## What `src/debounce.ts` should do
+
+Keep the existing `Timers`, `Debounced`, and `GLOBAL_TIMERS` definitions unchanged. Replace only the body of `debounce`:
+
+- If `ms < 0`, throw `new RangeError(...)` immediately.
+- Track a pending timer handle and the arguments of the most recent call.
+- Each call stores the latest args, clears any existing timer, and schedules a new one with `timers.setTimeout`.
+- When the timer fires (or `flush()` is called), run `fn` once with the stored latest args and clear the pending state.
+- `cancel()` clears the timer and drops the pending args without calling `fn`.
+- `flush()` is a no-op when nothing is pending; otherwise it clears the timer and invokes the pending call immediately.
+
+Exact implementation to use:
+
+```ts
+/** A version of fn that runs once, ms after the most recent call. */
+export function debounce<A extends unknown[]>(
+  fn: (...args: A) => void,
+  ms: number,
+  timers: Timers = GLOBAL_TIMERS,
+): Debounced<A> {
+  if (ms < 0) {
+    throw new RangeError(`debounce ms must be >= 0, got ${ms}`)
+  }
+
+  let timer: unknown
+  let lastArgs: A | undefined
+
+  const invoke = () => {
+    if (lastArgs === undefined) {
+      return
+    }
+    const args = lastArgs
+    lastArgs = undefined
+    timer = undefined
+    fn(...args)
+  }
+
+  const debounced = ((...args: A): void => {
+    lastArgs = args
+    if (timer !== undefined) {
+      timers.clearTimeout(timer)
+    }
+    timer = timers.setTimeout(invoke, ms)
+  }) as Debounced<A>
+
+  debounced.cancel = (): void => {
+    if (timer !== undefined) {
+      timers.clearTimeout(timer)
+      timer = undefined
+    }
+    lastArgs = undefined
+  }
+
+  debounced.flush = (): void => {
+    if (timer === undefined) {
+      return
+    }
+    timers.clearTimeout(timer)
+    timer = undefined
+    invoke()
+  }
+
+  return debounced
+}
+```
+
+## What `src/debounce.test.ts` should do
+
+Keep the existing `returns a function` test, add a controllable fake timer (so tests control time through the `timers` argument), and add tests for:
+
+1. `ms < 0` throws `RangeError`.
+2. Calls before `ms` elapses produce exactly one call with the most recent arguments.
+3. A call within `ms` resets the timer (advance partway, call again, verify nothing fires too early and only the latest args fire).
+4. `cancel()` drops a pending call.
+5. `flush()` runs a pending call immediately and cancels its timer.
+6. `cancel()`/`flush()` with nothing pending are no-ops.
+
+Use this test file:
+
+```ts
+import { expect, test } from 'bun:test'
+import { debounce } from './debounce.ts'
+
+function createFakeTimers() {
+  let nextId = 1
+  let now = 0
+  const pending = new Map<unknown, { fn: () => void; at: number }>()
+
+  return {
+    setTimeout: (fn: () => void, ms: number) => {
+      const id = nextId++
+      pending.set(id, { fn, at: now + ms })
+      return id
+    },
+    clearTimeout: (handle: unknown) => {
+      pending.delete(handle)
+    },
+    advance: (ms: number) => {
+      now += ms
+      const due = [...pending.entries()].filter(([, timer]) => timer.at <= now)
+      for (const [id, timer] of due) {
+        pending.delete(id)
+        timer.fn()
+      }
+    },
+    pendingCount: () => pending.size,
+  }
+}
+
+test('returns a function', () => {
+  expect(typeof debounce(() => {}, 10)).toBe('function')
+})
+
+test('throws a RangeError when ms is below 0', () => {
+  expect(() => debounce(() => {}, -1)).toThrow(RangeError)
+})
+
+test('calls fn once with the most recent arguments after ms', () => {
+  const timers = createFakeTimers()
+  const calls: Array<[string, number]> = []
+  const d = debounce((name: string, n: number) => calls.push([name, n]), 100, timers)
+
+  d('a', 1)
+  d('b', 2)
+  d('c', 3)
+
+  expect(calls).toEqual([])
+  expect(timers.pendingCount()).toBe(1)
+
+  timers.advance(100)
+
+  expect(calls).toEqual([['c', 3]])
+  expect(timers.pendingCount()).toBe(0)
+})
+
+test('resets the timer when called again within ms', () => {
+  const timers = createFakeTimers()
+  const calls: number[] = []
+  const d = debounce((n: number) => calls.push(n), 100, timers)
+
+  d(1)
+  timers.advance(60)
+  d(2)
+
+  timers.advance(40)
+  expect(calls).toEqual([])
+
+  timers.advance(60)
+  expect(calls).toEqual([2])
+})
+
+test('cancel drops a pending call', () => {
+  const timers = createFakeTimers()
+  const calls: number[] = []
+  const d = debounce((n: number) => calls.push(n), 100, timers)
+
+  d(1)
+  d.cancel()
+
+  timers.advance(200)
+  expect(calls).toEqual([])
+  expect(timers.pendingCount()).toBe(0)
+})
+
+test('flush runs a pending call immediately and cancels its timer', () => {
+  const timers = createFakeTimers()
+  const calls: number[] = []
+  const d = debounce((n: number) => calls.push(n), 100, timers)
+
+  d(1)
+  d.flush()
+
+  expect(calls).toEqual([1])
+  expect(timers.pendingCount()).toBe(0)
+
+  timers.advance(200)
+  expect(calls).toEqual([1])
+})
+
+test('flush and cancel are no-ops when nothing is pending', () => {
+  const timers = createFakeTimers()
+  const calls: number[] = []
+  const d = debounce((n: number) => calls.push(n), 100, timers)
+
+  d.flush()
+  d.cancel()
+  timers.advance(200)
+
+  expect(calls).toEqual([])
+})
+```
+
+## Check
+
+Run `bun test` from the workspace root. It must report all tests passing (7 tests).
+
+Please implement exactly this, run `bun test`, and report back the test output.
+architect · agent_send(coder)
+architect → coder Implement debounce and its tests per the plan below. Touch only these two files, then run the check and report back the …
+architect › Plan sent to coder. I'm waiting for their report that `bun test` passes with all 7 tests.
+coder · read(src/debounce.ts)
+coder · bash(git -C /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000g…)
+coder · bash(ls /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · write(src/debounce.ts)
+coder · write(src/debounce.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Implemented debounce per the plan and committed.
+
+**What I changed** (only the two planned files):
+- `src/debounce.ts` — replaced only the body of `debounce` (Timers/Debounced/GLOBAL_TIMERS unchanged): negative-`ms` RangeError guard, trailing-call semantics via `lastArgs`, timer reset on re-call, plus `cancel` and `flush` on the returned function.
+- `src/debounce.test.ts` — replaced the whole file with the fake-timer suite from the plan (7 tests).
+
+**Check output** — `bun test` from the workspace root:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 14 expect() calls
+Ran 7 tests across 1 file. [14.00ms]
+```
+
+All 7 tests pass. **No other files changed** — `git status` shows only `M src/debounce.test.ts` and `M src/debounce.ts`. Committed as `0b628bb Implement debounce with cancel and flush`.
+coder → architect Done. Implemented debounce per the plan and committed.  **What I changed** (only the two planned files): - `src/debounce…
+architect · bash(bun test 2>&1; git status --short)
+architect · bash(git status --short; git log --oneline -1)
+verified: bun run test passes on work/main
+merged work/main into the repository: d8bb739 Merge branch 'work/main'
+architect › Job done. The debounce implementation is complete and verified.
+
+**What changed:**
+- `src/debounce.ts` — implemented `debounce`: throws `RangeError` for `ms < 0`, runs `fn` once `ms` after the most recent call using that call's args, resets the timer on calls within `ms`, and exposes `cancel()`/`flush()` with a no-op-safe behavior when nothing is pending. Timers come from the passed `timers` object (defaulting to globals).
+- `src/debounce.test.ts` — added a fake-timer suite covering the RangeError, trailing-edge args, timer reset, cancel, flush, and empty-state no-ops.
+
+**Verification:** `bun test` reports `7 pass, 0 fail` across 1 file. Work is committed (`0b628bb`) on `work/main` with a clean working tree.
+
+  architect    deepseek-v4-pro      2 turns, 46682 tokens
+  coder        deepseek-v4-flash    1 turns, 59045 tokens
+
+main: done
+  bun run test passed
+  merged: d8bb739 Merge branch 'work/main'
+  this job: 106k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 13¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d8bb739 Merge branch 'work/main'","cost":"this job: 106k tokens, 3¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 13¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6885,"outputTokens":7797,"cacheReadTokens":32000,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6384,"outputTokens":2357,"cacheReadTokens":50304,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,84 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/invoice.ts)
+architect · read(src/receipt.ts)
+architect · glob(**/*.test.ts)
+architect · read(src/invoice.test.ts)
+architect · read(src/receipt.test.ts)
+architect · bash(cat package.json 2>/dev/null; ls)
+architect › The drift is clear: `receipt.ts` lacks the sign handling and grouping that `invoice.ts` has. Both files are small, tests run with `bun test`, and there are existing tests for each module. Sending the plan to the coder.
+architect · agent_send(Job: extract the money formatter shared by src/invoice.ts an…)
+architect → coder Job: extract the money formatter shared by src/invoice.ts and src/receipt.ts into a new module, fixing the receipt's dri…
+coder · tree(.)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · json(scripts)
+coder › Let me confirm the baseline test run passes before making changes.
+coder · bash(bun test 2>&1)
+coder › Baseline is green. Now I'll make the changes: create money.ts first, then refactor invoice.ts and receipt.ts.
+coder · write(src/money.ts)
+coder · edit(src/invoice.ts)
+architect › Plan sent to the coder. What I decided and why:
+
+- **Read:** `src/invoice.ts`, `src/receipt.ts`, both test files, and `package.json`. The invoice has the correct formatter (sign, comma grouping, two decimals); the receipt's copy lost the sign handling and grouping, which is exactly the `-13.-50 EUR` bug.
+- **Plan delivered:** new `src/money.ts` exporting `formatMoney` with the invoice's logic verbatim; `formatInvoiceAmount` and `formatReceiptAmount` become exported thin wrappers; receipt's doc comment updated; new `src/money.test.ts` covering grouping, padding, zero, and the negative case, plus a regression test on `renderReceipt` with a `-1250` cent item.
+- **Check that proves it:** `bun test` — the two pre-existing tests pin `renderInvoice`/`renderReceipt` output unchanged for positives, the new tests pin the shared formatter and the fix.
+
+I expect back the `bun test` output (all passing, 0 fail) and the list of changed files. I'll verify the run myself when the report lands.
+coder · edit(import { formatMoney } from './money.ts'  /** An item on a t…)
+coder › Now the tests: new money.test.ts and the regression in receipt.test.ts.
+coder · write(import { expect, test } from 'bun:test' import { formatMoney…)
+coder · edit(test('renders items and a total', () => {   expect(renderRec…)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me review the final state of the changed files.
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · read(src/money.ts)
+coder › All files look right. Now committing in small chunks as instructed.
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/money.ts && git commit -m "Extract shared format…)
+coder · bash(git add src/invoice.ts src/receipt.ts && git commit -m "Dele…)
+coder · bash(git add src/money.test.ts src/receipt.test.ts && git commit …)
+coder · bash(git status --short && git log --oneline -3)
+coder · bash(bun test 2>&1)
+coder › Work complete. Reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Done. The money formatter is extracted and the receipt drift is fixed. `bun test` output:  ``` bun test v1.3.14 (0d9b296…
+coder › Job done. Summary:
+
+- **Extracted** `src/money.ts` with `formatMoney(cents, currency)` — the invoice's correct logic, verbatim.
+- **Refactored** `src/invoice.ts` and `src/receipt.ts` so `formatInvoiceAmount`/`formatReceiptAmount` are thin wrappers around it; both stay exported with doc comments.
+- **Added** `src/money.test.ts` (6 tests incl. the negative-amount case) and extended `src/receipt.test.ts` with the `-1250` regression through `renderReceipt`; existing tests untouched.
+- **Verified**: `bun test` → 9 pass, 0 fail across 3 files.
+- **Committed** in three small commits on `work/main`; working tree clean. Reported to architect with the test output and file list.
+architect › The report says the check passes — verifying the run myself before calling it done.
+architect · bash(bun test 2>&1; git log --oneline -4; git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: 6bbed74 Merge branch 'work/main'
+architect › Job done — verified, not just reported.
+
+**What changed** (3 commits on `work/main`, tree clean):
+- `src/money.ts` (new): `formatMoney(cents, currency)` carrying the invoice's original behaviour — thousands grouped with commas, two decimals, leading minus, then the currency code.
+- `src/invoice.ts`: `formatInvoiceAmount` is now a thin wrapper over `formatMoney`, still exported; `renderInvoice` untouched.
+- `src/receipt.ts`: `formatReceiptAmount` likewise a wrapper; the buggy inline body (no grouping, negative amounts rendering as `-13.-50`) is gone.
+- Tests: new `src/money.test.ts` (6 cases incl. `-1250 → '-12.50 EUR'`) and a regression test in `src/receipt.test.ts` pinning `renderReceipt` with a negative refund item.
+
+**How verified:** I ran `bun test` myself — 9 pass, 0 fail across 3 files. The two pre-existing tests confirm `renderInvoice`/`renderReceipt` output is unchanged for positive amounts, and the new cases fix the receipt's negative-amount drift through its public entry point.
+
+Ready for the harness check and merge.
+
+  architect    glm-5.3-flash        2 turns, 22359 tokens
+  coder        deepseek-v4-flash    1 turns, 146236 tokens
+
+main: done
+  bun run test passed
+  merged: 6bbed74 Merge branch 'work/main'
+  this job: 169k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"6bbed74 Merge branch 'work/main'","cost":"this job: 169k tokens, 0.4¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":10549,"outputTokens":2594,"cacheReadTokens":9216,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":8119,"outputTokens":3077,"cacheReadTokens":135040,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

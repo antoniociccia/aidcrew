@@ -1,0 +1,66 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/logger.ts)
+coder · read(src/logger.test.ts)
+coder · json(package.json)
+coder · json(package.json)
+coder · bash(ls -la && cat src/logger.test.ts | wc -l)
+coder › I have a clear picture. Let me check the git setup and whether bun is available, then implement.
+coder · bash(cat .git; echo '---'; git -C . status --short 2>&1 | head; e…)
+coder › Now I'll create `src/redact.ts`:
+coder · write(src/redact.ts)
+coder › Now wire redaction into the logger:
+coder · write(import { redact } from './redact.ts'  export type Fields = R…)
+coder › Now the tests for `redact`:
+coder · write(import { expect, test } from 'bun:test' import { redact } fr…)
+coder › Now extend the logger tests:
+coder · write(import { expect, test } from 'bun:test' import { log } from …)
+coder · bash(bun test 2>&1)
+coder › All 16 tests pass. Let me commit the changes:
+coder · bash(cd "$(git -C . rev-parse --show-toplevel 2>/dev/null || echo…)
+coder · bash(git add src/redact.ts && git commit -q -m "Add redact() that…)
+verified: bun run test passes on work/main
+merged work/main into the repository: c028135 Merge branch 'work/main'
+coder › Done. Here is what I changed and why.
+
+## Changes
+
+**`src/redact.ts` (new)** — exports `redact(value): unknown`. It walks plain objects and arrays at any depth building a copy:
+- Any key whose name contains `password`, `passwd`, `secret`, `token`, `apikey`, `api_key`, `api-key` or `authorization` (case-insensitive substring match, so `userPassword`, `access_token`, `ApiKey`… are caught) has its *entire* value replaced with `'[redacted]'` and is not recursed into.
+- Any string *value* containing a literal `Bearer ` followed by a non-whitespace token has each such token replaced with `'[redacted]'`, keeping the `Bearer ` prefix.
+- Objects and arrays are copied; scalars and non-plain objects (e.g. `Date`) are returned unchanged, and the input is never mutated.
+
+**`src/logger.ts`** — `log()` now runs `redact(fields)` before spreading fields into the JSON line.
+
+**`src/redact.test.ts` (new)** and **`src/logger.test.ts` (extended)** — cover sensitive-key redaction (case, substring, nested depth, no recursion into a sensitive key's value), Bearer-token replacement (single, multiple, absent/lowercase `bearer` untouched), immutability of the input, scalar passthrough, and the logger redacting top-level and nested secrets and tokens while leaving ordinary fields and JSON ordering intact.
+
+## Checks
+
+`bun test` output:
+
+```
+ 16 pass
+ 0 fail
+ 21 expect() calls
+Ran 16 tests across 2 files. [16.00ms]
+```
+
+## Decisions the plan didn't pin down
+
+- **Sensitive keys stop recursion** — when a key is sensitive, its value becomes `'[redacted]'` wholesale rather than being walked, since the spec says the key's *value* is replaced by that string.
+- **`Bearer` is matched case-sensitively** — the spec says "in any case" only for the key names and quotes `'Bearer '` literally, so lowercase `bearer abc` is left alone (covered by a test). Key matching, by contrast, is case-insensitive per the spec.
+- **Token runs to the next whitespace** (`\S+`), which is the standard boundary for a bearer token.
+
+Committed in three small commits: adding `redact`, wiring it into `log()`, and adding the tests.
+
+  coder        deepseek-v4-flash    1 turns, 149946 tokens
+
+main: done
+  bun run test passed
+  merged: c028135 Merge branch 'work/main'
+  this job: 150k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"c028135 Merge branch 'work/main'","cost":"this job: 150k tokens, 0.4¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5648,"outputTokens":11306,"cacheReadTokens":132992,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

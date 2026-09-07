@@ -1,0 +1,66 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+coder · bash(ls -la && bun --version 2>/dev/null || true)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git checkout -b add-env-config)
+coder · write(src/env.ts)
+coder · edit(src/config.ts)
+coder · write(src/index.ts)
+coder · write(src/env.test.ts)
+coder · write(src/config.test.ts)
+coder · edit(src/config.test.ts)
+coder · write(src/index.test.ts)
+coder · bash(bun test)
+coder · bash(which tsc || true; tsc --version 2>/dev/null || true)
+coder · bash(find .aidcrew -maxdepth 2 -type f -print -exec cat {} \;)
+coder · bash(tsc --noEmit --allowImportingTsExtensions --module nodenext …)
+coder · bash(git status --short)
+coder · bash(git add src/env.ts && git commit -m "Add fromEnv for APP_* e…)
+coder · bash(git add src/config.ts && git commit -m "Add config validatio…)
+coder · bash(git add src/index.ts && git commit -m "Layer the environment…)
+coder · bash(git add src/env.test.ts src/config.test.ts src/index.test.ts…)
+coder · bash(bun test)
+coder · read(src/env.ts)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · bash(git status --short && git log --oneline -5)
+verified: bun run test passes on work/main
+merged work/main into the repository: d955215 Merge branch 'add-env-config'
+coder › Done. All changes are on branch `add-env-config`, committed in small pieces.
+
+What changed
+- `src/env.ts` (new): `fromEnv(env, prefix = 'APP_')` reads `${prefix}PORT`, `${prefix}HOST`, `${prefix}DEBUG`, `${prefix}NAME`. Port becomes a number, debug becomes a boolean (`true/1/yes` → true, `false/0/no` → false, case-insensitive), host/name stay strings. Absent or `''` values are left out. A non-numeric port throws `TypeError` naming the variable; an unrecognized debug value throws `TypeError` naming the variable.
+- `src/config.ts`: added `validate(config)` — returns the config, or throws a `TypeError` naming the field for a non-integer/out-of-range port (1–65535) or empty host/name.
+- `src/index.ts`: `resolveConfig(file, env)` now layers defaults → file → environment and validates; `env` defaults to `process.env`.
+- Tests: new `src/env.test.ts` and `src/config.test.ts`, and `src/index.test.ts` extended for layering/validation and the `process.env` default.
+
+Check output
+```
+bun test v1.3.14 (0d9b296a)
+
+ 15 pass
+ 0 fail
+ 45 expect() calls
+Ran 15 tests across 3 files. [16.00ms]
+```
+
+Notes/decisions
+- "Empty" is treated as exactly `''` (no trimming), per the wording "absent or empty".
+- Port parsing uses `Number(...)` with a `Number.isNaN` check; things like `12.5` or out-of-range values pass `fromEnv` and are then rejected by `validate` naming `port`, which keeps the two checks at their stated layers.
+- There is no typecheck/lint script in the repo; I did try a global `tsc` for a sanity pass, but the project has no `tsconfig.json` or `@types/node`, so `process` isn't typed outside Bun — the project's own check (`bun test`) is the one that runs clean.
+
+  coder        deepseek-v4-pro      1 turns, 292491 tokens
+
+main: done
+  bun run test passed
+  merged: d955215 Merge branch 'add-env-config'
+  this job: 292k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 18¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d955215 Merge branch 'add-env-config'","cost":"this job: 292k tokens, 6¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 18¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":7990,"outputTokens":10581,"cacheReadTokens":273920,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

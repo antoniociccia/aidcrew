@@ -1,0 +1,73 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(**/*.ts)
+architect · read(src/cache.ts)
+architect · read(src/cache.test.ts)
+architect › The skeleton and one test already exist. The contract is fully specified, so the plan is straightforward: implement `Cache` with a `Map` whose insertion order serves as the LRU order, plus lazy expiry, and extend the test file. Sending the plan to coder.
+architect · agent_send(Job: implement the LRU+TTL Cache in src/cache.ts and add tes…)
+architect → coder Job: implement the LRU+TTL Cache in src/cache.ts and add tests in src/cache.test.ts (bun test, ESM/TS). Work on the curr…
+coder · bash(git status && git branch --show-current && git log --oneline…)
+coder · glob(src/**/*.ts)
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · bash(cat package.json 2>/dev/null; ls -la; cat tsconfig.json 2>/d…)
+coder · error: command failed with exit code 1 {   "name": "cache",   "type": "module",   "private": true,   "scripts": {     "test": "…
+architect › The plan is with coder. What I decided after reading the skeleton (`src/cache.ts`) and its one existing test:
+
+**Design:** a private `Map` keyed by `K` holding `{ value, expiresAt }` — the map's insertion order is the LRU order, so recency refresh is delete-then-set and eviction takes the first key. Expiry is lazy (checked on `get`/`has`/`delete`/`size` against `now()`), with `expiresAt = set-time + ttlMs` and an entry expiring at exactly `now() >= expiresAt`. `set` purges expired entries before evicting the LRU one, so a stale slot frees itself; `has` and `delete` treat expired entries as absent; only `get` counts as a use; the constructor throws `RangeError` for capacity below 1.
+
+**Tests:** keep the existing one, add ~13 cases on a controllable clock covering the ttl=100 boundary (readable at 99, gone at 100), get-vs-has recency refresh, set-replaces-value-and-restarts-ttl, eviction at capacity (2 and 1), expired entries freeing slots without evicting live ones, delete semantics, size counting only unexpired, the RangeError, and the default clock.
+
+**Check:** `bun test` must show all tests passing with 0 failures. I expect back from coder that output plus confirmation that everything is committed on the branch.
+coder · write(src/cache.ts)
+coder · write(import { expect, test } from 'bun:test' import { Cache } fro…)
+coder · bash(bun test 2>&1)
+coder › All 14 tests pass. Committing.
+coder · bash(git add src/cache.ts src/cache.test.ts && git commit -m "Imp…)
+coder · agent_send(architect)
+coder → architect LRU+TTL cache implemented and committed on work/main (b64a232).  What changed: - src/cache.ts: private Map<K, { value; e…
+coder › Implemented and committed on `work/main` (b64a232), and reported back to the architect.
+
+**What I did**
+- `src/cache.ts`: backed by a private `Map<K, { value: V; expiresAt: number }>`; Map order = LRU order. Constructor keeps the readonly parameter properties and throws `RangeError("capacity must be at least 1, got N")` for capacity < 1. Expiry is `now() >= t + ttlMs`. `get` lazily drops stale entries and delete+re-sets on a hit (a get is a use); `set` for a new key purges all expired entries first, then evicts the first (LRU) key while at capacity, and never evicts on a re-set of an existing key; `has` checks expiry without refreshing recency; `delete` removes and returns whether it was unexpired; `size` counts `expiresAt > now()` read-only. Dropped the `notImplemented` helper, kept the JSDoc and exported signature.
+- `src/cache.test.ts`: kept the original test, added a controllable `clock()` helper (mutable `t`, `now: () => t`, `advance(ms)`), and covered all 13 requested behaviors plus the original.
+
+**Check output** (`bun test` from repo root):
+```
+14 pass
+0 fail
+42 expect() calls
+Ran 14 tests across 1 file.
+```
+
+**Confirmations requested**: RangeError for capacity 0 and −1 (test 12); expiry boundary with ttl 100 — readable at t=99, undefined at t=100 (test 2).
+
+**One judgment call**: test-5's scenario ("set a at t=0, set b; re-set a at t=80; at t=120 get(b) still works") is impossible with ttl 100 if b is set at t=0, since b would itself expire at t=100. I set b at t=30 (expires t=130) so all stated assertions hold: at t=120 `get(a)` returns the new value (old expiry at t=100 passed) and `get(b)` still works, size 2.
+
+All work committed on `work/main`, working tree clean.
+verified: bun run test passes on work/main
+merged work/main into the repository: 6d90511 Merge branch 'work/main'
+architect › The job is done. Coder's report checks out as a complete implementation of the plan:
+
+**What changed:**
+- `src/cache.ts` — the throwing skeleton replaced with a working LRU+TTL cache: a private `Map` whose insertion order drives recency (delete-then-set on `get` and re-`set`; evict-first-key when over capacity), lazy expiry at `now() >= set-time + ttlMs`, `set` purging expired entries before evicting so stale slots free themselves, `has`/`delete` treating expired entries as absent, `size` counting only unexpired entries, and a `RangeError` from the constructor for capacity below 1 — all on the caller-supplied `now` clock.
+- `src/cache.test.ts` — original test kept plus a controllable clock helper and 13 new cases covering the expiry boundary (readable at t=99, gone at t=100), get-refreshes-recency vs. has-doesn't, set-replaces-value-and-restarts-ttl, LRU eviction at capacities 2 and 1, expired entries freeing slots without evicting live ones, delete semantics, size filtering, RangeError for capacity 0 and −1, and the default clock.
+
+**How it was verified:** `bun test` from the repo root — 14 pass, 0 fail (42 expect calls), everything committed on `work/main` with a clean tree.
+
+Coder's adjustment to test 5 was correct: my plan set `b` at t=0 with ttl 100, which would itself be expired by t=120, so they set `b` at t=30 — the assertions under test (re-`set` restarts ttl, no eviction on replace) hold as intended. The boundary behavior is exactly as specified: an entry expires at exactly `ttlMs` after it was set.
+
+  architect    glm-5.3-flash        2 turns, 23374 tokens
+  coder        deepseek-v4-flash    1 turns, 113479 tokens
+
+main: done
+  bun run test passed
+  merged: 6d90511 Merge branch 'work/main'
+  this job: 137k tokens, 0.6¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 25¢, on gpt-5 ≈ 23¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"6d90511 Merge branch 'work/main'","cost":"this job: 137k tokens, 0.6¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 25¢, on gpt-5 ≈ 23¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":6650,"outputTokens":8596,"cacheReadTokens":8128,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6645,"outputTokens":11346,"cacheReadTokens":95488,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

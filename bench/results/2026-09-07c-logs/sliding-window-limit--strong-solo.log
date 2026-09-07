@@ -1,0 +1,58 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · bash(pwd && ls -la)
+coder · glob(**/*)
+coder · read(src/window.ts)
+coder · read(package.json)
+coder · read(.aidcrew/config.toml)
+coder · read(.aidcrew/agents/coder.md)
+coder · bash(git status && git branch -a && git log --oneline -5 2>/dev/n…)
+coder · write(src/window.ts)
+coder · write(src/window.test.ts)
+coder · bash(bun test)
+coder · bash(git status --short && git diff --stat)
+coder · bash(git add src/window.ts src/window.test.ts && git commit -m "I…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 0fd598a Merge branch 'work/main'
+coder › Done.
+
+**What I changed**
+- `src/window.ts`: implemented `SlidingWindow` with a private `Map<string, number[]>` of event timestamps per key.
+  - `allow(key)` prunes events older than the window, then records the current time only if the key is under `limit`; otherwise it records nothing and returns `false`.
+  - `remaining(key)` prunes and returns `limit - (events in the window)`.
+  - An event is dropped when `t <= now - windowMs`, so one exactly `windowMs` old no longer counts.
+  - Constructor throws `RangeError` when `limit < 1` or `windowMs < 1`.
+- `src/window.test.ts`: added 7 tests with a controlled clock (`() => time`), covering:
+  - `RangeError` for `limit` and `windowMs` below 1
+  - at-most-`limit` behaviour and that rejected events aren't recorded
+  - individual event expiry as the window slides (including the exactly-`windowMs`-old boundary)
+  - `remaining` counts
+  - key independence
+
+**Checks**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 22 expect() calls
+Ran 7 tests across 1 file. [16.00ms]
+```
+
+The project has no typecheck or lint script, so `bun test` is the only check run.
+
+**Commits**
+- `0389063 Implement SlidingWindow rate limiter`
+
+One small note beyond the letter of the plan: `recent()` keeps an (empty) array in the map for keys that have expired, rather than deleting the key, so per-key storage is retained. That's the simplest form that keeps `allow`/`remaining` consistent; if you'd prefer expired keys to be removed from the map, I can adjust it.
+
+  coder        deepseek-v4-pro      1 turns, 71043 tokens
+
+main: done
+  bun run test passed
+  merged: 0fd598a Merge branch 'work/main'
+  this job: 71k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"0fd598a Merge branch 'work/main'","cost":"this job: 71k tokens, 2¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5642,"outputTokens":5241,"cacheReadTokens":60160,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

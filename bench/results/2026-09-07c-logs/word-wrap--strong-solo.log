@@ -1,0 +1,54 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · tree(.)
+coder · glob(src/**/*)
+coder · read(src/wrap.ts)
+coder · read(package.json)
+coder · write(src/wrap.ts)
+coder · write(import { describe, expect, it } from "bun:test" import { wra…)
+coder · bash(bun test)
+coder · bash(git status --short && git log --oneline -3 2>/dev/null || tr…)
+coder · bash(git branch --show-current)
+coder · bash(git add src/wrap.ts && git commit -m "Implement wrap() with …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9f6e54f Merge branch 'work/main'
+coder › Implemented `wrap(text, width)` in `src/wrap.ts` and added tests in `src/wrap.test.ts`.
+
+What changed
+- `src/wrap.ts`
+  - Throws `RangeError` when `width < 1`.
+  - Splits input into paragraphs on blank (whitespace-only) lines, normalizing `\r\n`/`\r` first.
+  - Within a paragraph, collapses runs of whitespace into one space and trims.
+  - Wraps greedily, breaking at spaces so no line exceeds `width`, and splits any word longer than `width` into full-width chunks.
+  - Joins paragraphs with exactly one blank line (`\n\n`), so multiple blank lines collapse to one and the output has no trailing spaces on any line.
+
+Decisions not spelled out in the request
+- Single line breaks inside a paragraph (no blank line between them) are treated as spaces, since only blank lines separate paragraphs.
+- Whitespace-only lines count as blank paragraph separators.
+- `\r\n` and `\r` line endings are normalized to `\n`.
+
+Check output
+```
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+ 11 pass
+ 0 fail
+ 16 expect() calls
+Ran 11 tests across 1 file. [17.00ms]
+```
+
+Committed on `work/main`:
+- `74fd2b3` Implement wrap() with paragraph and word wrapping
+- `2d32a35` Add tests for wrap()
+
+  coder        deepseek-v4-pro      1 turns, 83900 tokens
+
+main: done
+  bun run test passed
+  merged: 9f6e54f Merge branch 'work/main'
+  this job: 84k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"9f6e54f Merge branch 'work/main'","cost":"this job: 84k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":4642,"outputTokens":7450,"cacheReadTokens":71808,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

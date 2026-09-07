@@ -1,0 +1,46 @@
++ coder on deepseek-v4-flash
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+coder · tree(.)
+coder · stat(src/window.ts)
+coder · read(src/window.ts)
+coder · read(package.json)
+coder · glob(**/*)
+coder · bash(ls -la; git status --short 2>/dev/null | head; git log --one…)
+coder · bash(command -v bun && bun --version)
+coder › Now I'll implement the class.
+coder · write(src/window.ts)
+coder · write(import { describe, expect, test } from 'bun:test' import { S…)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/window.test.ts: 49 |     expect(window.allow('a')).toBe…
+coder › My test's arithmetic was wrong — at t=1600 the event recorded at t=1000 is only 600ms old and still counts. Fixing the test to match the spec:
+coder · edit(src/window.test.ts)
+coder · bash(bun test 2>&1)
+coder › All 12 tests pass. Now commit on a branch.
+coder · bash(git checkout -b sliding-window && git add src/window.ts src/…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 5114792 Merge branch 'sliding-window'
+coder › Done. Summary of what I changed and decided:
+
+**`src/window.ts`** — implemented `SlidingWindow`:
+- Constructor validates `limit < 1` or `windowMs < 1` and throws a `RangeError` (with the offending value in the message), before anything else runs.
+- Internally keeps a `Map<string, number[]>` of per-key event timestamps from `now()`, so keys are fully independent.
+- `allow(key)` reads the clock once, drops events that are `windowMs` old or older (an event exactly `windowMs` old no longer counts, so anything `<= now - windowMs` is pruned), and records the event only when the surviving count is below `limit`, returning `true`; otherwise it records nothing and returns `false`.
+- `remaining(key)` returns `limit` minus the number of events still inside the window (pruning expired ones as it reads; that pruning is harmless since those events wouldn't count for `allow` either, and the test verifies `remaining` never records anything).
+- `allow` is O(1) amortized per call (pruning is a single `splice` of the expired prefix, and events are dropped once).
+
+**`src/window.test.ts`** — bun tests with a `FakeClock` the tests drive via `advance(ms)`: hits-the-limit behavior, the "exactly `windowMs` old no longer counts" boundary, events expiring one at a time, multiple events sharing one timestamp (a controlled clock can stand still), `remaining` semantics including the never-seen key and not recording, key independence, `RangeError` for both `limit < 1` and `windowMs < 1`, and that `now` defaults to `Date.now`.
+
+**Checks** — `bun test`: `12 pass, 0 fail, 48 expect() calls`.
+
+One decision beyond the plan: I made the test for events expiring one-at-a-time — my first version had an arithmetic error (expected an event recorded at t=1000 to have expired by t=1600, when it's only 600ms old). I corrected the test to match the specified semantics rather than changing the implementation. Committed as one commit (`1cc257f`) on branch `sliding-window`.
+
+  coder        deepseek-v4-flash    1 turns, 105632 tokens
+
+main: done
+  bun run test passed
+  merged: 5114792 Merge branch 'sliding-window'
+  this job: 106k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"5114792 Merge branch 'sliding-window'","cost":"this job: 106k tokens, 0.3¢ on deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":5581,"outputTokens":8403,"cacheReadTokens":91648,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

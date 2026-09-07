@@ -1,0 +1,763 @@
+360 runs to go, 0 already in bench/results/2026-09-07c.json, budget $100
+-> roman-numerals on cheap-solo (run 1)
+-> interval-merge on cheap-solo (run 1)
+-> retry-backoff on cheap-solo (run 1)
+-> csv-formula-injection on cheap-solo (run 1)
+   interval-merge on cheap-solo: passed, $0.002, 34s
+-> emitter-off-during-emit on cheap-solo (run 1)
+   retry-backoff on cheap-solo: passed, $0.002, 34s
+-> lower-bound on cheap-solo (run 1)
+   lower-bound on cheap-solo: passed, $0.001, 23s
+-> extract-money on cheap-solo (run 1)
+   extract-money on cheap-solo: not done, $0.001, 11s
+-> todo-done-command on cheap-solo (run 1)
+   roman-numerals on cheap-solo: not done, $0.003, 69s
+-> query-string on cheap-solo (run 1)
+   csv-formula-injection on cheap-solo: passed, $0.006, 77s
+-> debounce on cheap-solo (run 1)
+   emitter-off-during-emit on cheap-solo: passed, $0.003, 80s
+-> paginate-off-by-one on cheap-solo (run 1)
+   todo-done-command on cheap-solo: passed, $0.003, 53s
+-> stable-cache-key on cheap-solo (run 1)
+   query-string on cheap-solo: passed, $0.003, 55s
+-> lru-ttl-cache on cheap-solo (run 1)
+   paginate-off-by-one on cheap-solo: passed, $0.001, 17s
+-> money-parse on cheap-solo (run 1)
+   stable-cache-key on cheap-solo: passed, $0.001, 22s
+-> slugify-unicode on cheap-solo (run 1)
+   debounce on cheap-solo: passed, $0.004, 83s
+-> word-wrap on cheap-solo (run 1)
+   slugify-unicode on cheap-solo: passed, $0.002, 42s
+-> config-from-env on cheap-solo (run 1)
+   lru-ttl-cache on cheap-solo: said done, failed, $0.004, 82s
+-> csv-json-cli on cheap-solo (run 1)
+   config-from-env on cheap-solo: passed, $0.002, 34s
+-> markdown-toc on cheap-solo (run 1)
+   csv-json-cli on cheap-solo: passed, $0.005, 145s
+-> queue-in-order on cheap-solo (run 1)
+   money-parse on cheap-solo: passed, $0.010, 233s
+-> path-normalize on cheap-solo (run 1)
+   markdown-toc on cheap-solo: passed, $0.005, 150s
+-> deep-merge on cheap-solo (run 1)
+   queue-in-order on cheap-solo: passed, $0.003, 106s
+-> date-range-overlap on cheap-solo (run 1)
+   deep-merge on cheap-solo: passed, $0.005, 129s
+-> sliding-window-limit on cheap-solo (run 1)
+   date-range-overlap on cheap-solo: passed, $0.002, 51s
+-> token-bucket on cheap-solo (run 1)
+   path-normalize on cheap-solo: passed, $0.003, 177s
+-> extract-tokenize on cheap-solo (run 1)
+   token-bucket on cheap-solo: passed, $0.002, 52s
+-> ini-parser on cheap-solo (run 1)
+   sliding-window-limit on cheap-solo: passed, $0.002, 74s
+-> semver-compare on cheap-solo (run 1)
+   extract-tokenize on cheap-solo: passed, $0.002, 57s
+-> route-match on cheap-solo (run 1)
+   word-wrap on cheap-solo: not done, $0.005, 514s
+-> log-redaction on cheap-solo (run 1)
+   ini-parser on cheap-solo: passed, $0.004, 132s
+-> roman-numerals on strong-solo (run 1)
+   log-redaction on cheap-solo: passed, $0.003, 63s
+-> interval-merge on strong-solo (run 1)
+   semver-compare on cheap-solo: passed, $0.006, 184s
+-> retry-backoff on strong-solo (run 1)
+   roman-numerals on strong-solo: passed, $0.025, 78s
+-> csv-formula-injection on strong-solo (run 1)
+   interval-merge on strong-solo: passed, $0.014, 39s
+-> emitter-off-during-emit on strong-solo (run 1)
+   route-match on cheap-solo: said done, failed, $0.004, 197s
+-> lower-bound on strong-solo (run 1)
+   retry-backoff on strong-solo: passed, $0.018, 60s
+-> extract-money on strong-solo (run 1)
+   lower-bound on strong-solo: passed, $0.011, 28s
+-> todo-done-command on strong-solo (run 1)
+   csv-formula-injection on strong-solo: passed, $0.021, 62s
+-> query-string on strong-solo (run 1)
+   emitter-off-during-emit on strong-solo: passed, $0.029, 92s
+-> debounce on strong-solo (run 1)
+   extract-money on strong-solo: passed, $0.023, 55s
+-> paginate-off-by-one on strong-solo (run 1)
+   query-string on strong-solo: passed, $0.018, 58s
+-> stable-cache-key on strong-solo (run 1)
+   paginate-off-by-one on strong-solo: passed, $0.014, 31s
+-> lru-ttl-cache on strong-solo (run 1)
+   todo-done-command on strong-solo: passed, $0.032, 104s
+-> money-parse on strong-solo (run 1)
+   debounce on strong-solo: passed, $0.023, 68s
+-> slugify-unicode on strong-solo (run 1)
+   slugify-unicode on strong-solo: passed, $0.016, 46s
+-> word-wrap on strong-solo (run 1)
+   stable-cache-key on strong-solo: passed, $0.044, 178s
+-> config-from-env on strong-solo (run 1)
+   word-wrap on strong-solo: passed, $0.026, 98s
+-> csv-json-cli on strong-solo (run 1)
+   csv-json-cli on strong-solo: passed, $0.021, 19s
+-> markdown-toc on strong-solo (run 1)
+   lru-ttl-cache on strong-solo: passed, $0.058, 214s
+-> queue-in-order on strong-solo (run 1)
+   money-parse on strong-solo: passed, $0.066, 238s
+-> path-normalize on strong-solo (run 1)
+   config-from-env on strong-solo: passed, $0.033, 93s
+-> deep-merge on strong-solo (run 1)
+   path-normalize on strong-solo: passed, $0.014, 44s
+-> date-range-overlap on strong-solo (run 1)
+   markdown-toc on strong-solo: passed, $0.036, 125s
+-> sliding-window-limit on strong-solo (run 1)
+   date-range-overlap on strong-solo: passed, $0.026, 72s
+-> token-bucket on strong-solo (run 1)
+   sliding-window-limit on strong-solo: passed, $0.021, 65s
+-> extract-tokenize on strong-solo (run 1)
+   deep-merge on strong-solo: passed, $0.041, 161s
+-> ini-parser on strong-solo (run 1)
+   token-bucket on strong-solo: passed, $0.016, 55s
+-> semver-compare on strong-solo (run 1)
+   extract-tokenize on strong-solo: passed, $0.021, 53s
+-> route-match on strong-solo (run 1)
+   queue-in-order on strong-solo: passed, $0.053, 227s
+-> log-redaction on strong-solo (run 1)
+   semver-compare on strong-solo: passed, $0.026, 81s
+-> roman-numerals on cheap-team (run 1)
+   ini-parser on strong-solo: passed, $0.041, 127s
+-> interval-merge on cheap-team (run 1)
+   log-redaction on strong-solo: passed, $0.038, 150s
+-> retry-backoff on cheap-team (run 1)
+   route-match on strong-solo: said done, failed, $0.046, 159s
+-> csv-formula-injection on cheap-team (run 1)
+   interval-merge on cheap-team: passed, $0.002, 79s
+-> emitter-off-during-emit on cheap-team (run 1)
+   retry-backoff on cheap-team: passed, $0.002, 89s
+-> lower-bound on cheap-team (run 1)
+   roman-numerals on cheap-team: passed, $0.003, 175s
+-> extract-money on cheap-team (run 1)
+   csv-formula-injection on cheap-team: passed, $0.002, 90s
+-> todo-done-command on cheap-team (run 1)
+   lower-bound on cheap-team: passed, $0.002, 80s
+-> query-string on cheap-team (run 1)
+   emitter-off-during-emit on cheap-team: passed, $0.002, 139s
+-> debounce on cheap-team (run 1)
+   extract-money on cheap-team: passed, $0.004, 114s
+-> paginate-off-by-one on cheap-team (run 1)
+   todo-done-command on cheap-team: passed, $0.004, 120s
+-> stable-cache-key on cheap-team (run 1)
+   query-string on cheap-team: passed, $0.003, 93s
+-> lru-ttl-cache on cheap-team (run 1)
+   debounce on cheap-team: passed, $0.003, 107s
+-> money-parse on cheap-team (run 1)
+   paginate-off-by-one on cheap-team: passed, $0.002, 72s
+-> slugify-unicode on cheap-team (run 1)
+   slugify-unicode on cheap-team: passed, $0.002, 90s
+-> word-wrap on cheap-team (run 1)
+   stable-cache-key on cheap-team: passed, $0.003, 162s
+-> config-from-env on cheap-team (run 1)
+   word-wrap on cheap-team: passed, $0.003, 155s
+-> csv-json-cli on cheap-team (run 1)
+   config-from-env on cheap-team: passed, $0.004, 188s
+-> markdown-toc on cheap-team (run 1)
+   lru-ttl-cache on cheap-team: passed, $0.006, 321s
+-> queue-in-order on cheap-team (run 1)
+   csv-json-cli on cheap-team: passed, $0.005, 193s
+-> path-normalize on cheap-team (run 1)
+   queue-in-order on cheap-team: passed, $0.003, 160s
+-> deep-merge on cheap-team (run 1)
+   money-parse on cheap-team: passed, $0.008, 487s
+-> date-range-overlap on cheap-team (run 1)
+   markdown-toc on cheap-team: passed, $0.004, 213s
+-> sliding-window-limit on cheap-team (run 1)
+   path-normalize on cheap-team: passed, $0.003, 133s
+-> token-bucket on cheap-team (run 1)
+   date-range-overlap on cheap-team: passed, $0.003, 132s
+-> extract-tokenize on cheap-team (run 1)
+   sliding-window-limit on cheap-team: passed, $0.003, 134s
+-> ini-parser on cheap-team (run 1)
+   token-bucket on cheap-team: passed, $0.004, 165s
+-> semver-compare on cheap-team (run 1)
+   extract-tokenize on cheap-team: passed, $0.003, 156s
+-> route-match on cheap-team (run 1)
+   ini-parser on cheap-team: passed, $0.003, 175s
+-> log-redaction on cheap-team (run 1)
+   deep-merge on cheap-team: passed, $0.011, 403s
+-> roman-numerals on strong-team (run 1)
+   semver-compare on cheap-team: passed, $0.003, 157s
+-> interval-merge on strong-team (run 1)
+   log-redaction on cheap-team: passed, $0.004, 119s
+-> retry-backoff on strong-team (run 1)
+   interval-merge on strong-team: passed, $0.011, 59s
+-> csv-formula-injection on strong-team (run 1)
+   retry-backoff on strong-team: not done, $0.006, 27s
+-> emitter-off-during-emit on strong-team (run 1)
+   roman-numerals on strong-team: passed, $0.023, 115s
+-> lower-bound on strong-team (run 1)
+   route-match on cheap-team: said done, failed, $0.006, 218s
+-> extract-money on strong-team (run 1)
+   csv-formula-injection on strong-team: passed, $0.014, 69s
+-> todo-done-command on strong-team (run 1)
+   lower-bound on strong-team: passed, $0.010, 47s
+-> query-string on strong-team (run 1)
+   extract-money on strong-team: passed, $0.018, 62s
+-> debounce on strong-team (run 1)
+   query-string on strong-team: passed, $0.014, 54s
+-> paginate-off-by-one on strong-team (run 1)
+   emitter-off-during-emit on strong-team: passed, $0.015, 140s
+-> stable-cache-key on strong-team (run 1)
+   todo-done-command on strong-team: passed, $0.019, 88s
+-> lru-ttl-cache on strong-team (run 1)
+   debounce on strong-team: passed, $0.023, 106s
+-> money-parse on strong-team (run 1)
+   paginate-off-by-one on strong-team: passed, $0.013, 91s
+-> slugify-unicode on strong-team (run 1)
+   stable-cache-key on strong-team: passed, $0.024, 96s
+-> word-wrap on strong-team (run 1)
+   lru-ttl-cache on strong-team: passed, $0.018, 88s
+-> config-from-env on strong-team (run 1)
+   slugify-unicode on strong-team: passed, $0.014, 49s
+-> csv-json-cli on strong-team (run 1)
+   config-from-env on strong-team: passed, $0.020, 83s
+-> markdown-toc on strong-team (run 1)
+   word-wrap on strong-team: passed, $0.022, 92s
+-> queue-in-order on strong-team (run 1)
+   csv-json-cli on strong-team: said done, failed, $0.022, 124s
+-> path-normalize on strong-team (run 1)
+   money-parse on strong-team: passed, $0.036, 198s
+-> deep-merge on strong-team (run 1)
+   queue-in-order on strong-team: not done, $0.022, 83s
+-> date-range-overlap on strong-team (run 1)
+   path-normalize on strong-team: passed, $0.015, 48s
+-> sliding-window-limit on strong-team (run 1)
+   markdown-toc on strong-team: passed, $0.025, 126s
+-> token-bucket on strong-team (run 1)
+   sliding-window-limit on strong-team: passed, $0.013, 49s
+-> extract-tokenize on strong-team (run 1)
+   date-range-overlap on strong-team: passed, $0.024, 90s
+-> ini-parser on strong-team (run 1)
+   deep-merge on strong-team: not done, $0.027, 111s
+-> semver-compare on strong-team (run 1)
+   token-bucket on strong-team: passed, $0.018, 70s
+-> route-match on strong-team (run 1)
+   extract-tokenize on strong-team: passed, $0.016, 69s
+-> log-redaction on strong-team (run 1)
+   ini-parser on strong-team: not done, $0.019, 99s
+-> roman-numerals on cheap-solo (run 2)
+   semver-compare on strong-team: passed, $0.020, 105s
+-> interval-merge on cheap-solo (run 2)
+   route-match on strong-team: not done, $0.021, 232s
+-> retry-backoff on cheap-solo (run 2)
+   interval-merge on cheap-solo: not done, $0.001, 133s
+-> csv-formula-injection on cheap-solo (run 2)
+   log-redaction on strong-team: not done, $0.017, 210s
+-> emitter-off-during-emit on cheap-solo (run 2)
+   roman-numerals on cheap-solo: not done, $0.002, 179s
+-> lower-bound on cheap-solo (run 2)
+   retry-backoff on cheap-solo: not done, $0.000, 121s
+-> extract-money on cheap-solo (run 2)
+   csv-formula-injection on cheap-solo: not done, $0.000, 121s
+-> todo-done-command on cheap-solo (run 2)
+   emitter-off-during-emit on cheap-solo: not done, $0.000, 121s
+-> query-string on cheap-solo (run 2)
+   lower-bound on cheap-solo: not done, $0.000, 121s
+-> debounce on cheap-solo (run 2)
+   extract-money on cheap-solo: not done, $0.000, 122s
+-> paginate-off-by-one on cheap-solo (run 2)
+   todo-done-command on cheap-solo: not done, $0.000, 121s
+-> stable-cache-key on cheap-solo (run 2)
+   query-string on cheap-solo: not done, $0.000, 121s
+-> lru-ttl-cache on cheap-solo (run 2)
+   debounce on cheap-solo: not done, $0.000, 121s
+-> money-parse on cheap-solo (run 2)
+   paginate-off-by-one on cheap-solo: not done, $0.000, 121s
+-> slugify-unicode on cheap-solo (run 2)
+   stable-cache-key on cheap-solo: not done, $0.000, 122s
+-> word-wrap on cheap-solo (run 2)
+   lru-ttl-cache on cheap-solo: not done, $0.000, 121s
+-> config-from-env on cheap-solo (run 2)
+   money-parse on cheap-solo: not done, $0.000, 121s
+-> csv-json-cli on cheap-solo (run 2)
+   slugify-unicode on cheap-solo: not done, $0.000, 121s
+-> markdown-toc on cheap-solo (run 2)
+   word-wrap on cheap-solo: not done, $0.000, 121s
+-> queue-in-order on cheap-solo (run 2)
+   config-from-env on cheap-solo: not done, $0.000, 122s
+-> path-normalize on cheap-solo (run 2)
+   csv-json-cli on cheap-solo: not done, $0.000, 121s
+-> deep-merge on cheap-solo (run 2)
+   markdown-toc on cheap-solo: not done, $0.000, 121s
+-> date-range-overlap on cheap-solo (run 2)
+   queue-in-order on cheap-solo: not done, $0.000, 121s
+-> sliding-window-limit on cheap-solo (run 2)
+   path-normalize on cheap-solo: not done, $0.000, 121s
+-> token-bucket on cheap-solo (run 2)
+   deep-merge on cheap-solo: not done, $0.000, 122s
+-> extract-tokenize on cheap-solo (run 2)
+   date-range-overlap on cheap-solo: not done, $0.000, 121s
+-> ini-parser on cheap-solo (run 2)
+   sliding-window-limit on cheap-solo: not done, $0.000, 121s
+-> semver-compare on cheap-solo (run 2)
+   extract-tokenize on cheap-solo: passed, $0.002, 131s
+-> route-match on cheap-solo (run 2)
+   token-bucket on cheap-solo: passed, $0.002, 154s
+-> log-redaction on cheap-solo (run 2)
+   log-redaction on cheap-solo: passed, $0.003, 44s
+-> roman-numerals on strong-solo (run 2)
+   ini-parser on cheap-solo: passed, $0.003, 91s
+-> interval-merge on strong-solo (run 2)
+   interval-merge on strong-solo: passed, $0.014, 43s
+-> retry-backoff on strong-solo (run 2)
+   semver-compare on cheap-solo: passed, $0.006, 133s
+-> csv-formula-injection on strong-solo (run 2)
+   route-match on cheap-solo: said done, failed, $0.004, 107s
+-> emitter-off-during-emit on strong-solo (run 2)
+   retry-backoff on strong-solo: passed, $0.016, 45s
+-> lower-bound on strong-solo (run 2)
+   roman-numerals on strong-solo: passed, $0.034, 99s
+-> extract-money on strong-solo (run 2)
+   emitter-off-during-emit on strong-solo: passed, $0.017, 49s
+-> todo-done-command on strong-solo (run 2)
+   csv-formula-injection on strong-solo: passed, $0.021, 62s
+-> query-string on strong-solo (run 2)
+   lower-bound on strong-solo: passed, $0.010, 28s
+-> debounce on strong-solo (run 2)
+   extract-money on strong-solo: passed, $0.020, 55s
+-> paginate-off-by-one on strong-solo (run 2)
+   paginate-off-by-one on strong-solo: passed, $0.013, 26s
+-> stable-cache-key on strong-solo (run 2)
+   todo-done-command on strong-solo: said done, failed, $0.030, 96s
+-> lru-ttl-cache on strong-solo (run 2)
+   debounce on strong-solo: passed, $0.033, 102s
+-> money-parse on strong-solo (run 2)
+   query-string on strong-solo: passed, $0.035, 126s
+-> slugify-unicode on strong-solo (run 2)
+   slugify-unicode on strong-solo: passed, $0.017, 50s
+-> word-wrap on strong-solo (run 2)
+   stable-cache-key on strong-solo: passed, $0.031, 161s
+-> config-from-env on strong-solo (run 2)
+   lru-ttl-cache on strong-solo: passed, $0.051, 193s
+-> csv-json-cli on strong-solo (run 2)
+   money-parse on strong-solo: passed, $0.055, 223s
+-> markdown-toc on strong-solo (run 2)
+   config-from-env on strong-solo: passed, $0.054, 139s
+-> queue-in-order on strong-solo (run 2)
+   word-wrap on strong-solo: passed, $0.053, 212s
+-> path-normalize on strong-solo (run 2)
+   csv-json-cli on strong-solo: passed, $0.035, 115s
+-> deep-merge on strong-solo (run 2)
+   path-normalize on strong-solo: passed, $0.016, 46s
+-> date-range-overlap on strong-solo (run 2)
+   deep-merge on strong-solo: said done, failed, $0.009, 60s
+-> sliding-window-limit on strong-solo (run 2)
+   markdown-toc on strong-solo: passed, $0.026, 145s
+-> token-bucket on strong-solo (run 2)
+   queue-in-order on strong-solo: passed, $0.027, 114s
+-> extract-tokenize on strong-solo (run 2)
+   date-range-overlap on strong-solo: passed, $0.022, 55s
+-> ini-parser on strong-solo (run 2)
+   sliding-window-limit on strong-solo: passed, $0.022, 75s
+-> semver-compare on strong-solo (run 2)
+   extract-tokenize on strong-solo: passed, $0.026, 47s
+-> route-match on strong-solo (run 2)
+   token-bucket on strong-solo: passed, $0.022, 66s
+-> log-redaction on strong-solo (run 2)
+   ini-parser on strong-solo: passed, $0.031, 114s
+-> roman-numerals on cheap-team (run 2)
+   semver-compare on strong-solo: passed, $0.025, 79s
+-> interval-merge on cheap-team (run 2)
+   log-redaction on strong-solo: passed, $0.039, 133s
+-> retry-backoff on cheap-team (run 2)
+   interval-merge on cheap-team: passed, $0.002, 82s
+-> csv-formula-injection on cheap-team (run 2)
+   roman-numerals on cheap-team: passed, $0.002, 99s
+-> emitter-off-during-emit on cheap-team (run 2)
+   route-match on strong-solo: said done, failed, $0.055, 208s
+-> lower-bound on cheap-team (run 2)
+   lower-bound on cheap-team: passed, $0.002, 57s
+-> extract-money on cheap-team (run 2)
+   retry-backoff on cheap-team: passed, $0.003, 134s
+-> todo-done-command on cheap-team (run 2)
+   csv-formula-injection on cheap-team: passed, $0.005, 191s
+-> query-string on cheap-team (run 2)
+   extract-money on cheap-team: passed, $0.003, 88s
+-> debounce on cheap-team (run 2)
+   todo-done-command on cheap-team: passed, $0.003, 115s
+-> paginate-off-by-one on cheap-team (run 2)
+   query-string on cheap-team: passed, $0.002, 54s
+-> stable-cache-key on cheap-team (run 2)
+   debounce on cheap-team: passed, $0.003, 109s
+-> lru-ttl-cache on cheap-team (run 2)
+   paginate-off-by-one on cheap-team: passed, $0.002, 80s
+-> money-parse on cheap-team (run 2)
+   emitter-off-during-emit on cheap-team: passed, $0.010, 335s
+-> slugify-unicode on cheap-team (run 2)
+   slugify-unicode on cheap-team: passed, $0.002, 42s
+-> word-wrap on cheap-team (run 2)
+   stable-cache-key on cheap-team: passed, $0.006, 192s
+-> config-from-env on cheap-team (run 2)
+   word-wrap on cheap-team: passed, $0.004, 94s
+-> csv-json-cli on cheap-team (run 2)
+   lru-ttl-cache on cheap-team: passed, $0.004, 199s
+-> markdown-toc on cheap-team (run 2)
+   config-from-env on cheap-team: passed, $0.003, 99s
+-> queue-in-order on cheap-team (run 2)
+   money-parse on cheap-team: passed, $0.006, 242s
+-> path-normalize on cheap-team (run 2)
+   csv-json-cli on cheap-team: passed, $0.005, 93s
+-> deep-merge on cheap-team (run 2)
+   path-normalize on cheap-team: passed, $0.003, 90s
+-> date-range-overlap on cheap-team (run 2)
+   queue-in-order on cheap-team: passed, $0.003, 132s
+-> sliding-window-limit on cheap-team (run 2)
+   date-range-overlap on cheap-team: passed, $0.003, 93s
+-> token-bucket on cheap-team (run 2)
+   deep-merge on cheap-team: passed, $0.004, 175s
+-> extract-tokenize on cheap-team (run 2)
+   sliding-window-limit on cheap-team: passed, $0.003, 108s
+-> ini-parser on cheap-team (run 2)
+   token-bucket on cheap-team: passed, $0.003, 64s
+-> semver-compare on cheap-team (run 2)
+   extract-tokenize on cheap-team: passed, $0.002, 91s
+-> route-match on cheap-team (run 2)
+   ini-parser on cheap-team: passed, $0.003, 110s
+-> log-redaction on cheap-team (run 2)
+   route-match on cheap-team: said done, failed, $0.003, 82s
+-> roman-numerals on strong-team (run 2)
+   semver-compare on cheap-team: passed, $0.004, 133s
+-> interval-merge on strong-team (run 2)
+   markdown-toc on cheap-team: passed, $0.006, 461s
+-> retry-backoff on strong-team (run 2)
+   interval-merge on strong-team: passed, $0.013, 72s
+-> csv-formula-injection on strong-team (run 2)
+   roman-numerals on strong-team: passed, $0.020, 101s
+-> emitter-off-during-emit on strong-team (run 2)
+   log-redaction on cheap-team: said done, failed, $0.003, 137s
+-> lower-bound on strong-team (run 2)
+   retry-backoff on strong-team: passed, $0.013, 68s
+-> extract-money on strong-team (run 2)
+   lower-bound on strong-team: passed, $0.011, 38s
+-> todo-done-command on strong-team (run 2)
+   emitter-off-during-emit on strong-team: passed, $0.015, 73s
+-> query-string on strong-team (run 2)
+   csv-formula-injection on strong-team: passed, $0.014, 90s
+-> debounce on strong-team (run 2)
+   extract-money on strong-team: passed, $0.022, 88s
+-> paginate-off-by-one on strong-team (run 2)
+   todo-done-command on strong-team: said done, failed, $0.023, 90s
+-> stable-cache-key on strong-team (run 2)
+   paginate-off-by-one on strong-team: passed, $0.010, 51s
+-> lru-ttl-cache on strong-team (run 2)
+   query-string on strong-team: passed, $0.019, 85s
+-> money-parse on strong-team (run 2)
+   debounce on strong-team: passed, $0.026, 104s
+-> slugify-unicode on strong-team (run 2)
+   slugify-unicode on strong-team: passed, $0.011, 41s
+-> word-wrap on strong-team (run 2)
+   stable-cache-key on strong-team: passed, $0.025, 101s
+-> config-from-env on strong-team (run 2)
+   lru-ttl-cache on strong-team: passed, $0.021, 117s
+-> csv-json-cli on strong-team (run 2)
+   money-parse on strong-team: passed, $0.030, 152s
+-> markdown-toc on strong-team (run 2)
+   config-from-env on strong-team: passed, $0.022, 117s
+-> queue-in-order on strong-team (run 2)
+   csv-json-cli on strong-team: passed, $0.019, 127s
+-> path-normalize on strong-team (run 2)
+   word-wrap on strong-team: passed, $0.021, 204s
+-> deep-merge on strong-team (run 2)
+   markdown-toc on strong-team: passed, $0.022, 135s
+-> date-range-overlap on strong-team (run 2)
+   path-normalize on strong-team: passed, $0.013, 55s
+-> sliding-window-limit on strong-team (run 2)
+   queue-in-order on strong-team: passed, $0.030, 152s
+-> token-bucket on strong-team (run 2)
+   date-range-overlap on strong-team: passed, $0.018, 74s
+-> extract-tokenize on strong-team (run 2)
+   sliding-window-limit on strong-team: passed, $0.014, 69s
+-> ini-parser on strong-team (run 2)
+   deep-merge on strong-team: passed, $0.020, 104s
+-> semver-compare on strong-team (run 2)
+   ini-parser on strong-team: passed, $0.013, 60s
+-> route-match on strong-team (run 2)
+   extract-tokenize on strong-team: passed, $0.010, 66s
+-> log-redaction on strong-team (run 2)
+   semver-compare on strong-team: passed, $0.016, 104s
+-> roman-numerals on cheap-solo (run 3)
+   log-redaction on strong-team: passed, $0.017, 91s
+-> interval-merge on cheap-solo (run 3)
+   token-bucket on strong-team: passed, $0.013, 179s
+-> retry-backoff on cheap-solo (run 3)
+   roman-numerals on cheap-solo: passed, $0.003, 80s
+-> csv-formula-injection on cheap-solo (run 3)
+   retry-backoff on cheap-solo: passed, $0.002, 40s
+-> emitter-off-during-emit on cheap-solo (run 3)
+   interval-merge on cheap-solo: passed, $0.002, 44s
+-> lower-bound on cheap-solo (run 3)
+   lower-bound on cheap-solo: passed, $0.001, 18s
+-> extract-money on cheap-solo (run 3)
+   extract-money on cheap-solo: passed, $0.002, 33s
+-> todo-done-command on cheap-solo (run 3)
+   todo-done-command on cheap-solo: passed, $0.003, 35s
+-> query-string on cheap-solo (run 3)
+   route-match on strong-team: said done, failed, $0.028, 234s
+-> debounce on cheap-solo (run 3)
+   emitter-off-during-emit on cheap-solo: passed, $0.002, 124s
+-> paginate-off-by-one on cheap-solo (run 3)
+   debounce on cheap-solo: passed, $0.002, 49s
+-> stable-cache-key on cheap-solo (run 3)
+   csv-formula-injection on cheap-solo: passed, $0.003, 146s
+-> lru-ttl-cache on cheap-solo (run 3)
+   query-string on cheap-solo: passed, $0.002, 56s
+-> money-parse on cheap-solo (run 3)
+   paginate-off-by-one on cheap-solo: passed, $0.001, 24s
+-> slugify-unicode on cheap-solo (run 3)
+   slugify-unicode on cheap-solo: passed, $0.001, 23s
+-> word-wrap on cheap-solo (run 3)
+   stable-cache-key on cheap-solo: passed, $0.002, 46s
+-> config-from-env on cheap-solo (run 3)
+   money-parse on cheap-solo: not done, $0.001, 58s
+-> csv-json-cli on cheap-solo (run 3)
+   lru-ttl-cache on cheap-solo: said done, failed, $0.003, 87s
+-> markdown-toc on cheap-solo (run 3)
+   config-from-env on cheap-solo: passed, $0.003, 67s
+-> queue-in-order on cheap-solo (run 3)
+   word-wrap on cheap-solo: passed, $0.004, 102s
+-> path-normalize on cheap-solo (run 3)
+   path-normalize on cheap-solo: passed, $0.001, 32s
+-> deep-merge on cheap-solo (run 3)
+   csv-json-cli on cheap-solo: passed, $0.004, 107s
+-> date-range-overlap on cheap-solo (run 3)
+   markdown-toc on cheap-solo: passed, $0.004, 107s
+-> sliding-window-limit on cheap-solo (run 3)
+   queue-in-order on cheap-solo: passed, $0.003, 86s
+-> token-bucket on cheap-solo (run 3)
+   date-range-overlap on cheap-solo: passed, $0.003, 69s
+-> extract-tokenize on cheap-solo (run 3)
+   token-bucket on cheap-solo: passed, $0.002, 60s
+-> ini-parser on cheap-solo (run 3)
+   sliding-window-limit on cheap-solo: passed, $0.003, 64s
+-> semver-compare on cheap-solo (run 3)
+   extract-tokenize on cheap-solo: passed, $0.002, 39s
+-> route-match on cheap-solo (run 3)
+   deep-merge on cheap-solo: passed, $0.005, 145s
+-> log-redaction on cheap-solo (run 3)
+   ini-parser on cheap-solo: passed, $0.002, 52s
+-> roman-numerals on strong-solo (run 3)
+   route-match on cheap-solo: said done, failed, $0.002, 41s
+-> interval-merge on strong-solo (run 3)
+   semver-compare on cheap-solo: passed, $0.005, 106s
+-> retry-backoff on strong-solo (run 3)
+   interval-merge on strong-solo: passed, $0.018, 58s
+-> csv-formula-injection on strong-solo (run 3)
+   log-redaction on cheap-solo: passed, $0.004, 88s
+-> emitter-off-during-emit on strong-solo (run 3)
+   roman-numerals on strong-solo: passed, $0.022, 88s
+-> lower-bound on strong-solo (run 3)
+   retry-backoff on strong-solo: passed, $0.013, 41s
+-> extract-money on strong-solo (run 3)
+   csv-formula-injection on strong-solo: passed, $0.018, 54s
+-> todo-done-command on strong-solo (run 3)
+   lower-bound on strong-solo: passed, $0.013, 35s
+-> query-string on strong-solo (run 3)
+   extract-money on strong-solo: passed, $0.018, 48s
+-> debounce on strong-solo (run 3)
+   emitter-off-during-emit on strong-solo: passed, $0.023, 92s
+-> paginate-off-by-one on strong-solo (run 3)
+   paginate-off-by-one on strong-solo: passed, $0.011, 31s
+-> stable-cache-key on strong-solo (run 3)
+   query-string on strong-solo: passed, $0.024, 96s
+-> lru-ttl-cache on strong-solo (run 3)
+   todo-done-command on strong-solo: said done, failed, $0.028, 105s
+-> money-parse on strong-solo (run 3)
+   debounce on strong-solo: passed, $0.028, 109s
+-> slugify-unicode on strong-solo (run 3)
+   slugify-unicode on strong-solo: passed, $0.012, 33s
+-> word-wrap on strong-solo (run 3)
+   lru-ttl-cache on strong-solo: passed, $0.023, 85s
+-> config-from-env on strong-solo (run 3)
+   config-from-env on strong-solo: passed, $0.034, 105s
+-> csv-json-cli on strong-solo (run 3)
+   stable-cache-key on strong-solo: passed, $0.047, 226s
+-> markdown-toc on strong-solo (run 3)
+   word-wrap on strong-solo: passed, $0.054, 242s
+-> queue-in-order on strong-solo (run 3)
+   csv-json-cli on strong-solo: passed, $0.033, 128s
+-> path-normalize on strong-solo (run 3)
+   money-parse on strong-solo: passed, $0.072, 340s
+-> deep-merge on strong-solo (run 3)
+   path-normalize on strong-solo: passed, $0.016, 53s
+-> date-range-overlap on strong-solo (run 3)
+   markdown-toc on strong-solo: passed, $0.045, 200s
+-> sliding-window-limit on strong-solo (run 3)
+   date-range-overlap on strong-solo: said done, failed, $0.016, 47s
+-> token-bucket on strong-solo (run 3)
+   deep-merge on strong-solo: said done, failed, $0.018, 127s
+-> extract-tokenize on strong-solo (run 3)
+   token-bucket on strong-solo: passed, $0.020, 52s
+-> ini-parser on strong-solo (run 3)
+   queue-in-order on strong-solo: passed, $0.040, 200s
+-> semver-compare on strong-solo (run 3)
+   sliding-window-limit on strong-solo: passed, $0.029, 97s
+-> route-match on strong-solo (run 3)
+   extract-tokenize on strong-solo: passed, $0.018, 46s
+-> log-redaction on strong-solo (run 3)
+   ini-parser on strong-solo: passed, $0.029, 109s
+-> roman-numerals on cheap-team (run 3)
+   log-redaction on strong-solo: passed, $0.025, 103s
+-> interval-merge on cheap-team (run 3)
+   semver-compare on strong-solo: passed, $0.037, 116s
+-> retry-backoff on cheap-team (run 3)
+   roman-numerals on cheap-team: passed, $0.004, 111s
+-> csv-formula-injection on cheap-team (run 3)
+   interval-merge on cheap-team: passed, $0.002, 102s
+-> emitter-off-during-emit on cheap-team (run 3)
+   retry-backoff on cheap-team: passed, $0.002, 103s
+-> lower-bound on cheap-team (run 3)
+   route-match on strong-solo: said done, failed, $0.046, 228s
+-> extract-money on cheap-team (run 3)
+   lower-bound on cheap-team: passed, $0.002, 65s
+-> todo-done-command on cheap-team (run 3)
+   extract-money on cheap-team: passed, $0.003, 82s
+-> query-string on cheap-team (run 3)
+   csv-formula-injection on cheap-team: passed, $0.005, 151s
+-> debounce on cheap-team (run 3)
+   emitter-off-during-emit on cheap-team: passed, $0.003, 123s
+-> paginate-off-by-one on cheap-team (run 3)
+   query-string on cheap-team: passed, $0.003, 76s
+-> stable-cache-key on cheap-team (run 3)
+   todo-done-command on cheap-team: passed, $0.003, 109s
+-> lru-ttl-cache on cheap-team (run 3)
+   paginate-off-by-one on cheap-team: passed, $0.002, 76s
+-> money-parse on cheap-team (run 3)
+   debounce on cheap-team: passed, $0.004, 131s
+-> slugify-unicode on cheap-team (run 3)
+   stable-cache-key on cheap-team: passed, $0.003, 119s
+-> word-wrap on cheap-team (run 3)
+   lru-ttl-cache on cheap-team: passed, $0.004, 144s
+-> config-from-env on cheap-team (run 3)
+   slugify-unicode on cheap-team: passed, $0.002, 80s
+-> csv-json-cli on cheap-team (run 3)
+   config-from-env on cheap-team: passed, $0.004, 153s
+-> markdown-toc on cheap-team (run 3)
+   csv-json-cli on cheap-team: passed, $0.007, 196s
+-> queue-in-order on cheap-team (run 3)
+   markdown-toc on cheap-team: passed, $0.003, 125s
+-> path-normalize on cheap-team (run 3)
+   money-parse on cheap-team: passed, $0.006, 406s
+-> deep-merge on cheap-team (run 3)
+   path-normalize on cheap-team: passed, $0.002, 63s
+-> date-range-overlap on cheap-team (run 3)
+   queue-in-order on cheap-team: not done, $0.004, 215s
+-> sliding-window-limit on cheap-team (run 3)
+   deep-merge on cheap-team: passed, $0.003, 157s
+-> token-bucket on cheap-team (run 3)
+   date-range-overlap on cheap-team: passed, $0.003, 128s
+-> extract-tokenize on cheap-team (run 3)
+   word-wrap on cheap-team: passed, $0.008, 529s
+-> ini-parser on cheap-team (run 3)
+   sliding-window-limit on cheap-team: passed, $0.003, 109s
+-> semver-compare on cheap-team (run 3)
+   token-bucket on cheap-team: passed, $0.003, 106s
+-> route-match on cheap-team (run 3)
+   extract-tokenize on cheap-team: passed, $0.003, 98s
+-> log-redaction on cheap-team (run 3)
+   ini-parser on cheap-team: passed, $0.004, 137s
+-> roman-numerals on strong-team (run 3)
+   semver-compare on cheap-team: passed, $0.004, 148s
+-> interval-merge on strong-team (run 3)
+   roman-numerals on strong-team: passed, $0.013, 70s
+-> retry-backoff on strong-team (run 3)
+   log-redaction on cheap-team: passed, $0.007, 151s
+-> csv-formula-injection on strong-team (run 3)
+   interval-merge on strong-team: passed, $0.017, 83s
+-> emitter-off-during-emit on strong-team (run 3)
+   csv-formula-injection on strong-team: passed, $0.013, 61s
+-> lower-bound on strong-team (run 3)
+   retry-backoff on strong-team: passed, $0.018, 96s
+-> extract-money on strong-team (run 3)
+   lower-bound on strong-team: passed, $0.011, 37s
+-> todo-done-command on strong-team (run 3)
+   route-match on cheap-team: said done, failed, $0.005, 280s
+-> query-string on strong-team (run 3)
+   emitter-off-during-emit on strong-team: passed, $0.019, 99s
+-> debounce on strong-team (run 3)
+   extract-money on strong-team: passed, $0.019, 95s
+-> paginate-off-by-one on strong-team (run 3)
+   todo-done-command on strong-team: passed, $0.016, 88s
+-> stable-cache-key on strong-team (run 3)
+   query-string on strong-team: passed, $0.016, 98s
+-> lru-ttl-cache on strong-team (run 3)
+   paginate-off-by-one on strong-team: passed, $0.010, 38s
+-> money-parse on strong-team (run 3)
+   lru-ttl-cache on strong-team: passed, $0.014, 49s
+-> slugify-unicode on strong-team (run 3)
+   stable-cache-key on strong-team: passed, $0.020, 96s
+-> word-wrap on strong-team (run 3)
+   slugify-unicode on strong-team: passed, $0.010, 46s
+-> config-from-env on strong-team (run 3)
+   debounce on strong-team: passed, $0.025, 169s
+-> csv-json-cli on strong-team (run 3)
+   money-parse on strong-team: passed, $0.024, 155s
+-> markdown-toc on strong-team (run 3)
+   config-from-env on strong-team: passed, $0.020, 137s
+-> queue-in-order on strong-team (run 3)
+   word-wrap on strong-team: passed, $0.029, 176s
+-> path-normalize on strong-team (run 3)
+   csv-json-cli on strong-team: passed, $0.031, 152s
+-> deep-merge on strong-team (run 3)
+   markdown-toc on strong-team: passed, $0.020, 125s
+-> date-range-overlap on strong-team (run 3)
+   path-normalize on strong-team: passed, $0.015, 65s
+-> sliding-window-limit on strong-team (run 3)
+   date-range-overlap on strong-team: passed, $0.020, 79s
+-> token-bucket on strong-team (run 3)
+   queue-in-order on strong-team: passed, $0.026, 150s
+-> extract-tokenize on strong-team (run 3)
+   sliding-window-limit on strong-team: passed, $0.015, 66s
+-> ini-parser on strong-team (run 3)
+   deep-merge on strong-team: passed, $0.028, 155s
+-> semver-compare on strong-team (run 3)
+   extract-tokenize on strong-team: passed, $0.012, 68s
+-> route-match on strong-team (run 3)
+   token-bucket on strong-team: passed, $0.016, 92s
+-> log-redaction on strong-team (run 3)
+   ini-parser on strong-team: passed, $0.019, 110s
+   semver-compare on strong-team: passed, $0.019, 98s
+   log-redaction on strong-team: passed, $0.024, 135s
+   route-match on strong-team: said done, failed, $0.028, 166s
+
+| configuration | passed | said done | said done, failed | total cost | cost per pass | mean time |
+|---|---|---|---|---|---|---|
+| cheap-solo | 57/90 | 62 | 5 | $0.20 | 0.3c | 96s |
+| strong-solo | 82/90 | 90 | 8 | $2.57 | 3.1c | 102s |
+| cheap-team | 85/90 | 89 | 4 | $0.33 | 0.4c | 149s |
+| strong-team | 80/90 | 84 | 4 | $1.67 | 2.1c | 100s |
+
+| task | category | cheap-solo | strong-solo | cheap-team | strong-team |
+|---|---|---|---|---|---|
+| interval-merge | feature | 2/3 0.2c 70s | 3/3 1.5c 47s | 3/3 0.2c 87s | 3/3 1.4c 71s |
+| retry-backoff | feature | 2/3 0.1c 65s | 3/3 1.6c 49s | 3/3 0.3c 109s | 2/3 1.3c 64s |
+| lower-bound | bugfix | 2/3 0.1c 54s | 3/3 1.1c 30s | 3/3 0.2c 67s | 3/3 1.1c 41s |
+| extract-money | refactor | 1/3 0.1c 55s | 3/3 2.0c 53s | 3/3 0.3c 95s | 3/3 1.9c 82s |
+| roman-numerals | feature | 1/3 0.2c 109s | 3/3 2.7c 88s | 3/3 0.3c 128s | 3/3 1.9c 95s |
+| csv-formula-injection | bugfix | 2/3 0.3c 115s | 3/3 2.0c 59s | 3/3 0.4c 144s | 3/3 1.4c 73s |
+| emitter-off-during-emit | bugfix | 2/3 0.2c 108s | 3/3 2.3c 77s | 3/3 0.5c 199s | 3/3 1.6c 104s |
+| todo-done-command | multi-file | 2/3 0.2c 70s | 1/3, 2 said done 3.0c 102s | 3/3 0.3c 115s | 2/3, 1 said done 1.9c 89s |
+| query-string | feature | 2/3 0.2c 77s | 3/3 2.6c 93s | 3/3 0.3c 74s | 3/3 1.6c 79s |
+| paginate-off-by-one | bugfix | 2/3 0.1c 54s | 3/3 1.3c 29s | 3/3 0.2c 76s | 3/3 1.1c 60s |
+| stable-cache-key | bugfix | 2/3 0.1c 63s | 3/3 4.1c 189s | 3/3 0.4c 157s | 3/3 2.3c 98s |
+| debounce | feature | 2/3 0.2c 85s | 3/3 2.8c 93s | 3/3 0.3c 116s | 3/3 2.4c 126s |
+| slugify-unicode | bugfix | 2/3 0.1c 62s | 3/3 1.5c 43s | 3/3 0.2c 71s | 3/3 1.1c 45s |
+| lru-ttl-cache | feature | 0/3, 2 said done 0.2c 97s | 3/3 4.4c 164s | 3/3 0.5c 222s | 3/3 1.8c 85s |
+| config-from-env | multi-file | 2/3 0.2c 74s | 3/3 4.0c 112s | 3/3 0.4c 147s | 3/3 2.0c 112s |
+| csv-json-cli | multi-file | 2/3 0.3c 124s | 3/3 3.0c 87s | 3/3 0.6c 161s | 2/3, 1 said done 2.4c 134s |
+| money-parse | feature | 1/3 0.3c 137s | 3/3 6.4c 267s | 3/3 0.7c 379s | 3/3 3.0c 168s |
+| markdown-toc | feature | 2/3 0.3c 126s | 3/3 3.6c 157s | 3/3 0.4c 266s | 3/3 2.2c 129s |
+| queue-in-order | bugfix | 2/3 0.2c 104s | 3/3 4.0c 180s | 2/3 0.3c 169s | 2/3 2.6c 128s |
+| deep-merge | feature | 2/3 0.3c 132s | 1/3, 2 said done 2.3c 116s | 3/3 0.6c 245s | 2/3 2.5c 123s |
+| date-range-overlap | bugfix | 2/3 0.2c 81s | 2/3, 1 said done 2.1c 58s | 3/3 0.3c 118s | 3/3 2.0c 81s |
+| path-normalize | bugfix | 2/3 0.2c 110s | 3/3 1.6c 47s | 3/3 0.3c 95s | 3/3 1.4c 56s |
+| token-bucket | feature | 3/3 0.2c 89s | 3/3 1.9c 58s | 3/3 0.3c 112s | 3/3 1.6c 114s |
+| sliding-window-limit | feature | 2/3 0.2c 87s | 3/3 2.4c 79s | 3/3 0.3c 117s | 3/3 1.4c 61s |
+| extract-tokenize | refactor | 3/3 0.2c 76s | 3/3 2.2c 49s | 3/3 0.3c 115s | 3/3 1.3c 67s |
+| word-wrap | feature | 1/3 0.3c 246s | 3/3 4.4c 184s | 3/3 0.5c 259s | 3/3 2.4c 157s |
+| ini-parser | feature | 3/3 0.3c 92s | 3/3 3.4c 117s | 3/3 0.3c 141s | 2/3 1.7c 90s |
+| log-redaction | multi-file | 3/3 0.3c 65s | 3/3 3.4c 129s | 2/3, 1 said done 0.5c 136s | 2/3 1.9c 145s |
+| semver-compare | feature | 3/3 0.5c 141s | 3/3 2.9c 92s | 3/3 0.4c 146s | 3/3 1.8c 102s |
+| route-match | feature | 0/3, 3 said done 0.3c 115s | 0/3, 3 said done 4.9c 198s | 0/3, 3 said done 0.5c 193s | 0/3, 2 said done 2.5c 210s |
+
+spent $4.77 in total; results in bench/results/2026-09-07c.json

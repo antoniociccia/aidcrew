@@ -1,0 +1,59 @@
++ coder on deepseek-v4-pro
+  coder        deepseek-v4-pro      0 turns, 0 tokens
+
+coder · read(src/emitter.ts)
+coder · tree(.)
+coder · read(src/emitter.test.ts)
+coder · read(package.json)
+coder › I have the picture. The bug is in `emit`: it iterates the live array, so `splice` during iteration shifts later listeners into already-visited slots. I'll make `emit` iterate a snapshot taken at the start, then add tests.
+coder · edit(src/emitter.ts)
+coder · edit(src/emitter.test.ts)
+coder · edit(src/emitter.test.ts)
+coder · bash(bun test)
+coder · read(src/emitter.ts)
+coder · read(src/emitter.test.ts)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/emitter.ts && git commit -m "Snapshot listeners …)
+coder · bash(bun test)
+verified: bun run test passes on work/main
+merged work/main into the repository: 4802f1d Merge branch 'work/main'
+coder › Done.
+
+**What I changed**
+- `src/emitter.ts` — `emit()` now iterates over a snapshot of the listener array (`[...(this.#listeners.get(event) ?? [])]`) taken when emit begins, instead of the live array. This ensures every listener present at the start of emit runs exactly once in registration order, regardless of `off`/`on` calls made by other listeners during the emit; listeners added during emit wait until the next emit.
+- `src/emitter.test.ts` — added tests for:
+  - a listener that removes itself during emit not skipping the next listener
+  - a listener that removes a later listener during emit not skipping it
+  - a listener added during emit not firing until the next emit
+  - a `once` listener not silencing an ordinary listener registered after it
+  - `once` firing exactly once across emits
+  - `off` returning whether it removed anything
+  - `emit` returning the number of listeners called
+
+`once` and `off` needed no code changes: `off` already returns a boolean correctly, and the emit snapshot is what makes `once`'s self-removal safe.
+
+**Checks**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 8 pass
+ 0 fail
+ 20 expect() calls
+Ran 8 tests across 1 file. [11.00ms]
+```
+
+**Commits** (on `work/main`)
+- `3d4d8eb` Snapshot listeners at emit start
+- `c60b669` Test listeners added or removed during emit
+
+One decision not in the plan: I kept `off`'s existing single-removal behavior (removes the first matching occurrence and returns `true`), since the requirement was only that it report whether it removed anything.
+
+  coder        deepseek-v4-pro      1 turns, 107860 tokens
+
+main: done
+  bun run test passed
+  merged: 4802f1d Merge branch 'work/main'
+  this job: 108k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"4802f1d Merge branch 'work/main'","cost":"this job: 108k tokens, 3¢ on deepseek-v4-pro — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":6784,"outputTokens":6868,"cacheReadTokens":94208,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

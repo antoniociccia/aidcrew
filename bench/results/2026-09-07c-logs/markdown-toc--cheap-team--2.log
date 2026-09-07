@@ -1,0 +1,54 @@
++ architect on glm-5.3-flash
++ coder on deepseek-v4-flash
+  architect    glm-5.3-flash        0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · bash(ls -la && cat package.json 2>/dev/null)
+architect · glob(src/**/*)
+architect · read(src/toc.ts)
+architect · bash(ls -la src/ && git log --oneline -5 && git status --short)
+architect · bash(bun --version && bun test 2>&1 | tail -5)
+architect › The repo is a minimal Bun project (`bun test`) with a stub `src/toc.ts` defining `Heading` and `toc`. I have what I need to write the plan.
+architect · agent_send(Job: implement toc(markdown) in src/toc.ts on branch work/ma…)
+architect → coder Job: implement toc(markdown) in src/toc.ts on branch work/main (that's your checkout), plus tests. Commit as you go, sma…
+coder · read(src/toc.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · tree(.)
+coder · write(src/toc.ts)
+architect › Plan sent to coder. Summary of what I decided after inspecting the repo (a bare Bun project, `"test": "bun test"`, with a stub `src/toc.ts` exporting `Heading` and an unimplemented `toc`):
+
+**Files:**
+1. `src/toc.ts` — keep the exported names/shape; implement line-by-line parsing: 0–3 leading spaces then 1–6 `#` followed by whitespace is a heading; text = heading minus hashes, trimmed; slug = lowercased, runs of non-letters/digits → one dash (Unicode-aware `\p{L}\p{N}`), trimmed, deduped with `-2`, `-3` via a plain per-call counter. Backtick fences tracked with a length check so a short fence can't close a long one, allowing 0–3 spaces of indent, ignoring closing-fence info strings, and swallowing everything in an unclosed fence. `~~~` fences and `## foo ##` closing sequences deliberately out of scope.
+2. `src/toc.test.ts` — new Bun test covering levels 1–6, `#######` rejection, fenced/4-backtick/unclosed fences, closing-fence edge cases, non-headings, slug dedup (`foo`, `foo-2`, `foo-3`), punctuation/unicode/empty slugs, internal-whitespace preservation, tab separators, CRLF, and empty input.
+
+**Check:** `bun test` passing with 0 fail, everything committed on `work/main`.
+
+I expect back from coder: the list of changed files, the tail of the `bun test` output, and confirmation `git status` is clean on `work/main`.
+coder · write(import { describe, expect, test } from 'bun:test' import { t…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 12 tests pass. Committing in two small commits:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · agent_send(architect)
+coder → architect Implemented toc(markdown) in src/toc.ts and added src/toc.test.ts, both committed on work/main.  Changes: - src/toc.ts: …
+coder › Done. Implemented `toc()` in `src/toc.ts` per spec, added `src/toc.test.ts` covering every requested case, ran `bun test` — 12 pass / 0 fail — and committed both on `work/main` (working tree clean). Full report sent to architect.
+architect · bash(bun test 2>&1 | tail -6 && git log --oneline -3 && git statu…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 30d56ee Merge branch 'work/main'
+architect › Job done. Verified on `work/main` in my own checkout, not just from the report:
+
+- **What changed:** `src/toc.ts` — `toc(markdown)` implemented (line-by-line scan; ATX headings `#{1,6}` + whitespace with 0–3 spaces indent, backtick-fence tracking with length matching so a short fence can't close a long one, closing-fence info strings ignored, unclosed fence swallows the rest; slugify is lower-case + Unicode-aware non-alphanumeric runs → single dash, trimmed, deduped `-2`/`-3` per call); `src/toc.test.ts` — 12 tests covering the fence edge cases, non-headings, slug dedup/punctuation/unicode/empty, CRLF, and empty input.
+- **How verified:** ran `bun test` from the repo root — 12 pass, 0 fail (13 expect calls).
+- **State:** commits `3cc45d4` and `0626060` on `work/main`, `git status` clean.
+
+Ready for the harness check and merge.
+
+  architect    glm-5.3-flash        2 turns, 37341 tokens
+  coder        deepseek-v4-flash    1 turns, 61392 tokens
+
+main: done
+  bun run test passed
+  merged: 30d56ee Merge branch 'work/main'
+  this job: 99k tokens, 0.6¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 24¢, on gpt-5 ≈ 22¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"30d56ee Merge branch 'work/main'","cost":"this job: 99k tokens, 0.6¢ on glm-5.3-flash + deepseek-v4-flash — on claude-sonnet-5 ≈ 24¢, on gpt-5 ≈ 22¢"}],"agents":[{"id":"architect","model":"glm-5.3-flash","task":"main","usage":{"inputTokens":10688,"outputTokens":15645,"cacheReadTokens":11008,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":6306,"outputTokens":3630,"cacheReadTokens":51456,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

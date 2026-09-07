@@ -1,0 +1,60 @@
++ architect on deepseek-v4-pro
++ coder on deepseek-v4-flash
+  architect    deepseek-v4-pro      0 turns, 0 tokens
+  coder        deepseek-v4-flash    0 turns, 0 tokens
+
+architect · read(src/cache.ts)
+architect · bash(ls && cat package.json 2>/dev/null | head -60)
+architect · bash(ls -la src && echo "---" && find . -name '*.test.ts' -not -p…)
+architect · read(src/cache.test.ts)
+architect › The file is a stub with one trivial test. The design is clear from the spec plus a couple of edge decisions I'll pin down so the coder doesn't have to ask.
+architect · agent_send(coder)
+architect → coder Implement the `Cache` class in `src/cache.ts` and add tests in `src/cache.test.ts`. The file is a stub right now; `packa…
+architect › Plan sent to coder. I'll wait for their report with the `bun test` result.
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · json(package.json)
+coder · tree(.)
+coder · write(src/cache.ts)
+coder · write(import { expect, test } from 'bun:test' import { Cache } fro…)
+coder · bash(bun test)
+coder › All tests pass. Let me commit.
+coder · bash(git add src/cache.ts src/cache.test.ts && git commit -m "Imp…)
+coder · bash(git status && git log --oneline -3)
+coder › Done. Implemented `Cache` in `src/cache.ts` and added all 9 requested tests plus the existing one in `src/cache.test.ts`.
+
+**What I changed:**
+
+`src/cache.ts`:
+- Added a private `entries` Map backing the cache with `{ value, time }` entries.
+- Constructor validates `capacity < 1` and throws `RangeError`.
+- Private helpers `isExpired(entry)` (`now() - time >= ttlMs`) and `purgeExpired()` (deletes all expired entries).
+- `get`: returns `undefined` for missing/expired (deleting expired), and treats a live hit as a use by deleting + re-inserting the entry.
+- `set`: live keys get value replaced and time refreshed without evicting anything; otherwise expired entry removed, `purgeExpired()` runs, LRU entries evicted while `size >= capacity`, then the new entry inserted.
+- `has` / `delete`: handle absent and expired cases as specified (deleting expired entries).
+- `size` getter: purges expired entries then returns Map size.
+
+`src/cache.test.ts`: Kept the existing "returns what was set" test, added the 9 tests from the spec using a controllable `let t` clock.
+
+**Check result:** `bun test` → **10 pass, 0 fail, 23 expect() calls**, exit code 0.
+
+Committed on `work/main` as `da52537`.
+coder → architect Done. Implemented `Cache` in `src/cache.ts` and added all 9 requested tests plus the existing one in `src/cache.test.ts`…
+architect · bash(bun test)
+architect · bash(git log --oneline -3 && git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: ea0f598 Merge branch 'work/main'
+architect › Job done. The `Cache` class is implemented in `src/cache.ts` with LRU eviction, TTL expiry, and a controllable `now` clock, plus `RangeError` for capacity below 1. Tests were added in `src/cache.test.ts`.
+
+Verified by running `bun test`: **10 pass, 0 fail, 23 expect() calls**, exit code 0. Committed as `da52537` on `work/main` with a clean working tree.
+
+  architect    deepseek-v4-pro      2 turns, 38927 tokens
+  coder        deepseek-v4-flash    1 turns, 56509 tokens
+
+main: done
+  bun run test passed
+  merged: ea0f598 Merge branch 'work/main'
+  this job: 95k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 11¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"ea0f598 Merge branch 'work/main'","cost":"this job: 95k tokens, 2¢ on deepseek-v4-pro + deepseek-v4-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 11¢"}],"agents":[{"id":"architect","model":"deepseek-v4-pro","task":"main","usage":{"inputTokens":5375,"outputTokens":6288,"cacheReadTokens":27264,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek-v4-flash","task":"main","usage":{"inputTokens":10113,"outputTokens":2364,"cacheReadTokens":44032,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---
