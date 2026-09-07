@@ -14,6 +14,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2356b4e9'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='36' font-weight='700' text-anchor='middle' fill='%230e0f15'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
+<script>
+try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElement.dataset.skin = s } catch (e) {}
+</script>
 </head>
 <body>
 
@@ -27,6 +30,18 @@
     <a href="#guards">Guards</a>
     <a href="#install">Install</a>
     <a href="https://github.com/antoniociccia/aidcrew" rel="noopener">Source</a>
+    <span class="skins" role="group" aria-label="Skin — the terminal's own themes">
+      <button type="button" data-skin="crew" aria-label="crew skin" title="crew" aria-pressed="false" style="--a:#e8dcc0;--v:#56b4e9;--g:#14151d"></button>
+      <button type="button" data-skin="graphite" aria-label="graphite skin" title="graphite" aria-pressed="false" style="--a:#a78bfa;--v:#a78bfa;--g:#1e1e23"></button>
+      <button type="button" data-skin="ember" aria-label="ember skin" title="ember" aria-pressed="false" style="--a:#e0a458;--v:#e0a458;--g:#241e16"></button>
+      <button type="button" data-skin="mono" aria-label="mono skin" title="mono" aria-pressed="false" style="--a:#ffffff;--v:#ffffff;--g:#222226"></button>
+      <button type="button" data-skin="neon" aria-label="neon skin" title="neon" aria-pressed="false" style="--a:#f92672;--v:#f92672;--g:#272822"></button>
+      <button type="button" data-skin="slate" aria-label="slate skin" title="slate" aria-pressed="false" style="--a:#61afef;--v:#61afef;--g:#282c34"></button>
+      <button type="button" data-skin="sorbet" aria-label="sorbet skin" title="sorbet" aria-pressed="false" style="--a:#ff75b5;--v:#ff75b5;--g:#2a2c2d"></button>
+      <button type="button" data-skin="frost" aria-label="frost skin" title="frost" aria-pressed="false" style="--a:#88c0d0;--v:#88c0d0;--g:#2e3440"></button>
+      <button type="button" data-skin="clay" aria-label="clay skin" title="clay" aria-pressed="false" style="--a:#d79921;--v:#d79921;--g:#282828"></button>
+      <span class="skin-name" aria-live="polite">crew</span>
+    </span>
   </nav>
 </header>
 
@@ -60,7 +75,7 @@
 </section>
 
 <section class="three" id="why">
-  <article style="--voice:#56b4e9">
+  <article style="--voice:var(--sky)">
     <h2>One model for everything is the expensive way.</h2>
     <p>
       Mixed models are the base case here, not an extension: two agents hold two credentials on
@@ -69,7 +84,7 @@
       <code>gpt-5</code>. That line is the argument for running a team at all.
     </p>
   </article>
-  <article style="--voice:#23c4a0">
+  <article style="--voice:var(--teal)">
     <h2>Done is checked, not said.</h2>
     <p>
       Every job gets a git worktree on a branch of its own. When the leader ends a turn with
@@ -79,7 +94,7 @@
       never committed, the leader is sent back with the output.
     </p>
   </article>
-  <article style="--voice:#e58fc2">
+  <article style="--voice:var(--pink)">
     <h2>Everything is a plugin.</h2>
     <p>
       The core has no dependencies and knows no provider or tool by name; a test fails the build
@@ -232,5 +247,36 @@ aidcrew demo</code></pre>
   </span>
 </footer>
 
+<script>
+(() => {
+  const root = document.documentElement
+  const buttons = [...document.querySelectorAll('.skins button')]
+  const label = document.querySelector('.skin-name')
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const apply = (skin) => {
+    if (skin === 'crew') delete root.dataset.skin
+    else root.dataset.skin = skin
+    for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.skin === skin))
+    if (label) label.textContent = skin
+    try { localStorage.setItem('aidcrew-skin', skin) } catch (e) {}
+  }
+  const current = () => root.dataset.skin || 'crew'
+  apply(buttons.some((b) => b.dataset.skin === current()) ? current() : 'crew')
+  let busy = false
+  for (const button of buttons) {
+    button.addEventListener('click', () => {
+      const skin = button.dataset.skin
+      if (busy || skin === current()) return
+      if (reduced) return apply(skin)
+      busy = true
+      root.classList.add('skinning')
+      setTimeout(() => {
+        apply(skin)
+        setTimeout(() => { root.classList.remove('skinning'); busy = false }, 230)
+      }, 210)
+    })
+  }
+})()
+</script>
 </body>
 </html>

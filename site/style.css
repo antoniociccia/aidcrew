@@ -1,4 +1,5 @@
-/* aidcrew.dev — the palette is the app's own (the "crew" theme). */
+/* aidcrew.dev — the palettes are the terminal's own: every skin here is a theme there,
+   the same hex values, read off packages/tui/src/theme.ts. The crew theme is the default. */
 :root {
   --bg: #0d0e14;
   --surface: #14151d;
@@ -14,9 +15,142 @@
   --coral: #f08a5d;
   --purple: #b98ae0;
   --on-voice: #0e0f15;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --measure: 66rem;
+}
+
+:root[data-skin="graphite"] {
+  --bg: #111114;
+  --surface: #1e1e23;
+  --line: #323237;
+  --text: #ececea;
+  --muted: #a9a9b2;
+  --faint: #6b6b76;
+  --accent: #a78bfa;
+  --sky: #a78bfa;
+  --teal: #7dd3fc;
+  --pink: #f0abfc;
+  --yellow: #4ade80;
+  --coral: #fbbf24;
+  --purple: #fb7185;
+  --on-voice: #101012;
+}
+
+:root[data-skin="ember"] {
+  --bg: #15110d;
+  --surface: #241e16;
+  --line: #38322b;
+  --text: #f3ece2;
+  --muted: #b3a595;
+  --faint: #7a6e5c;
+  --accent: #e0a458;
+  --sky: #e0a458;
+  --teal: #d98b6a;
+  --pink: #c9a227;
+  --yellow: #8fae6b;
+  --coral: #c98428;
+  --purple: #b5651d;
+  --on-voice: #0a0906;
+}
+
+:root[data-skin="mono"] {
+  --bg: #141416;
+  --surface: #222226;
+  --line: #36363a;
+  --text: #e4e4e7;
+  --muted: #a5a5ad;
+  --faint: #6e6e77;
+  --accent: #ffffff;
+  --sky: #ffffff;
+  --teal: #c4c4cc;
+  --pink: #9a9aa4;
+  --yellow: #7c7c85;
+  --coral: #e4e4e7;
+  --purple: #b0b0b8;
+  --on-voice: #0e0e10;
+}
+
+:root[data-skin="neon"] {
+  --bg: #171714;
+  --surface: #272822;
+  --line: #3a3b36;
+  --text: #f8f8f2;
+  --muted: #a6a49a;
+  --faint: #6b695f;
+  --accent: #f92672;
+  --sky: #f92672;
+  --teal: #a6e22e;
+  --pink: #66d9ef;
+  --yellow: #fd971f;
+  --coral: #ae81ff;
+  --purple: #e6db74;
+  --on-voice: #1b1c18;
+}
+
+:root[data-skin="slate"] {
+  --bg: #171a1e;
+  --surface: #282c34;
+  --line: #3b3f46;
+  --text: #abb2bf;
+  --muted: #7f8794;
+  --faint: #545b66;
+  --accent: #61afef;
+  --sky: #61afef;
+  --teal: #98c379;
+  --pink: #c678dd;
+  --yellow: #e5c07b;
+  --coral: #56b6c2;
+  --purple: #e06c75;
+  --on-voice: #1c1f24;
+}
+
+:root[data-skin="sorbet"] {
+  --bg: #181a1a;
+  --surface: #2a2c2d;
+  --line: #3d3f40;
+  --text: #e6e6e6;
+  --muted: #9a9a9a;
+  --faint: #676767;
+  --accent: #ff75b5;
+  --sky: #ff75b5;
+  --teal: #19f9d8;
+  --pink: #ffb86c;
+  --yellow: #6fc1ff;
+  --coral: #b084eb;
+  --purple: #ff2c6d;
+  --on-voice: #131415;
+}
+
+:root[data-skin="frost"] {
+  --bg: #1b1e25;
+  --surface: #2e3440;
+  --line: #414651;
+  --text: #eceff4;
+  --muted: #9aa5b1;
+  --faint: #68727e;
+  --accent: #88c0d0;
+  --sky: #88c0d0;
+  --teal: #a3be8c;
+  --pink: #b48ead;
+  --yellow: #ebcb8b;
+  --coral: #81a1c1;
+  --purple: #bf616a;
+  --on-voice: #101318;
+}
+
+:root[data-skin="clay"] {
+  --bg: #171717;
+  --surface: #282828;
+  --line: #3b3b3b;
+  --text: #ebdbb2;
+  --muted: #a89984;
+  --faint: #7c6f64;
+  --accent: #d79921;
+  --sky: #d79921;
+  --teal: #b8bb26;
+  --pink: #83a598;
+  --yellow: #fe8019;
+  --coral: #d3869b;
+  --purple: #fb4934;
+  --on-voice: #1d2021;
 }
 
 * { box-sizing: border-box; }
@@ -146,3 +280,25 @@ footer {
   .what dt { margin-top: 0.8rem; }
   section { padding: 2.5rem 0; }
 }
+
+/* the skin switcher, and the blur a change goes through */
+.skins { display: inline-flex; align-items: center; gap: 0.45rem; margin-left: 0.6rem; }
+.skins .skin-name { font-family: var(--mono); font-size: 0.8rem; color: var(--faint); min-width: 4.5em; }
+.skins button {
+  width: 18px; height: 18px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--line);
+  background: linear-gradient(135deg, var(--a) 0 50%, var(--v) 50% 100%);
+  box-shadow: inset 0 0 0 2px var(--g);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.skins button:hover { transform: scale(1.15); }
+.skins button[aria-pressed="true"] { border-color: var(--text); transform: scale(1.2); }
+.skins button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+body { transition: background-color 0.45s ease, color 0.45s ease; }
+body > * { transition: filter 0.22s ease, opacity 0.22s ease; }
+html.skinning body > * { filter: blur(12px); opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+  body, body > * { transition: none; }
+  html.skinning body > * { filter: none; opacity: 1; }
+}
+@media (max-width: 860px) { .skins { margin-left: 0; } }
