@@ -305,3 +305,19 @@ html.skinning body > * { filter: blur(12px); opacity: 0.55; }
   html.skinning body > * { filter: none; opacity: 1; }
 }
 @media (max-width: 860px) { .skins { margin-left: 0; } }
+
+/* narrow screens: a grid item is as wide as its longest line unless told
+   otherwise, and a code block's longest line is wider than a phone */
+.three > *, .how > *, .plugins > *, .what > *, .film { min-width: 0; }
+pre.code, .plugins pre, pre { max-width: 100%; overflow-x: auto; }
+.film video, .film img { max-width: 100%; }
+@media (max-width: 860px) {
+  .top { padding: 1rem; }
+  .top nav { gap: 0.9rem; }
+  .skins { flex-wrap: wrap; }
+  .skins button { width: 15px; height: 15px; }
+  main { padding: 0 1rem 3rem; }
+  h1 { font-size: clamp(1.9rem, 8vw, 2.6rem); }
+  pre.code, .plugins pre.code { font-size: 0.78rem; padding: 0.9rem 1rem; }
+  .actions .meta { flex-basis: 100%; }
+}
