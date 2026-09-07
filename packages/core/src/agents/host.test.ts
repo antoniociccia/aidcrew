@@ -59,6 +59,7 @@ function makeHost(
     orchestration?: string
     onEvent?(event: TeamEvent): void
     leader?: string
+    unattended?: boolean
     /** Told an agent's whole conversation and spend after every turn. */
     onHistory?: HostOptions['onHistory']
     /** What an agent has changed, as the host would read it off its worktree. */
@@ -73,6 +74,7 @@ function makeHost(
     tools: options.tools ?? [],
     limits: options.limits ?? { maxHops: 3 },
     isolate: false,
+    ...(options.unattended ? { unattended: true } : {}),
     onEvent: (event) => {
       events.push(event)
       options.onEvent?.(event)
@@ -4052,6 +4054,83 @@ describe('a report that comes home', () => {
 
     expect(host.outstanding()).toEqual([])
     expect(host.stalled()).toBeUndefined()
+    await host.shutdown()
+  })
+})
+
+describe('a plan handed to nobody', () => {
+  // Watched on the benchmark: a leader read the code, wrote a complete plan
+  // as text, and ended its turn without sending it. Nobody was busy, nothing
+  // was outstanding, and the run ended having done nothing. Nobody watching
+  // means nobody to say "and now send it", so the harness says it — once.
+  test('is sent back once to be handed over', async () => {
+    const { host, events } = makeHost(
+      {
+        lead: [
+          // Looked into the code, then wrote the plan — and stopped.
+          call('r1', 'noop', {}),
+          text('Plan: 1. fix src/x.ts 2. add a test 3. run bun test'),
+          call('s1', 'agent_send', { to: 'coder', message: 'fix src/x.ts, add a test' }),
+          text('handed over'),
+          text('done'),
+        ],
+        work: [text('did it')],
+      },
+      { tools: [noop], leader: 'lead', unattended: true },
+    )
+    await host.spawn(def('lead', 'lead'))
+    await host.spawn(def('coder', 'work'))
+
+    await host.tell('lead', 'ship the fix')
+    await host.idle()
+
+    expect(events.filter((event) => event.type === 'agent_nudged')).toEqual([
+      { type: 'agent_nudged', id: 'lead' },
+    ])
+    expect(
+      events.some(
+        (event) => event.type === 'agent_message' && event.from === 'lead' && event.to === 'coder',
+      ),
+    ).toBe(true)
+    await host.shutdown()
+  })
+
+  test('is not what an agent on its own answering a question has done', async () => {
+    const { host, events } = makeHost({
+      solo: [text('paginate slices the list from (page - 1) * perPage')],
+    })
+    await host.spawn(def('coder', 'solo'))
+
+    await host.tell('coder', 'what does paginate do?')
+    await host.idle()
+
+    expect(events.some((event) => event.type === 'agent_nudged')).toBe(false)
+    expect(host.list()[0]?.turns).toBe(1)
+    await host.shutdown()
+  })
+
+  test('is said once: a leader that plans to nobody twice is left to the person', async () => {
+    const { host, events } = makeHost(
+      {
+        lead: [
+          call('r1', 'noop', {}),
+          text('Plan: do things'),
+          call('r2', 'noop', {}),
+          text('Plan again: do things'),
+          text('and again'),
+        ],
+        work: [text('never asked')],
+      },
+      { tools: [noop], leader: 'lead', unattended: true },
+    )
+    await host.spawn(def('lead', 'lead'))
+    await host.spawn(def('coder', 'work'))
+
+    await host.tell('lead', 'ship it')
+    await host.idle()
+
+    expect(events.filter((event) => event.type === 'agent_nudged')).toHaveLength(1)
+    expect(host.list().find((agent) => agent.id === 'lead')?.turns).toBe(2)
     await host.shutdown()
   })
 })

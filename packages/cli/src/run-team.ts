@@ -121,6 +121,9 @@ export async function runTeam(
     // leader, and making somebody name one before anything runs would be a
     // setting standing in the way of the thing it configures.
     ...(leader ? { leader } : {}),
+    // Nobody is watching a headless run: what a person would say from the
+    // screen, the harness says.
+    unattended: true,
     ...(session.workspace.toolCallsPerTurn
       ? { maxTurnsPerInstruction: session.workspace.toolCallsPerTurn }
       : {}),

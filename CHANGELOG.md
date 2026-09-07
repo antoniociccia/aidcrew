@@ -20,6 +20,12 @@ the person using it, in the order it matters.
 
 ### The team
 
+- A leader that ends its turn with a plan written to nobody — nothing
+  handed over, nothing changed in the checkout — is sent back once to hand
+  it over, or to say the job is done. Watched on the benchmark: a strong
+  planner wrote a complete plan as text and stopped, and a headless run
+  ended having done nothing. Nobody watching means nobody to say "and now
+  send it", so the harness says it.
 - A report that comes home is answered by being read. A coder that sent
   its report to the leader with `agent_send` and ended its turn left a
   handoff open that the leader, who owes nobody an answer, could never

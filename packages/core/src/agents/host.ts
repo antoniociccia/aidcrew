@@ -122,6 +122,8 @@ export type TeamEvent =
    * be seen to be.
    */
   | { type: 'agent_continued'; id: string; round: number; of: number }
+  /** A leader ended its turn with a plan handed to nobody and nothing changed; sent back once to hand it over. */
+  | { type: 'agent_nudged'; id: string }
   /**
    * A turn going round in circles: one exact tool call has returned one exact
    * result this many times this turn. Said to the model at three; at six the
@@ -298,6 +300,13 @@ export type HostOptions = {
    * was spoken to.
    */
   leader?: string
+  /**
+   * Nobody is watching this run — a pipeline, a benchmark — so what a
+   * person would say from the screen, the harness says: a leader whose
+   * turn ended with a plan handed to nobody is sent back to hand it over.
+   * With a person watching it is theirs to say, and nothing is sent.
+   */
+  unattended?: boolean
 
   /**
    * What this project says about how its team works, from ORCHESTRATE.md.
@@ -1444,6 +1453,8 @@ class LiveAgent {
     const spentThisTurn: Usage = { inputTokens: 0, outputTokens: 0 }
     /** How the turn ended, which decides whether it has an answer to give. */
     let ended = ''
+    /** How many requests the turn took: more than one means it used a tool. */
+    let requests = 0
     // What this turn said, for the answer it owes. Read off the responses as
     // they go by rather than off the conversation afterwards: the
     // conversation is the whole history, and reading it backwards for "the
@@ -1482,6 +1493,7 @@ class LiveAgent {
           // out: somebody pressed the key, so they already know.
           const stopped = step.value.stopReason
           ended = stopped
+          requests = step.value.turns
           // Sent back to work rather than reported as stopped, when nobody is
           // watching and the count allows. The ledger is left alone: the
           // handoff is still being worked on.
@@ -1555,8 +1567,51 @@ class LiveAgent {
       options.onHistory?.(this.#def.id, this.#messages, this.#usage)
     }
 
+    if (await this.#plannedToNobody(message, ended, requests)) return
     await this.#answerWhoeverAsked(message, ended, said)
     await this.#host.settleJob(this.#def.id, ended)
+  }
+
+  /**
+   * Sends a leader back, once, when its turn ended with a plan handed to
+   * nobody.
+   *
+   * Watched on the benchmark: the leader read the code, wrote a complete
+   * plan as text, and ended its turn without sending it. Nobody was busy,
+   * nothing was outstanding, nothing had changed, and the run ended having
+   * done nothing. Nobody watching means nobody to say "and now send it", so
+   * the harness says it — once; a leader that does it twice is left to the
+   * person. Only when nobody is watching, only the leader, only for an
+   * instruction from the person, only with colleagues to hand to, only
+   * after a turn that looked into the code
+   * — an answer given without a single tool call is an answer to a question,
+   * not a plan — and only when the checkout shows no work done instead.
+   */
+  async #plannedToNobody(message: AgentMessage, ended: string, requests: number): Promise<boolean> {
+    const { options, roster, workspaces } = this.#host.internals
+    if (options.unattended !== true) return false
+    if (message.from !== 'user' || message.nudged === true) return false
+    if (ended !== 'end_turn' && ended !== 'stop_sequence') return false
+    if (requests < 2 || this.#repliedTo.size > 0) return false
+    const team = roster()
+    if (team.length < 2) return false
+    if ((options.leader ?? team[0]?.id) !== this.#def.id) return false
+    const task = taskOf(this.#def)
+    if ((await workspaces.changedFiles(task)).length > 0) return false
+    if ((await workspaces.ahead(task)) > 0) return false
+
+    this.#mailbox.unshift({
+      ...message,
+      text:
+        'This is the harness, not a colleague: your turn ended with nothing handed over and ' +
+        'nothing changed in the checkout. A plan reaches nobody unless it is sent. If it is ready, ' +
+        'send it to the agent who will carry it out with agent_send, say what you expect back, and ' +
+        'end your turn. If the job is already done, say so plainly. If you need something from ' +
+        'the person, ask for it.',
+      nudged: true,
+    })
+    options.onEvent({ type: 'agent_nudged', id: this.#def.id })
+    return true
   }
 
   /**

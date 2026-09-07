@@ -182,6 +182,15 @@ export function createTeamRenderer({ write, color }: RendererOptions) {
         }
         return
       }
+      if (event.type === 'agent_nudged') {
+        write(
+          paint(
+            event.id,
+            'ended its turn with a plan handed to nobody — sent back to hand it over\n',
+          ),
+        )
+        return
+      }
       if (event.type === 'agent_looping') {
         write(
           paint(

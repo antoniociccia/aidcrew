@@ -1375,6 +1375,14 @@ export function toLines(event: TeamEvent): Line[] {
           text: `but the verification itself changed: ${warning}`,
         })),
       ]
+    case 'agent_nudged':
+      return [
+        {
+          agentId: event.id,
+          kind: 'note',
+          text: 'ended its turn with a plan handed to nobody — sent back to hand it over',
+        },
+      ]
     case 'agent_looping':
       return [
         {

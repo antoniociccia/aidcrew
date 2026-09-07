@@ -108,6 +108,8 @@ export type TeamOptions = {
   orchestration?: string
   /** The agent every job reports back to, which cannot be taken off the team. */
   leader?: string
+  /** Nobody is watching: what a person would say from the screen, the harness says. */
+  unattended?: boolean
   /** Tool calls one turn may make, when the project says so. */
   maxTurnsPerInstruction?: number
   /** The command a job is proved by, when the project says so. */
@@ -134,6 +136,7 @@ export function createTeamHost(options: TeamOptions): InProcessHost {
     ...(options.onContention ? { onContention: options.onContention } : {}),
     ...(options.orchestration ? { orchestration: options.orchestration } : {}),
     ...(options.leader ? { leader: options.leader } : {}),
+    ...(options.unattended ? { unattended: true } : {}),
     ...(options.maxTurnsPerInstruction
       ? { maxTurnsPerInstruction: options.maxTurnsPerInstruction }
       : {}),
