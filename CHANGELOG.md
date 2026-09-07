@@ -20,6 +20,11 @@ the person using it, in the order it matters.
 
 ### The team
 
+- A report that comes home is answered by being read. A coder that sent
+  its report to the leader with `agent_send` and ended its turn left a
+  handoff open that the leader, who owes nobody an answer, could never
+  close: the run was reported as stalled, and the job was never checked or
+  merged. Found by the benchmark, in the first two team runs.
 - A job's checkout is on a branch made for it, `work/<job>`, from the moment
   it is made, so a commit in it is kept whatever happens to the checkout —
   no agent has to remember to make one. A later session's checkout for the

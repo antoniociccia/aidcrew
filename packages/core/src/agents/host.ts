@@ -1460,8 +1460,15 @@ class LiveAgent {
     // did not send one the harness sends it below and settles the ledger
     // then. Asked at the end rather than now, because the answer can be sent
     // partway through.
+    // A report that has come home — sent to the agent the whole chain
+    // started from — is answered by being read: the one who asked owes
+    // nobody an answer. Held open, the ledger reported a team that had just
+    // finished as one that had stalled, and the job was never checked.
     const answered = (): boolean =>
-      message.from === 'user' || message.reply === true || this.#repliedTo.has(message.from)
+      message.from === 'user' ||
+      message.reply === true ||
+      message.origin === this.#def.id ||
+      this.#repliedTo.has(message.from)
 
     try {
       for (;;) {
@@ -1646,6 +1653,8 @@ class LiveAgent {
     // a longer one this is the difference between the owner hearing that the
     // work is written and hearing that it passes.
     const to = message.origin ?? message.from
+    // Come home: the report reached the one who asked for the work, and
+    // this turn is the answer. The ledger is settled above, by `answered`.
     if (to === this.#def.id) return
     if (this.#repliedTo.has(to)) return
 

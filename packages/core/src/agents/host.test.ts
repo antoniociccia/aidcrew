@@ -4025,3 +4025,33 @@ describe('a turn going round in circles', () => {
     await host.shutdown()
   })
 })
+
+describe('a report that comes home', () => {
+  // Watched on the benchmark, twice in two team runs: the coder sends its
+  // report to the leader with agent_send and ends its turn; the leader reads
+  // it, says "job done", and owes nobody an answer — it is the one who
+  // asked. The ledger still held the coder's handoff, so the run was
+  // reported as stalled, and the job was never checked or merged.
+  test('is answered by being read, and leaves nothing outstanding', async () => {
+    const { host } = makeHost({
+      lead: [
+        call('s1', 'agent_send', { to: 'coder', message: 'fix it and report back' }),
+        text('plan sent'),
+        text('Job done.'),
+      ],
+      work: [
+        call('r1', 'agent_send', { to: 'lead', message: 'Done, committed on work/main' }),
+        text('Done.'),
+      ],
+    })
+    await host.spawn(def('lead', 'lead'))
+    await host.spawn(def('coder', 'work'))
+
+    await host.tell('lead', 'ship it')
+    await host.idle()
+
+    expect(host.outstanding()).toEqual([])
+    expect(host.stalled()).toBeUndefined()
+    await host.shutdown()
+  })
+})
