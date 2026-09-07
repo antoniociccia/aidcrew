@@ -1,7 +1,7 @@
 import { closeOpenCalls } from '../conversation.ts'
-import type { LoopEvent, Provider, Tool } from '../loop.ts'
+import type { LoopEvent, Provider, Tool, ToolOutput } from '../loop.ts'
 import { accumulateUsage, runAgentLoop } from '../loop.ts'
-import type { Hooks } from '../plugins/types.ts'
+import type { Hooks, ToolCallInfo } from '../plugins/types.ts'
 import type { AgentDef } from '../sources/types.ts'
 import type { ContentBlock, Message, Usage } from '../types.ts'
 import { addUsage } from '../types.ts'
@@ -11,6 +11,7 @@ import { Governor } from './governor.ts'
 import type { Note, SharedMemory } from './shared.ts'
 import { asMessage, EMPTY_MEMORY, olderThanKept, remember, shorten, tooLong } from './shared.ts'
 import { shortcutsIn } from './shortcuts.ts'
+import { REPEATS_NOTED, REPEATS_REFUSED, Repeats, refusedOnRepeat, saidOnRepeat } from './stall.ts'
 import type { MergeOutcome } from './workspace.ts'
 import { branchOf, type RemoveOutcome, WorkspaceManager } from './workspace.ts'
 
@@ -121,6 +122,12 @@ export type TeamEvent =
    * be seen to be.
    */
   | { type: 'agent_continued'; id: string; round: number; of: number }
+  /**
+   * A turn going round in circles: one exact tool call has returned one exact
+   * result this many times this turn. Said to the model at three; at six the
+   * call is refused for the rest of the turn.
+   */
+  | { type: 'agent_looping'; id: string; tool: string; times: number; refused: boolean }
   /** The job's check passed on its branch, run by the harness. */
   | {
       type: 'job_verified'
@@ -1416,7 +1423,12 @@ class LiveAgent {
       agentId: this.#def.id,
       ...(options.maxTurnsPerInstruction ? { maxTurns: options.maxTurnsPerInstruction } : {}),
       ...(this.#def.maxTokens ? { maxTokens: this.#def.maxTokens } : {}),
-      hooks: [...(options.hooks ?? []), this.#interjectionHook(), this.#sharedHook()],
+      hooks: [
+        ...(options.hooks ?? []),
+        this.#interjectionHook(),
+        this.#sharedHook(),
+        this.#stallHook(),
+      ],
       ...(options.hookNames ? { hookNames: options.hookNames } : {}),
     })
 
@@ -1700,6 +1712,37 @@ class LiveAgent {
    * Replaced rather than appended each turn, so the note appears once however
    * many turns a conversation runs for.
    */
+  /**
+   * Notices a turn going round in circles, while it is still cheap.
+   *
+   * Made afresh for each turn, so the count is the turn's. The same call
+   * returning the same result is said at three, in the result where the
+   * model reads it; at six the call is refused for the rest of the turn.
+   * Anything the harness has to say goes at the end of the tool's own
+   * output, after every other hook has had its say about it.
+   */
+  #stallHook(): Hooks {
+    const repeats = new Repeats()
+    const id = this.#def.id
+    const { onEvent } = this.#host.internals.options
+    return {
+      async preToolCall(call: ToolCallInfo): Promise<ToolOutput | undefined> {
+        const times = repeats.streak(call.name, call.input)
+        if (times < REPEATS_REFUSED) return undefined
+        onEvent({ type: 'agent_looping', id, tool: call.name, times, refused: true })
+        return { content: refusedOnRepeat(call.name, times), isError: true }
+      },
+      async postToolCall(call: ToolCallInfo, output: ToolOutput): Promise<ToolOutput | undefined> {
+        const times = repeats.record(call.name, call.input, output.content)
+        if (times < REPEATS_NOTED) return undefined
+        if (times === REPEATS_NOTED) {
+          onEvent({ type: 'agent_looping', id, tool: call.name, times, refused: false })
+        }
+        return { ...output, content: `${output.content}${saidOnRepeat(times)}` }
+      },
+    }
+  }
+
   #sharedHook(): Hooks {
     const shared = this.#host.internals.shared
     const task = taskOf(this.#def)

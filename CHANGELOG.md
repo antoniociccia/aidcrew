@@ -78,6 +78,11 @@ the person using it, in the order it matters.
   directory — the wizard, a checkout, an undo snapshot — and it covers the
   snapshots as well as the checkouts, the layout and the transcript database.
   The config and the agents beside it stay committable, which is the point.
+- A turn going round in circles is noticed while it is still cheap. The
+  same tool call returning the same result is said to the model the third
+  time, in the result where it reads it, and refused for the rest of the
+  turn the sixth; a result that changes is progress and the count starts
+  over. The turn limit still stands, for the circles this does not catch.
 - `[defaults] toolCallsPerTurn` raises the bound on tool calls in one turn for
   a project whose jobs are bigger than fifty allow for; a turn stopped at the
   bound now says so, and that what it wrote is in its checkout.

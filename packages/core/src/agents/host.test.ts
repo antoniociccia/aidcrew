@@ -3921,3 +3921,107 @@ describe('where an agent is told it is', () => {
     expect(briefing).toContain('shared')
   })
 })
+
+describe('a turn going round in circles', () => {
+  /** A tool that fails the same way every time, which is what a stuck turn sees. */
+  const stuck: Tool = {
+    name: 'bash',
+    description: 'runs a command',
+    inputSchema: { type: 'object' },
+    execute: async () => ({ content: 'error: 1 fail', isError: true }),
+  }
+  const sameCall = (n: number) => call(`c${n}`, 'bash', { command: 'bun test' })
+
+  function loopingHost(rounds: number) {
+    const events: TeamEvent[] = []
+    const script = [...Array.from({ length: rounds }, (_, n) => sameCall(n + 1)), text('giving up')]
+    const host = new InProcessHost({
+      cwd: process.cwd(),
+      providerFor: () => scripted({ m: script })('m'),
+      tools: [stuck],
+      limits: { maxHops: 3 },
+      isolate: false,
+      onEvent: (event) => events.push(event),
+    })
+    return { host, events }
+  }
+
+  test('is told so the third time the same call returns the same result', async () => {
+    // The turn limit stops this after fifty calls, on the bill. The circle
+    // is visible on the third, and that is when it is said — in the result,
+    // where the model reads it.
+    const { host, events } = loopingHost(3)
+    await host.spawn(def('coder', 'm'))
+
+    await host.tell('coder', 'make the tests pass')
+    await host.idle()
+
+    expect(events).toContainEqual({
+      type: 'agent_looping',
+      id: 'coder',
+      tool: 'bash',
+      times: 3,
+      refused: false,
+    })
+    const results = events.flatMap((event) =>
+      event.type === 'agent_event' && event.event.type === 'tool_end'
+        ? [event.event.output.content]
+        : [],
+    )
+    expect(results[1]).not.toContain('[harness]')
+    expect(results[2]).toContain('[harness]')
+    expect(results[2]).toContain('3 times')
+    await host.shutdown()
+  })
+
+  test('is refused the call the sixth time, for the rest of the turn', async () => {
+    const { host, events } = loopingHost(7)
+    await host.spawn(def('coder', 'm'))
+
+    await host.tell('coder', 'make the tests pass')
+    await host.idle()
+
+    expect(events).toContainEqual({
+      type: 'agent_looping',
+      id: 'coder',
+      tool: 'bash',
+      times: 6,
+      refused: true,
+    })
+    const results = events.flatMap((event) =>
+      event.type === 'agent_event' && event.event.type === 'tool_end'
+        ? [event.event.output.content]
+        : [],
+    )
+    expect(results[6]).toContain('refused by the harness')
+    await host.shutdown()
+  })
+
+  test('starts the count over when the result changes, which is progress', async () => {
+    let fails = 2
+    const improving: Tool = {
+      ...stuck,
+      execute: async () => {
+        fails -= 1
+        return { content: `error: ${fails + 1} fail`, isError: true }
+      },
+    }
+    const events: TeamEvent[] = []
+    const host = new InProcessHost({
+      cwd: process.cwd(),
+      providerFor: () =>
+        scripted({ m: [sameCall(1), sameCall(2), sameCall(3), text('done')] })('m'),
+      tools: [improving],
+      limits: { maxHops: 3 },
+      isolate: false,
+      onEvent: (event) => events.push(event),
+    })
+    await host.spawn(def('coder', 'm'))
+
+    await host.tell('coder', 'make the tests pass')
+    await host.idle()
+
+    expect(events.some((event) => event.type === 'agent_looping')).toBe(false)
+    await host.shutdown()
+  })
+})

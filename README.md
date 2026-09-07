@@ -202,9 +202,11 @@ answers that exist: wait, start a second agent of that role, or drop it and tell
 the sender so. A headless run queues, as it always did.
 
 A turn is bounded — fifty tool calls, so a model going round in circles is
-stopped — and an agent you have turned loose with `/yolo` is sent back to carry
-on when it reaches that bound with the work unfinished, a few times, before the
-stop is real. A project whose jobs are bigger than that raises the bound in its
+stopped — and the circle is noticed long before that: the same tool call
+returning the same result is said to the model the third time, in the result
+where it reads it, and refused for the rest of the turn the sixth. An agent
+you have turned loose with `/yolo` is sent back to carry on when it reaches
+the bound with the work unfinished, a few times, before the stop is real. A project whose jobs are bigger than that raises the bound in its
 config, with `[defaults] toolCallsPerTurn`. Nobody watching means nobody to say "go on", so the harness says
 it. An agent that is asking first stops and waits for you.
 

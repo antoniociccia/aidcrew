@@ -1375,6 +1375,16 @@ export function toLines(event: TeamEvent): Line[] {
           text: `but the verification itself changed: ${warning}`,
         })),
       ]
+    case 'agent_looping':
+      return [
+        {
+          agentId: event.id,
+          kind: 'note',
+          text: event.refused
+            ? `going round in circles: \`${event.tool}\` returned the same result ${event.times} times — refused for the rest of the turn`
+            : `going round in circles: \`${event.tool}\` returned the same result ${event.times} times — told so`,
+        },
+      ]
     case 'job_unverified':
       return [{ agentId: event.task, kind: 'note', text: `unverified: ${event.detail}` }]
     case 'job_check_failed':

@@ -182,6 +182,17 @@ export function createTeamRenderer({ write, color }: RendererOptions) {
         }
         return
       }
+      if (event.type === 'agent_looping') {
+        write(
+          paint(
+            event.id,
+            event.refused
+              ? `going round in circles: ${event.tool} returned the same result ${event.times} times — refused for the rest of the turn\n`
+              : `going round in circles: ${event.tool} returned the same result ${event.times} times — told so\n`,
+          ),
+        )
+        return
+      }
       if (event.type === 'job_unverified') {
         write(paint(event.task, `unverified: ${event.detail}\n`))
         return
