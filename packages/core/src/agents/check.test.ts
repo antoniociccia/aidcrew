@@ -17,16 +17,24 @@ describe('the check a project is proved by', () => {
   // Nobody should have to say `bun test` to a harness that can see the
   // package.json. What is declared wins; what is not declared is read off
   // the files every ecosystem leaves behind.
-  test('is bun test where bun is plainly in use', () => {
+  test('runs the test script through bun where bun is plainly in use', () => {
+    // `bun test` is bun's own runner, which ignores the script; a project whose
+    // script says vitest is proved by vitest.
     expect(
       detectCheck(project({ 'package.json': '{"scripts":{"test":"bun test"}}', 'bun.lock': '' })),
-    ).toBe('bun test')
+    ).toBe('bun run test')
   })
 
   test('is npm test for a package with a test script and no sign of bun', () => {
     expect(detectCheck(project({ 'package.json': '{"scripts":{"test":"vitest"}}' }))).toBe(
       'npm test',
     )
+  })
+
+  test('runs the script through pnpm or yarn where their lockfile is', () => {
+    const script = JSON.stringify({ scripts: { test: 'vitest run' } })
+    expect(detectCheck(project({ 'package.json': script, 'pnpm-lock.yaml': '' }))).toBe('pnpm test')
+    expect(detectCheck(project({ 'package.json': script, 'yarn.lock': '' }))).toBe('yarn test')
   })
 
   test('is nothing for a package without a test script', () => {

@@ -26,14 +26,18 @@ export function detectCheck(root: string): string | undefined {
   if (existsSync(manifest)) {
     const script = testScriptOf(manifest)
     if (script === undefined) return undefined
-    // Bun's own test runner, or a lockfile of its, is a project on bun; a
-    // test script with neither is run the way its author runs it.
+    // The script is run, not guessed at: `bun test` is bun's own runner and
+    // ignores a script that says vitest. What varies is the package manager
+    // that runs it, read off the lockfile the project keeps.
     const onBun =
       /\bbun\b/.test(script) ||
       existsSync(join(root, 'bun.lock')) ||
       existsSync(join(root, 'bun.lockb')) ||
       existsSync(join(root, 'bunfig.toml'))
-    return onBun ? 'bun test' : 'npm test'
+    if (onBun) return 'bun run test'
+    if (existsSync(join(root, 'pnpm-lock.yaml'))) return 'pnpm test'
+    if (existsSync(join(root, 'yarn.lock'))) return 'yarn test'
+    return 'npm test'
   }
   for (const [file, command] of KNOWN) if (existsSync(join(root, file))) return command
   return undefined
