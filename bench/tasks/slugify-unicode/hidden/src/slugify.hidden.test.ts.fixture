@@ -1,0 +1,22 @@
+import { expect, test } from 'bun:test'
+import { slugify } from './slugify.ts'
+
+test('reduces accented letters to their base letter', () => {
+  expect(slugify('Crème Brûlée')).toBe('creme-brulee')
+  expect(slugify('São Paulo')).toBe('sao-paulo')
+  expect(slugify('ÀÉÎÕÜ')).toBe('aeiou')
+  expect(slugify('Über 2000')).toBe('uber-2000')
+})
+
+test('collapses runs of punctuation and spaces into one dash', () => {
+  expect(slugify('Hello,   World!')).toBe('hello-world')
+})
+
+test('drops dashes at either end', () => {
+  expect(slugify('--Ünïcode--')).toBe('unicode')
+})
+
+test('is empty for nothing but punctuation', () => {
+  expect(slugify('!!!')).toBe('')
+  expect(slugify('')).toBe('')
+})

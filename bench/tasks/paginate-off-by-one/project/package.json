@@ -1,0 +1,8 @@
+{
+  "name": "paginate",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

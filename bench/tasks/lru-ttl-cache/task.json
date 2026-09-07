@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement the Cache class in src/cache.ts: a least-recently-used cache holding at most capacity entries, each expiring ttlMs after it was set. get returns undefined for a missing or expired entry, and a successful get counts as a use. set replaces an existing key's value and time without evicting anything; when set would exceed capacity, the least recently used entry is evicted first. has and delete behave as on a Map, with expired entries counting as absent. size counts only entries that have not expired. Time is read from the now function passed to the constructor, so tests can control it. A capacity below 1 must throw a RangeError from the constructor. Add tests."
+}

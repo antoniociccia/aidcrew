@@ -1,0 +1,16 @@
+import { expect, test } from 'bun:test'
+import { resolveConfig } from './index.ts'
+
+test('the environment wins over the file, which wins over the defaults', () => {
+  const config = resolveConfig({ port: 80, name: 'file' }, { APP_PORT: '8080' })
+  expect(config).toEqual({ port: 8080, host: 'localhost', debug: false, name: 'file' })
+})
+
+test('an empty variable changes nothing', () => {
+  expect(resolveConfig({}, { APP_HOST: '' }).host).toBe('localhost')
+})
+
+test('what comes out is validated', () => {
+  expect(() => resolveConfig({ port: 0 }, {})).toThrow(TypeError)
+  expect(() => resolveConfig({}, { APP_PORT: '99999' })).toThrow(/port/)
+})

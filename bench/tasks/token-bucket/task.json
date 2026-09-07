@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement RateLimiter in src/limiter.ts as a token bucket. It starts full, with capacity tokens. Tokens refill continuously at refillPerSecond, never beyond capacity. tryTake(n) takes n tokens and returns true when they were available; otherwise it returns false and takes nothing. An n greater than capacity is always refused. available reports the tokens in the bucket right now, refilled up to the current time, and may be fractional. The now function passed to the constructor gives the time in milliseconds, so tests can control it. Add tests."
+}

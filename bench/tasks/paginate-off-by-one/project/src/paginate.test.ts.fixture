@@ -1,0 +1,7 @@
+import { expect, test } from 'bun:test'
+import { pageCount } from './paginate.ts'
+
+test('counts the pages a list takes', () => {
+  expect(pageCount(10, 3)).toBe(4)
+  expect(pageCount(0, 3)).toBe(0)
+})

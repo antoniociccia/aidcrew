@@ -1,0 +1,15 @@
+import { expect, test } from 'bun:test'
+import { DEFAULTS, validate } from './config.ts'
+
+test('returns a valid config', () => {
+  expect(validate(DEFAULTS)).toEqual(DEFAULTS)
+})
+
+test('names the field that is wrong', () => {
+  expect(() => validate({ ...DEFAULTS, port: 0 })).toThrow(/port/)
+  expect(() => validate({ ...DEFAULTS, port: 70000 })).toThrow(/port/)
+  expect(() => validate({ ...DEFAULTS, port: 1.5 })).toThrow(/port/)
+  expect(() => validate({ ...DEFAULTS, host: '' })).toThrow(/host/)
+  expect(() => validate({ ...DEFAULTS, name: '' })).toThrow(/name/)
+  expect(() => validate({ ...DEFAULTS, port: 0 })).toThrow(TypeError)
+})

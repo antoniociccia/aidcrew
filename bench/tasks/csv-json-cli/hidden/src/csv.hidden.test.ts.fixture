@@ -1,0 +1,22 @@
+import { expect, test } from 'bun:test'
+import { parseCsv } from './csv.ts'
+
+test('splits rows and fields', () => {
+  expect(parseCsv('a,b\n1,2\n')).toEqual([['a', 'b'], ['1', '2']])
+})
+
+test('a quoted field may hold a comma', () => {
+  expect(parseCsv('a,b\n"x, y",2\n')).toEqual([['a', 'b'], ['x, y', '2']])
+})
+
+test('a doubled quote inside a quoted field is one quote', () => {
+  expect(parseCsv('a\n"say ""hi"""\n')).toEqual([['a'], ['say "hi"']])
+})
+
+test('lines may end in CRLF', () => {
+  expect(parseCsv('a,b\r\n1,2\r\n')).toEqual([['a', 'b'], ['1', '2']])
+})
+
+test('an empty input has no rows', () => {
+  expect(parseCsv('')).toEqual([])
+})

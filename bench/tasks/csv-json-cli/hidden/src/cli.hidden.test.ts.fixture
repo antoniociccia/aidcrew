@@ -1,0 +1,29 @@
+import { expect, test } from 'bun:test'
+import { run } from './cli.ts'
+
+test('--json turns rows into objects keyed by the header', () => {
+  expect(run(['--json'], 'name,age\nann,3\nbob,4\n')).toEqual({
+    out: '[{"name":"ann","age":"3"},{"name":"bob","age":"4"}]\n',
+    code: 0,
+  })
+})
+
+test('--json keeps quoted commas', () => {
+  expect(run(['--json'], 'city\n"Paris, TX"\n').out).toBe('[{"city":"Paris, TX"}]\n')
+})
+
+test('--json prints an empty array for an empty input or a header alone', () => {
+  expect(run(['--json'], '')).toEqual({ out: '[]\n', code: 0 })
+  expect(run(['--json'], 'a,b\n')).toEqual({ out: '[]\n', code: 0 })
+})
+
+test('--json refuses a ragged row, naming its line', () => {
+  const result = run(['--json'], 'a,b\n1,2\n3\n')
+  expect(result.code).toBe(1)
+  expect(result.out).toContain('3')
+  expect(result.out).not.toContain('[')
+})
+
+test('the usage line mentions --json', () => {
+  expect(run([], '').out).toContain('--json')
+})

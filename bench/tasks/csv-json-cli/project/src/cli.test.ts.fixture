@@ -1,0 +1,14 @@
+import { expect, test } from 'bun:test'
+import { run } from './cli.ts'
+
+test('--upper shouts', () => {
+  expect(run(['--upper'], 'a,b\n')).toEqual({ out: 'A,B\n', code: 0 })
+})
+
+test('--count counts lines', () => {
+  expect(run(['--count'], 'a,b\n1,2\n')).toEqual({ out: '2\n', code: 0 })
+})
+
+test('anything else is usage', () => {
+  expect(run([], '').code).toBe(2)
+})

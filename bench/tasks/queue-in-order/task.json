@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "The Queue in src/queue.ts is documented to run jobs one after another, in the order they were pushed, but it starts every job the moment it is pushed, so two jobs that touch the same file run at once. Fix it so that a job starts only after the one before it has finished, in push order, and never synchronously inside push; a job that throws is recorded in errors and does not stop the ones after it; drain resolves once every job pushed so far has finished, including jobs pushed while draining. push must stay synchronous and return nothing. Add tests."
+}

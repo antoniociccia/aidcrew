@@ -1,0 +1,7 @@
+import { expect, test } from 'bun:test'
+import { RateLimiter } from './limiter.ts'
+
+test('starts full', () => {
+  const limiter = new RateLimiter(3, 1, () => 0)
+  expect(limiter.tryTake()).toBe(true)
+})

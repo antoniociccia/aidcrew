@@ -1,0 +1,6 @@
+import { expect, test } from 'bun:test'
+import { renderReceipt } from './receipt.ts'
+
+test('renders items and a total', () => {
+  expect(renderReceipt([{ name: 'tea', cents: 1250 }], 'EUR')).toBe('tea 12.50 EUR\nTOTAL 12.50 EUR')
+})

@@ -1,0 +1,4 @@
+{
+  "category": "refactor",
+  "instruction": "src/invoice.ts and src/receipt.ts each format money on their own, and they have drifted: the receipt drops the thousands separator and mangles negative amounts (a refund of -1250 cents renders as -13.-50 EUR). Extract one formatter into a new module src/money.ts exporting formatMoney(cents: number, currency: string): string with the invoice's behaviour: thousands grouped with commas, two decimals, a leading minus for a negative amount, then a space and the currency code. Make both invoice and receipt use it, so the receipt is fixed by the extraction. Keep formatInvoiceAmount and formatReceiptAmount exported, as thin wrappers, so nothing that imports them breaks, and keep the output of renderInvoice and renderReceipt unchanged for positive amounts. Add tests."
+}

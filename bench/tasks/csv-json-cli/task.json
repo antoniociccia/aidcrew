@@ -1,0 +1,4 @@
+{
+  "category": "multi-file",
+  "instruction": "Add a --json flag to the csvtool command line in src/cli.ts. It reads CSV from the input, takes the first line as the header, and prints a JSON array of objects, one per data row, keyed by the header names, every value a string, followed by a newline. Fields may be wrapped in double quotes, in which case they may contain commas, and a doubled quote inside a quoted field stands for one quote. Lines may end in \\r\\n. An empty input, or a header with no rows, prints [] and a newline. A data row with a different number of fields than the header exits with code 1 and prints one line naming the 1-based line number, and no JSON. Put the CSV parsing in a new module src/csv.ts exporting parseCsv(text: string): string[][], so it can be tested on its own. Mention --json in the usage line. Add tests."
+}

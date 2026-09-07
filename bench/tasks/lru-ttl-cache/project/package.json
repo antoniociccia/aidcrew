@@ -1,0 +1,8 @@
+{
+  "name": "cache",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

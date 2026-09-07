@@ -74,6 +74,13 @@ the person using it, in the order it matters.
 
 ### The project
 
+- A benchmark, under `bench/`: ten repeatable tasks — a bug, a feature, a
+  refactor, a change across files — each with tests the agents never see
+  and a reference solution that proves it solvable. Four configurations run
+  on every task, headless: a cheap model alone, a strong one alone, a cheap
+  team, a strong planner with a cheap coder. What is recorded is what the
+  hidden tests said, what the harness claimed, every cent of every attempt,
+  and the time. Whether the next change made things better is a number now.
 - `.aidcrew/.gitignore` is written the first time anything creates the
   directory — the wizard, a checkout, an undo snapshot — and it covers the
   snapshots as well as the checkouts, the layout and the transcript database.

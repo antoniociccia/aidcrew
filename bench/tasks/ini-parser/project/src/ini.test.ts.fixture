@@ -1,0 +1,6 @@
+import { expect, test } from 'bun:test'
+import { parseIni } from './ini.ts'
+
+test('reads a key under its section', () => {
+  expect(parseIni('[server]\nport = 8080\n')).toEqual({ server: { port: '8080' } })
+})

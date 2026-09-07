@@ -1,0 +1,30 @@
+import { expect, test } from 'bun:test'
+import { formatInvoiceAmount, renderInvoice } from './invoice.ts'
+import { formatMoney } from './money.ts'
+import { formatReceiptAmount, renderReceipt } from './receipt.ts'
+
+test('groups thousands, keeps two decimals, puts the currency after', () => {
+  expect(formatMoney(123450, 'EUR')).toBe('1,234.50 EUR')
+  expect(formatMoney(100000000, 'EUR')).toBe('1,000,000.00 EUR')
+  expect(formatMoney(5, 'USD')).toBe('0.05 USD')
+})
+
+test('a negative amount has one leading minus', () => {
+  expect(formatMoney(-1250, 'EUR')).toBe('-12.50 EUR')
+})
+
+test('the receipt is fixed by the extraction', () => {
+  expect(renderReceipt([{ name: 'refund', cents: -1250 }], 'EUR')).toContain('-12.50 EUR')
+  expect(renderReceipt([{ name: 'car', cents: 123450 }], 'EUR')).toContain('1,234.50 EUR')
+})
+
+test('the old names still work, and agree', () => {
+  expect(formatInvoiceAmount(-1250, 'EUR')).toBe(formatReceiptAmount(-1250, 'EUR'))
+  expect(formatInvoiceAmount(123450, 'GBP')).toBe('1,234.50 GBP')
+})
+
+test('the invoice renders as it always did', () => {
+  expect(renderInvoice([{ description: 'work', cents: 123450 }], 'EUR')).toBe(
+    'work: 1,234.50 EUR\ntotal: 1,234.50 EUR',
+  )
+})

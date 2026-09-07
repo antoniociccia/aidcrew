@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement parseIni in src/ini.ts. A section is a line like [name]; every key = value line after it belongs to that section, and keys before any section header go under the empty-string section. Whitespace around keys, values and section names is trimmed. Lines starting with ; or # are comments, and blank lines are ignored. A value wrapped in double quotes keeps everything inside the quotes, including leading and trailing spaces and ; characters. The first = splits the key from the value, so k=b=c gives key k and value b=c. A later key overrides an earlier one in the same section. A line that is none of these must throw a SyntaxError whose message names the 1-based line number. Add tests."
+}

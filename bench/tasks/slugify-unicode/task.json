@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "slugify('Crème Brûlée') returns 'cr-me-br-l-e'; it should return 'creme-brulee'. Fix slugify in src/slugify.ts so that accented Latin letters are reduced to their base letter, runs of anything that is not a letter or a digit become one dash, leading and trailing dashes are dropped, and an empty string or a string of nothing but punctuation returns ''. Add tests."
+}

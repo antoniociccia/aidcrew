@@ -1,0 +1,35 @@
+import { expect, test } from 'bun:test'
+import { parseIni } from './ini.ts'
+
+test('keys before any section go under the empty name', () => {
+  expect(parseIni('name = app\n[db]\nhost = h\n')).toEqual({ '': { name: 'app' }, db: { host: 'h' } })
+})
+
+test('trims around keys, values and section names', () => {
+  expect(parseIni('[ a ]\n  key  =  value  \n')).toEqual({ a: { key: 'value' } })
+})
+
+test('ignores comments and blank lines', () => {
+  expect(parseIni('; one\n# two\n\n[a]\nk=v\n')).toEqual({ a: { k: 'v' } })
+})
+
+test('a quoted value keeps its spaces and semicolons', () => {
+  expect(parseIni('[a]\nk = "  v ; w  "\n')).toEqual({ a: { k: '  v ; w  ' } })
+})
+
+test('a later key wins', () => {
+  expect(parseIni('[a]\nk=1\nk=2\n')).toEqual({ a: { k: '2' } })
+})
+
+test('the first = splits key from value', () => {
+  expect(parseIni('[a]\nk=b=c\n')).toEqual({ a: { k: 'b=c' } })
+})
+
+test('a line that is none of these is a SyntaxError naming its line', () => {
+  expect(() => parseIni('[a]\nk=v\nwhat\n')).toThrow(SyntaxError)
+  try {
+    parseIni('[a]\nk=v\nwhat\n')
+  } catch (error) {
+    expect(String(error)).toContain('3')
+  }
+})

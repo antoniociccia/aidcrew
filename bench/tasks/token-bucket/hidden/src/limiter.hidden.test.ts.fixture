@@ -1,0 +1,53 @@
+import { expect, test } from 'bun:test'
+import { RateLimiter } from './limiter.ts'
+
+function clock() {
+  let at = 0
+  return { now: () => at, tick: (ms: number) => { at += ms } }
+}
+
+test('gives out capacity tokens and then refuses', () => {
+  const limiter = new RateLimiter(3, 1, clock().now)
+  expect(limiter.tryTake()).toBe(true)
+  expect(limiter.tryTake()).toBe(true)
+  expect(limiter.tryTake()).toBe(true)
+  expect(limiter.tryTake()).toBe(false)
+})
+
+test('refuses without taking anything', () => {
+  const limiter = new RateLimiter(3, 1, clock().now)
+  expect(limiter.tryTake(5)).toBe(false)
+  expect(limiter.tryTake(3)).toBe(true)
+})
+
+test('refills at the rate, over time', () => {
+  const time = clock()
+  const limiter = new RateLimiter(3, 2, time.now)
+  expect(limiter.tryTake(3)).toBe(true)
+  time.tick(500)
+  expect(limiter.available).toBeCloseTo(1, 6)
+  expect(limiter.tryTake(1)).toBe(true)
+  expect(limiter.tryTake(1)).toBe(false)
+})
+
+test('never refills beyond capacity', () => {
+  const time = clock()
+  const limiter = new RateLimiter(3, 2, time.now)
+  limiter.tryTake(1)
+  time.tick(10_000)
+  expect(limiter.available).toBe(3)
+})
+
+test('available is fractional', () => {
+  const time = clock()
+  const limiter = new RateLimiter(3, 2, time.now)
+  limiter.tryTake(3)
+  time.tick(250)
+  expect(limiter.available).toBeCloseTo(0.5, 6)
+})
+
+test('more than capacity is always refused', () => {
+  const limiter = new RateLimiter(3, 2, clock().now)
+  expect(limiter.tryTake(4)).toBe(false)
+  expect(limiter.available).toBe(3)
+})

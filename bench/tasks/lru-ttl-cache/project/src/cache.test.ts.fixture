@@ -1,0 +1,8 @@
+import { expect, test } from 'bun:test'
+import { Cache } from './cache.ts'
+
+test('returns what was set', () => {
+  const cache = new Cache<string, number>(2, 1000, () => 0)
+  cache.set('a', 1)
+  expect(cache.get('a')).toBe(1)
+})

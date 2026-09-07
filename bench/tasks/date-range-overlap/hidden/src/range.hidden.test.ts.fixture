@@ -1,0 +1,36 @@
+import { expect, test } from 'bun:test'
+import { overlaps } from './range.ts'
+
+const at = (hour: string) => `2026-01-01T${hour}:00:00Z`
+
+test('ranges that merely touch do not overlap', () => {
+  expect(overlaps({ start: at('09'), end: at('10') }, { start: at('10'), end: at('11') })).toBe(false)
+  expect(overlaps({ start: at('10'), end: at('11') }, { start: at('09'), end: at('10') })).toBe(false)
+})
+
+test('ranges apart do not overlap', () => {
+  expect(overlaps({ start: at('09'), end: at('10') }, { start: at('11'), end: at('12') })).toBe(false)
+})
+
+test('ranges starting at the same instant overlap', () => {
+  expect(overlaps({ start: at('09'), end: at('10') }, { start: at('09'), end: at('12') })).toBe(true)
+})
+
+test('a range of zero length overlaps nothing', () => {
+  const empty = { start: at('10'), end: at('10') }
+  expect(overlaps(empty, { start: at('09'), end: at('11') })).toBe(false)
+  expect(overlaps(empty, empty)).toBe(false)
+})
+
+test('a date that does not parse is refused, by name', () => {
+  expect(() => overlaps({ start: 'not-a-date', end: at('10') }, { start: at('09'), end: at('11') })).toThrow(
+    TypeError,
+  )
+  expect(() => overlaps({ start: at('09'), end: 'nope' }, { start: at('09'), end: at('11') })).toThrow(/nope/)
+})
+
+test('a range ending before it starts is refused', () => {
+  expect(() => overlaps({ start: at('11'), end: at('10') }, { start: at('09'), end: at('11') })).toThrow(
+    RangeError,
+  )
+})

@@ -1,0 +1,7 @@
+import { expect, test } from 'bun:test'
+import { resolveConfig } from './index.ts'
+
+test('the file overrides the defaults', () => {
+  expect(resolveConfig({ port: 80 }).port).toBe(80)
+  expect(resolveConfig({}).host).toBe('localhost')
+})

@@ -1,0 +1,15 @@
+import { expect, test } from 'bun:test'
+import { Queue } from './queue.ts'
+
+test('drain waits for every job', async () => {
+  const queue = new Queue()
+  let done = 0
+  queue.push(async () => {
+    done += 1
+  })
+  queue.push(async () => {
+    done += 1
+  })
+  await queue.drain()
+  expect(done).toBe(2)
+})

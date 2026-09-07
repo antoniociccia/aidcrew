@@ -1,0 +1,11 @@
+import { expect, test } from 'bun:test'
+import { overlaps } from './range.ts'
+
+test('ranges that share an hour overlap', () => {
+  expect(
+    overlaps(
+      { start: '2026-01-01T09:00:00Z', end: '2026-01-01T11:00:00Z' },
+      { start: '2026-01-01T10:00:00Z', end: '2026-01-01T12:00:00Z' },
+    ),
+  ).toBe(true)
+})

@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "Users report that page 1 of every list shows the second page of results, and the first perPage items are never shown. Fix paginate in src/paginate.ts so that page 1 returns the first perPage items, the last page returns whatever is left, and a page past the end returns an empty list. A page below 1, or a perPage below 1, must throw a RangeError. Add tests for these cases."
+}

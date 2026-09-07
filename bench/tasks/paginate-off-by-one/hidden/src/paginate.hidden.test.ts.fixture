@@ -1,0 +1,28 @@
+import { expect, test } from 'bun:test'
+import { paginate } from './paginate.ts'
+
+const items = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+
+test('page 1 is the first perPage items', () => {
+  expect(paginate(items, 1, 3)).toEqual(['a', 'b', 'c'])
+})
+
+test('page 2 follows', () => {
+  expect(paginate(items, 2, 3)).toEqual(['d', 'e', 'f'])
+})
+
+test('the last page holds what is left', () => {
+  expect(paginate(items, 3, 3)).toEqual(['g'])
+})
+
+test('a page past the end is empty', () => {
+  expect(paginate(items, 4, 3)).toEqual([])
+})
+
+test('a page below 1 is refused', () => {
+  expect(() => paginate(items, 0, 3)).toThrow(RangeError)
+})
+
+test('a perPage below 1 is refused', () => {
+  expect(() => paginate(items, 1, 0)).toThrow(RangeError)
+})

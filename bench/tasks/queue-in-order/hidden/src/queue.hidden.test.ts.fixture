@@ -1,0 +1,57 @@
+import { expect, test } from 'bun:test'
+import { Queue } from './queue.ts'
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+test('runs jobs one at a time, in order', async () => {
+  const queue = new Queue()
+  const events: string[] = []
+  queue.push(async () => {
+    events.push('start 1')
+    await sleep(20)
+    events.push('end 1')
+  })
+  queue.push(async () => {
+    events.push('start 2')
+    await sleep(5)
+    events.push('end 2')
+  })
+  await queue.drain()
+  expect(events).toEqual(['start 1', 'end 1', 'start 2', 'end 2'])
+})
+
+test('a job never starts synchronously inside push', () => {
+  const queue = new Queue()
+  let started = false
+  queue.push(async () => {
+    started = true
+  })
+  expect(started).toBe(false)
+})
+
+test('a failing job is recorded and does not stop the next', async () => {
+  const queue = new Queue()
+  let ran = false
+  queue.push(async () => {
+    throw new Error('boom')
+  })
+  queue.push(async () => {
+    ran = true
+  })
+  await queue.drain()
+  expect(queue.errors.map((error) => error.message)).toEqual(['boom'])
+  expect(ran).toBe(true)
+})
+
+test('drain includes a job pushed while draining', async () => {
+  const queue = new Queue()
+  let second = false
+  queue.push(async () => {
+    await sleep(10)
+    queue.push(async () => {
+      second = true
+    })
+  })
+  await queue.drain()
+  expect(second).toBe(true)
+})

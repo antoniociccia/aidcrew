@@ -32,6 +32,7 @@
   },
   "include": [
     "packages/**/*.ts",
+    "bench/*.ts",
     "plugins/**/*.ts",
     // Checked too, or they rot. The examples are what somebody writing a
     // plugin copies from, and the scripts are how a release is built — both

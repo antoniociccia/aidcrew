@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "overlaps in src/range.ts says that two ranges which merely touch, one ending exactly when the other starts, overlap; and for a date it cannot parse it answers false, silently. The end of a range is exclusive. Fix overlaps so that touching ranges do not overlap; two ranges that start at the same instant do; a range of zero length, whose start equals its end, overlaps nothing, not even itself; a range whose start or end does not parse throws a TypeError whose message includes the offending value; and a range whose end is before its start throws a RangeError. Add tests."
+}
