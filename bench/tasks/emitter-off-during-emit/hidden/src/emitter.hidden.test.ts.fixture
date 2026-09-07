@@ -1,0 +1,48 @@
+import { expect, test } from 'bun:test'
+import { Emitter } from './emitter.ts'
+
+test('a once listener does not silence the one registered after it', () => {
+  const emitter = new Emitter()
+  const seen: string[] = []
+  emitter.once('tick', () => seen.push('once'))
+  emitter.on('tick', () => seen.push('always'))
+  emitter.emit('tick')
+  emitter.emit('tick')
+  expect(seen).toEqual(['once', 'always', 'always'])
+})
+
+test('a listener that removes another during emit does not skip the next', () => {
+  const emitter = new Emitter()
+  const seen: string[] = []
+  const second = () => seen.push('second')
+  emitter.on('tick', () => {
+    seen.push('first')
+    emitter.off('tick', second)
+  })
+  emitter.on('tick', second)
+  emitter.on('tick', () => seen.push('third'))
+  expect(emitter.emit('tick')).toBe(3)
+  expect(seen).toEqual(['first', 'second', 'third'])
+  expect(emitter.emit('tick')).toBe(2)
+})
+
+test('a listener added during emit waits for the next emit', () => {
+  const emitter = new Emitter()
+  const seen: string[] = []
+  emitter.on('tick', () => {
+    seen.push('a')
+    emitter.on('tick', () => seen.push('late'))
+  })
+  emitter.emit('tick')
+  expect(seen).toEqual(['a'])
+  emitter.emit('tick')
+  expect(seen).toEqual(['a', 'a', 'late'])
+})
+
+test('off says whether it removed anything', () => {
+  const emitter = new Emitter()
+  const listener = () => {}
+  emitter.on('tick', listener)
+  expect(emitter.off('tick', listener)).toBe(true)
+  expect(emitter.off('tick', listener)).toBe(false)
+})

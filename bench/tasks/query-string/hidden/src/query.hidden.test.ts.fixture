@@ -1,0 +1,17 @@
+import { expect, test } from 'bun:test'
+import { parseQuery, stringifyQuery } from './query.ts'
+
+test('parses pairs, repeats, bare keys and encodings', () => {
+  expect(parseQuery('?a=1&b=x%20y&a=2&c&d=1+2')).toEqual({ a: ['1', '2'], b: 'x y', c: '', d: '1 2' })
+  expect(parseQuery('')).toEqual({})
+})
+
+test('stringifies in order, encoding what needs it', () => {
+  expect(stringifyQuery({ a: ['1', '2'], b: 'x y', c: '' })).toBe('a=1&a=2&b=x%20y&c=')
+  expect(stringifyQuery({ q: 'a&b=c' })).toBe('q=a%26b%3Dc')
+})
+
+test('round trips', () => {
+  const query = { tags: ['one', 'two three'], page: '2', note: 'a=b&c' }
+  expect(parseQuery(stringifyQuery(query))).toEqual(query)
+})

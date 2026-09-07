@@ -1,0 +1,6 @@
+import { expect, test } from 'bun:test'
+import { wordCount } from './stats.ts'
+
+test('counts words, whatever their case and punctuation', () => {
+  expect(wordCount("Don't stop. DON'T!")).toBe(3)
+})

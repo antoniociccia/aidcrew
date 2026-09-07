@@ -1,0 +1,37 @@
+import { expect, test } from 'bun:test'
+import { retry } from './retry.ts'
+
+test('returns the first success, waiting longer each time', async () => {
+  const waits: number[] = []
+  let calls = 0
+  const result = await retry(
+    async () => {
+      calls += 1
+      if (calls < 3) throw new Error(`fail ${calls}`)
+      return 'ok'
+    },
+    { attempts: 5, baseMs: 100, sleep: async (ms) => { waits.push(ms) } },
+  )
+  expect(result).toBe('ok')
+  expect(calls).toBe(3)
+  expect(waits).toEqual([100, 200])
+})
+
+test('gives up after the last attempt, naming the count and keeping the cause', async () => {
+  const last = new Error('still broken')
+  const failing = retry(async () => { throw last }, { attempts: 3, baseMs: 1, sleep: async () => {} })
+  await expect(failing).rejects.toThrow(/^gave up after 3 attempts: still broken/)
+  await failing.catch((error: Error) => {
+    expect(error.cause).toBe(last)
+  })
+})
+
+test('one attempt never sleeps', async () => {
+  const waits: number[] = []
+  await retry(async () => { throw new Error('x') }, { attempts: 1, baseMs: 50, sleep: async (ms) => { waits.push(ms) } }).catch(() => {})
+  expect(waits).toEqual([])
+})
+
+test('refuses fewer than one attempt', async () => {
+  await expect(retry(async () => 1, { attempts: 0, baseMs: 1 })).rejects.toThrow(RangeError)
+})

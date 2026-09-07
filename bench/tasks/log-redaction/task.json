@@ -1,0 +1,4 @@
+{
+  "category": "multi-file",
+  "instruction": "The logger in src/logger.ts writes whatever fields it is given, secrets included. Add src/redact.ts exporting redact(value), which returns a copy of value in which, at any depth of objects and arrays, the value of every key whose name contains password, passwd, secret, token, apikey, api_key, api-key or authorization, in any case, is replaced by the string '[redacted]', and every string value containing 'Bearer ' followed by a token has that token replaced by '[redacted]'; nothing else changes, and the input is not mutated. Make log() in src/logger.ts pass its fields through redact before writing the line. Add tests for redact and for the logger."
+}

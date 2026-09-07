@@ -1,0 +1,18 @@
+import { expect, test } from 'bun:test'
+import { insertionIndex } from './search.ts'
+
+test('an equal element is found at its first occurrence', () => {
+  expect(insertionIndex([1, 2, 2, 2, 3], 2)).toBe(1)
+  expect(insertionIndex([2, 2, 2], 2)).toBe(0)
+})
+
+test('the ends', () => {
+  expect(insertionIndex([1, 2, 3], 0)).toBe(0)
+  expect(insertionIndex([1, 2, 3], 9)).toBe(3)
+})
+
+test('stays correct on a long list', () => {
+  const list = Array.from({ length: 1000 }, (_, at) => Math.floor(at / 10))
+  expect(insertionIndex(list, 50)).toBe(500)
+  expect(insertionIndex(list, 50.5)).toBe(510)
+})

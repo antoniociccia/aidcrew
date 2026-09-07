@@ -1,0 +1,25 @@
+import { expect, test } from 'bun:test'
+import { parseMoney } from './money.ts'
+
+test('reads the common European and American spellings', () => {
+  expect(parseMoney('€1.234,56')).toEqual({ cents: 123456, currency: 'EUR' })
+  expect(parseMoney('$1,234.56')).toEqual({ cents: 123456, currency: 'USD' })
+  expect(parseMoney('1 234,56 EUR')).toEqual({ cents: 123456, currency: 'EUR' })
+  expect(parseMoney('£12')).toEqual({ cents: 1200, currency: 'GBP' })
+})
+
+test('a separator not followed by exactly two digits is grouping', () => {
+  expect(parseMoney('$1,234')).toEqual({ cents: 123400, currency: 'USD' })
+  expect(parseMoney('USD 1.234')).toEqual({ cents: 123400, currency: 'USD' })
+})
+
+test('reads negatives either way', () => {
+  expect(parseMoney('-$5.00')).toEqual({ cents: -500, currency: 'USD' })
+  expect(parseMoney('($5.00)')).toEqual({ cents: -500, currency: 'USD' })
+})
+
+test('refuses an unknown currency or no digits, by text', () => {
+  expect(() => parseMoney('12.00')).toThrow(TypeError)
+  expect(() => parseMoney('¥100')).toThrow(/¥100/)
+  expect(() => parseMoney('EUR')).toThrow(TypeError)
+})

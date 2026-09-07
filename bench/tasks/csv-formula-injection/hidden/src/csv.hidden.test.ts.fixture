@@ -1,0 +1,15 @@
+import { expect, test } from 'bun:test'
+import { toCsv } from './csv.ts'
+
+test('a formula is written as text', () => {
+  expect(toCsv([['=HYPERLINK("http://x")']])).toBe('"\'=HYPERLINK(""http://x"")"\n')
+  expect(toCsv([['+1', '-1', '@a', '\tx']])).toBe('"\'+1","\'-1","\'@a","\'\tx"\n')
+})
+
+test('a number is written plainly, negative or not', () => {
+  expect(toCsv([[-5, 3.5]])).toBe('-5,3.5\n')
+})
+
+test('ordinary quoting still holds', () => {
+  expect(toCsv([['say "hi"', 'a\nb', 'plain']])).toBe('"say ""hi""","a\nb",plain\n')
+})

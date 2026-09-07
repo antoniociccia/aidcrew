@@ -1,0 +1,69 @@
+import { expect, test } from 'bun:test'
+import { debounce } from './debounce.ts'
+
+function scheduler() {
+  let at = 0
+  let next = 1
+  const pending = new Map<number, { due: number; fn: () => void }>()
+  return {
+    timers: {
+      setTimeout: (fn: () => void, ms: number) => {
+        const handle = next++
+        pending.set(handle, { due: at + ms, fn })
+        return handle
+      },
+      clearTimeout: (handle: unknown) => {
+        pending.delete(handle as number)
+      },
+    },
+    advance(ms: number) {
+      at += ms
+      for (const [handle, entry] of [...pending].sort((a, b) => a[1].due - b[1].due)) {
+        if (entry.due <= at) {
+          pending.delete(handle)
+          entry.fn()
+        }
+      }
+    },
+  }
+}
+
+test('runs once, after the last call, with its arguments', () => {
+  const clock = scheduler()
+  const calls: number[] = []
+  const save = debounce((n: number) => calls.push(n), 100, clock.timers)
+  save(1)
+  clock.advance(50)
+  save(2)
+  clock.advance(50)
+  expect(calls).toEqual([])
+  clock.advance(50)
+  expect(calls).toEqual([2])
+})
+
+test('cancel drops a pending call', () => {
+  const clock = scheduler()
+  const calls: number[] = []
+  const save = debounce((n: number) => calls.push(n), 100, clock.timers)
+  save(1)
+  save.cancel()
+  clock.advance(200)
+  expect(calls).toEqual([])
+})
+
+test('flush runs a pending call now, and only once', () => {
+  const clock = scheduler()
+  const calls: number[] = []
+  const save = debounce((n: number) => calls.push(n), 100, clock.timers)
+  save(7)
+  save.flush()
+  expect(calls).toEqual([7])
+  clock.advance(200)
+  expect(calls).toEqual([7])
+  save.flush()
+  expect(calls).toEqual([7])
+})
+
+test('a negative delay is refused', () => {
+  expect(() => debounce(() => {}, -1)).toThrow(RangeError)
+})

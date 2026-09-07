@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement wrap(text, width) in src/wrap.ts: the text broken into lines of at most width characters, breaking at spaces; runs of spaces within a paragraph count as one; a word longer than width is split across lines; a blank line in the input separates paragraphs and one blank line is kept between them in the output; no line ends in a space; width below 1 throws a RangeError. Add tests."
+}

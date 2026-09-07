@@ -1,0 +1,6 @@
+import { expect, test } from 'bun:test'
+import { log } from './logger.ts'
+
+test('writes one json line', () => {
+  expect(log('info', 'started', { port: 80 })).toBe('{"level":"info","message":"started","port":80}\n')
+})

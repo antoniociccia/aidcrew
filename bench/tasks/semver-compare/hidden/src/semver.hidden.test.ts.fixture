@@ -1,0 +1,28 @@
+import { expect, test } from 'bun:test'
+import { compareSemver } from './semver.ts'
+
+test('compares numerically, not as text', () => {
+  expect(compareSemver('1.2.3', '1.10.0')).toBe(-1)
+  expect(compareSemver('2.0.0', '1.99.99')).toBe(1)
+  expect(compareSemver('1.0.0', '1.0.0')).toBe(0)
+})
+
+test('a prerelease is lower than the release', () => {
+  expect(compareSemver('1.0.0-alpha', '1.0.0')).toBe(-1)
+})
+
+test('prerelease identifiers compare one by one', () => {
+  expect(compareSemver('1.0.0-alpha.1', '1.0.0-alpha.beta')).toBe(-1)
+  expect(compareSemver('1.0.0-beta.2', '1.0.0-beta.11')).toBe(-1)
+  expect(compareSemver('1.0.0-alpha', '1.0.0-alpha.1')).toBe(-1)
+  expect(compareSemver('1.0.0-rc.1', '1.0.0-beta.11')).toBe(1)
+})
+
+test('build metadata is ignored', () => {
+  expect(compareSemver('1.0.0+build.1', '1.0.0')).toBe(0)
+})
+
+test('refuses what is not a version, by name', () => {
+  expect(() => compareSemver('1.0', '1.0.0')).toThrow(TypeError)
+  expect(() => compareSemver('1.0.0', 'banana')).toThrow(/banana/)
+})

@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement retry in src/retry.ts: retry(fn, { attempts, baseMs, sleep }) calls the async fn up to attempts times and returns its first result; between two attempts it waits, through the sleep function passed in, baseMs milliseconds after the first failure, twice that after the second, and so on, doubling each time. After the last failure it throws an Error whose message starts with 'gave up after N attempts:' followed by the last error's message, and whose cause is that last error. attempts below 1 throws a RangeError before anything runs. sleep defaults to a real setTimeout wait. Add tests, with a sleep that records what it was asked to wait."
+}

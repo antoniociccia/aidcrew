@@ -102,13 +102,14 @@ the person using it, in the order it matters.
   in the configuration still win.
 - `AIDCREW_HOME` points a run at another home — a benchmark, a container,
   a test from the shell — so a run is only what the project declares.
-- A benchmark, under `bench/`: ten repeatable tasks — a bug, a feature, a
+- A benchmark, under `bench/`: thirty repeatable tasks — a bug, a feature, a
   refactor, a change across files — each with tests the agents never see
   and a reference solution that proves it solvable. Four configurations run
   on every task, headless: a cheap model alone, a strong one alone, a cheap
   team, a strong planner with a cheap coder. What is recorded is what the
   hidden tests said, what the harness claimed, every cent of every attempt,
-  and the time. Whether the next change made things better is a number now.
+  and the time, and `--repeat` runs every pair several times for the
+  variance. Whether the next change made things better is a number now.
 - `.aidcrew/.gitignore` is written the first time anything creates the
   directory — the wizard, a checkout, an undo snapshot — and it covers the
   snapshots as well as the checkouts, the layout and the transcript database.

@@ -1,0 +1,8 @@
+{
+  "name": "log-redaction",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

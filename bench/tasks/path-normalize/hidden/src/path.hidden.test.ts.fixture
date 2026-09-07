@@ -1,0 +1,24 @@
+import { expect, test } from 'bun:test'
+import { normalizePath } from './path.ts'
+
+test('an absolute path stays absolute, and .. cannot climb above the root', () => {
+  expect(normalizePath('/a/../../b')).toBe('/b')
+  expect(normalizePath('/..')).toBe('/')
+})
+
+test('a relative path keeps the .. it cannot resolve', () => {
+  expect(normalizePath('../a/../b')).toBe('../b')
+  expect(normalizePath('a/../../b')).toBe('../b')
+})
+
+test('collapses slashes and drops a trailing one, except on the root', () => {
+  expect(normalizePath('/a//b/')).toBe('/a/b')
+  expect(normalizePath('/')).toBe('/')
+  expect(normalizePath('///')).toBe('/')
+})
+
+test('nothing left is the current directory', () => {
+  expect(normalizePath('')).toBe('.')
+  expect(normalizePath('a/..')).toBe('.')
+  expect(normalizePath('./')).toBe('.')
+})

@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "insertionIndex in src/search.ts is meant to return the first index at which target could be inserted into the sorted list and keep it sorted — the index of the first element that is not below target — but with duplicates it returns the index after the last equal element, so an insert goes after its equals instead of before them. Fix it, keeping it binary: target below every element gives 0, above every element gives the length, and for equal elements the index of the first of them. Add tests."
+}

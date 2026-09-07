@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement match(pattern, path) in src/router.ts: pattern is a path like /users/:id/posts/:postId whose :name segments each match one non-empty segment of path, and a final * segment matches the rest of the path, however many segments, as the parameter rest. It returns the parameters as an object of strings, percent-decoded, or undefined when the path does not match. A query string after ? in path is ignored, and a trailing slash on either side makes no difference. A pattern with * anywhere but last throws a TypeError. Add tests."
+}

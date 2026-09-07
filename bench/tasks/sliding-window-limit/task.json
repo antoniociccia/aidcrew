@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement SlidingWindow in src/window.ts: new SlidingWindow(limit, windowMs, now) where now returns the time in milliseconds. allow(key) records one event for key and returns true when, that one included, key has had at most limit events in the last windowMs; otherwise it records nothing and returns false. remaining(key) says how many more events key may have right now. Keys are independent; an event exactly windowMs old no longer counts. limit below 1 or windowMs below 1 throws a RangeError. Add tests with a controlled clock."
+}

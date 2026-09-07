@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement compareSemver(a, b) in src/semver.ts, returning -1, 0 or 1 by semantic versioning: major, minor and patch compared numerically; a version with a prerelease is lower than the same version without one; prerelease identifiers are compared one by one, numeric ones numerically and the rest lexically, numeric ones being lower than alphanumeric ones, and a shorter list of identifiers is lower when all its identifiers are equal; build metadata after a + is ignored. A string that is not a semantic version throws a TypeError naming it. Add tests."
+}

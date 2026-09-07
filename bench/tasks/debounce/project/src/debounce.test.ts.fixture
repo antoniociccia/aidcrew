@@ -1,0 +1,6 @@
+import { expect, test } from 'bun:test'
+import { debounce } from './debounce.ts'
+
+test('returns a function', () => {
+  expect(typeof debounce(() => {}, 10)).toBe('function')
+})

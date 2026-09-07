@@ -1,0 +1,8 @@
+{
+  "name": "route-match",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

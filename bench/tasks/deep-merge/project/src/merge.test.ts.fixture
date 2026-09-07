@@ -1,0 +1,6 @@
+import { expect, test } from 'bun:test'
+import { deepMerge } from './merge.ts'
+
+test('lays a flat object over another', () => {
+  expect(deepMerge({ a: 1, b: 2 }, { b: 3 })).toEqual({ a: 1, b: 3 })
+})

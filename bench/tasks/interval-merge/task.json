@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement mergeIntervals(intervals) in src/intervals.ts: given a list of [start, end] pairs of numbers in any order, return a new list, sorted by start, in which every pair of intervals that overlap or touch — one's end equal to the other's start — has been merged into one. The input and its pairs are not mutated. A pair whose end is below its start throws a RangeError naming it. Add tests."
+}

@@ -1,0 +1,10 @@
+import { expect, test } from 'bun:test'
+import { log } from './logger.ts'
+
+test('never writes a secret', () => {
+  const line = log('warn', 'login failed', { user: 'ann', password: 'hunter2', headers: { authorization: 'Bearer abc' } })
+  expect(line).not.toContain('hunter2')
+  expect(line).not.toContain('abc')
+  expect(line).toContain('"user":"ann"')
+  expect(line).toContain('[redacted]')
+})

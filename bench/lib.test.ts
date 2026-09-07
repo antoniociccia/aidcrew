@@ -158,9 +158,38 @@ describe('picking up a results file', () => {
     const left = nextRuns(['a', 'b'], ['x', 'y'], [record({ task: 'a', configuration: 'x' })])
 
     expect(left).toEqual([
-      { task: 'b', configuration: 'x' },
-      { task: 'a', configuration: 'y' },
-      { task: 'b', configuration: 'y' },
+      { task: 'b', configuration: 'x', run: 1 },
+      { task: 'a', configuration: 'y', run: 1 },
+      { task: 'b', configuration: 'y', run: 1 },
     ])
+  })
+
+  test('repeats every pair, after one full pass over all of them', () => {
+    const left = nextRuns(['a'], ['x', 'y'], [record({ task: 'a', configuration: 'x', run: 1 })], 2)
+
+    expect(left).toEqual([
+      { task: 'a', configuration: 'y', run: 1 },
+      { task: 'a', configuration: 'x', run: 2 },
+      { task: 'a', configuration: 'y', run: 2 },
+    ])
+  })
+})
+
+describe('a table of repeated runs', () => {
+  test('says how many of the runs passed, with the means', () => {
+    const text = table([
+      record({ task: 'a', configuration: 'x', run: 1, passed: true, usd: 0.01, seconds: 10 }),
+      record({
+        task: 'a',
+        configuration: 'x',
+        run: 2,
+        passed: false,
+        done: true,
+        usd: 0.03,
+        seconds: 30,
+      }),
+    ])
+
+    expect(text).toContain('| a | bugfix | 1/2, 1 said done 2.0c 20s |')
   })
 })

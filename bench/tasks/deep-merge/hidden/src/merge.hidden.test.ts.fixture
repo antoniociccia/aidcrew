@@ -1,0 +1,29 @@
+import { expect, test } from 'bun:test'
+import { deepMerge } from './merge.ts'
+
+test('merges nested objects and replaces arrays', () => {
+  const merged = deepMerge({ db: { host: 'a', port: 1 }, tags: [1, 2] }, { db: { port: 2 }, tags: [3] })
+  expect(merged).toEqual({ db: { host: 'a', port: 2 }, tags: [3] })
+})
+
+test('undefined leaves the base alone and null replaces it', () => {
+  expect(deepMerge({ a: 1, b: 2 }, { a: undefined, b: null })).toEqual({ a: 1, b: null })
+})
+
+test('ignores prototype keys, so a parsed document pollutes nothing', () => {
+  const hostile = JSON.parse('{"__proto__": {"polluted": true}, "constructor": {"x": 1}}') as Record<string, unknown>
+  const merged = deepMerge({}, hostile)
+  expect(({} as { polluted?: boolean }).polluted).toBeUndefined()
+  expect(Object.keys(merged)).toEqual([])
+  expect((merged as { polluted?: boolean }).polluted).toBeUndefined()
+})
+
+test('mutates neither argument and shares no object with them', () => {
+  const base = { a: { b: 1 } }
+  const over = { c: { d: 2 } }
+  const merged = deepMerge(base, over)
+  expect(base).toEqual({ a: { b: 1 } })
+  expect(over).toEqual({ c: { d: 2 } })
+  expect(merged.a).not.toBe(base.a)
+  expect(merged.c).not.toBe(over.c)
+})

@@ -1,0 +1,25 @@
+import { expect, test } from 'bun:test'
+import { toc } from './toc.ts'
+
+test('lists headings with their level and slug', () => {
+  expect(toc('# Title\n\ntext\n\n## Getting started\n### Install it!')).toEqual([
+    { level: 1, text: 'Title', slug: 'title' },
+    { level: 2, text: 'Getting started', slug: 'getting-started' },
+    { level: 3, text: 'Install it!', slug: 'install-it' },
+  ])
+})
+
+test('ignores headings inside fenced code', () => {
+  expect(toc('# A\n```\n# not a heading\n```\n## B')).toEqual([
+    { level: 1, text: 'A', slug: 'a' },
+    { level: 2, text: 'B', slug: 'b' },
+  ])
+})
+
+test('needs a space after the marks, and at most six of them', () => {
+  expect(toc('#NoSpace\n####### seven\n###### six')).toEqual([{ level: 6, text: 'six', slug: 'six' }])
+})
+
+test('numbers a repeated slug', () => {
+  expect(toc('# Setup\n# Setup\n# Setup').map((h) => h.slug)).toEqual(['setup', 'setup-2', 'setup-3'])
+})

@@ -1,0 +1,4 @@
+{
+  "category": "multi-file",
+  "instruction": "The todo tool in src/cli.ts knows add and list. Add a done command: 'done <id>' marks the todo with that numeric id as done and prints 'done: <text>'; an id that is not a whole number, or that no todo has, prints one line starting with 'error:' naming the id and exits with code 1, leaving the todos unchanged. Put the state change in src/store.ts as markDone(todos, id), which returns a new list with that todo done and throws a RangeError naming the id when there is no such todo; the list given is not mutated. list must show done todos as '[x]' and the rest as '[ ]'. Add tests for markDone and for the command."
+}

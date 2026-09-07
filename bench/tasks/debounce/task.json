@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement debounce in src/debounce.ts. The returned function calls fn once, ms milliseconds after the most recent call, with the arguments of that most recent call; calls within ms of each other reset the timer. The returned function carries two methods: cancel() drops a pending call, and flush() runs a pending call immediately and cancels its timer. Timers come from the timers object passed to debounce, whose setTimeout and clearTimeout have the shape of the global ones, so tests can control time; the default is the global timers. ms below 0 throws a RangeError. Add tests."
+}

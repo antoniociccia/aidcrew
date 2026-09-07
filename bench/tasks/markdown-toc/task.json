@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement toc(markdown) in src/toc.ts: a list of { level, text, slug } for every ATX heading, one to six # characters followed by a space, outside fenced code blocks (``` fences). text is the heading with the # marks and surrounding whitespace removed; slug is text in lower case with every run of characters that are not letters or digits replaced by one dash and dashes trimmed from both ends; a slug that has already been used gets -2, -3 and so on appended. Add tests."
+}

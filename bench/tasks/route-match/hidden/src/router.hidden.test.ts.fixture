@@ -1,0 +1,23 @@
+import { expect, test } from 'bun:test'
+import { match } from './router.ts'
+
+test('binds named segments', () => {
+  expect(match('/users/:id/posts/:postId', '/users/42/posts/7')).toEqual({ id: '42', postId: '7' })
+  expect(match('/users/:id', '/users')).toBeUndefined()
+  expect(match('/users/:id', '/users/1/extra')).toBeUndefined()
+})
+
+test('decodes, ignores the query, and tolerates a trailing slash', () => {
+  expect(match('/tags/:tag', '/tags/caf%C3%A9?page=2')).toEqual({ tag: 'café' })
+  expect(match('/a/', '/a')).toEqual({})
+  expect(match('/a', '/a/')).toEqual({})
+})
+
+test('a trailing star takes the rest', () => {
+  expect(match('/files/*', '/files/a/b/c.txt')).toEqual({ rest: 'a/b/c.txt' })
+  expect(match('/files/*', '/files')).toBeUndefined()
+})
+
+test('a star anywhere else is refused', () => {
+  expect(() => match('/*/x', '/a/x')).toThrow(TypeError)
+})

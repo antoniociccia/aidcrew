@@ -1,0 +1,8 @@
+{
+  "name": "csv-formula-injection",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

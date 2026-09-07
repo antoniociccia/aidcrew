@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement toRoman and fromRoman in src/roman.ts. toRoman(n) gives the standard Roman numeral for an integer from 1 to 3999, using the subtractive forms IV, IX, XL, XC, CD and CM, and throws a RangeError for anything else, non-integers included. fromRoman(text) reads a numeral in either case and throws a SyntaxError naming the text for anything that is not a standard numeral, such as IIII, VX, IC or an empty string; fromRoman(toRoman(n)) must be n for every n in range. Add tests."
+}

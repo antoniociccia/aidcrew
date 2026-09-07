@@ -175,6 +175,8 @@ export type RunRecord = {
   task: string
   category: string
   configuration: string
+  /** Which repetition this is, from 1; absent in files written before repetitions existed. */
+  run?: number
   /** What the harness said: every job checked and merged. */
   done: boolean
   /** What the hidden tests said, on the repository after the run. */
@@ -249,8 +251,18 @@ export function table(records: RunRecord[]): string {
   )
   for (const task of tasks) {
     const cells = configurations.map((configuration) => {
-      const record = records.find((one) => one.task === task && one.configuration === configuration)
+      const own = records.filter((one) => one.task === task && one.configuration === configuration)
+      const [record] = own
       if (!record) return '-'
+      if (own.length > 1) {
+        // Repeated: how many of the runs passed, and the means.
+        const passed = own.filter((one) => one.passed).length
+        const refuted = own.filter((one) => one.done && !one.passed).length
+        const usd = own.reduce((sum, one) => sum + one.usd, 0) / own.length
+        const seconds = own.reduce((sum, one) => sum + one.seconds, 0) / own.length
+        const note = refuted > 0 ? `, ${refuted} said done` : ''
+        return `${passed}/${own.length}${note} ${money(usd)} ${Math.round(seconds)}s`
+      }
       if (record.error) return `error (${money(record.usd)})`
       const mark = record.passed ? 'pass' : record.done ? 'FAIL, said done' : 'fail'
       return `${mark} ${money(record.usd)} ${Math.round(record.seconds)}s`
@@ -261,16 +273,26 @@ export function table(records: RunRecord[]): string {
   return `${lines.join('\n')}\n`
 }
 
-/** The task x configuration pairs still to run, given what a results file already holds. */
+/**
+ * The task x configuration x repetition triples still to run, given what a
+ * results file already holds. Repetitions go last, so one full pass over
+ * every pair exists before any pair is run twice.
+ */
 export function nextRuns(
   tasks: string[],
   configurations: string[],
   existing: RunRecord[],
-): { task: string; configuration: string }[] {
-  const seen = new Set(existing.map((record) => `${record.task} ${record.configuration}`))
-  return configurations.flatMap((configuration) =>
-    tasks
-      .filter((task) => !seen.has(`${task} ${configuration}`))
-      .map((task) => ({ task, configuration })),
+  repeat = 1,
+): { task: string; configuration: string; run: number }[] {
+  const seen = new Set(
+    existing.map((record) => `${record.task} ${record.configuration} ${record.run ?? 1}`),
+  )
+  const runs = Array.from({ length: Math.max(1, repeat) }, (_, at) => at + 1)
+  return runs.flatMap((run) =>
+    configurations.flatMap((configuration) =>
+      tasks
+        .filter((task) => !seen.has(`${task} ${configuration} ${run}`))
+        .map((task) => ({ task, configuration, run })),
+    ),
   )
 }

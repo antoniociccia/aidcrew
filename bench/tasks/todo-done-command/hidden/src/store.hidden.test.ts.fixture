@@ -1,0 +1,19 @@
+import { expect, test } from 'bun:test'
+import { add, markDone, render } from './store.ts'
+
+test('markDone returns a new list with that todo done', () => {
+  const todos = add(add([], 'a'), 'b')
+  const after = markDone(todos, 2)
+  expect(after.map((todo) => todo.done)).toEqual([false, true])
+  expect(todos.map((todo) => todo.done)).toEqual([false, false])
+})
+
+test('markDone refuses an unknown id, by number', () => {
+  expect(() => markDone(add([], 'a'), 7)).toThrow(RangeError)
+  expect(() => markDone(add([], 'a'), 7)).toThrow(/7/)
+})
+
+test('render shows what is done', () => {
+  const todos = markDone(add(add([], 'a'), 'b'), 1)
+  expect(render(todos)).toBe('1. [x] a\n2. [ ] b')
+})

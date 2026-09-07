@@ -145,6 +145,7 @@ async function runOne(
   config: Configuration,
   timeoutMs: number,
   logs: string,
+  run: number,
 ): Promise<RunRecord> {
   const dir = await prepare(task, config)
   const home = cleanHome()
@@ -165,7 +166,10 @@ async function runOne(
   // Everything the run printed, kept: a failure nobody can read is a failure
   // nobody can fix, and the log is what a task's write-up is made from.
   mkdirSync(logs, { recursive: true })
-  writeFileSync(join(logs, `${task.name}--${config.name}.log`), `${out}\n--- stderr ---\n${err}`)
+  writeFileSync(
+    join(logs, `${task.name}--${config.name}${run > 1 ? `--${run}` : ''}.log`),
+    `${out}\n--- stderr ---\n${err}`,
+  )
   const verdict = parseVerdict(out)
   const passed = await grade(task, dir)
   rmSync(dir, { recursive: true, force: true })
@@ -174,6 +178,7 @@ async function runOne(
     task: task.name,
     category: task.category,
     configuration: config.name,
+    run,
     seconds,
     passed,
   }
@@ -220,6 +225,7 @@ async function main(): Promise<number> {
       parallel: { type: 'string', default: '3' },
       'timeout-minutes': { type: 'string', default: '20' },
       out: { type: 'string' },
+      repeat: { type: 'string', default: '1' },
     },
   })
   const configs = CONFIGURATIONS.filter(
@@ -235,10 +241,12 @@ async function main(): Promise<number> {
   const records: RunRecord[] = existsSync(out)
     ? (JSON.parse(readFileSync(out, 'utf8')) as RunRecord[])
     : []
+  const repeat = Math.max(1, Number(values.repeat))
   const queue = nextRuns(
     tasks.map((task) => task.name),
     configs.map((config) => config.name),
     records,
+    repeat,
   )
   console.log(
     `${queue.length} runs to go, ${records.length} already in ${relative(ROOT, out)}, budget $${budget}`,
@@ -264,8 +272,14 @@ async function main(): Promise<number> {
       const task = tasks.find((one) => one.name === next.task)
       const config = configs.find((one) => one.name === next.configuration)
       if (!task || !config) continue
-      console.log(`-> ${task.name} on ${config.name}`)
-      const record = await runOne(task, config, timeoutMs, out.replace(/\.json$/, '-logs'))
+      console.log(`-> ${task.name} on ${config.name}${repeat > 1 ? ` (run ${next.run})` : ''}`)
+      const record = await runOne(
+        task,
+        config,
+        timeoutMs,
+        out.replace(/\.json$/, '-logs'),
+        next.run,
+      )
       records.push(record)
       spent += record.usd
       save()

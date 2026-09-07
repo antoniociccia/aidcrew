@@ -1,0 +1,41 @@
+import { expect, test } from 'bun:test'
+import { SlidingWindow } from './window.ts'
+
+function clock() {
+  let at = 0
+  return { now: () => at, tick: (ms: number) => { at += ms } }
+}
+
+test('allows up to the limit within the window, then refuses', () => {
+  const time = clock()
+  const window = new SlidingWindow(2, 1000, time.now)
+  expect(window.allow('a')).toBe(true)
+  expect(window.allow('a')).toBe(true)
+  expect(window.allow('a')).toBe(false)
+  expect(window.remaining('a')).toBe(0)
+})
+
+test('an event exactly a window old no longer counts', () => {
+  const time = clock()
+  const window = new SlidingWindow(1, 1000, time.now)
+  expect(window.allow('a')).toBe(true)
+  time.tick(999)
+  expect(window.allow('a')).toBe(false)
+  time.tick(1)
+  expect(window.allow('a')).toBe(true)
+})
+
+test('keys are independent, and a refusal records nothing', () => {
+  const time = clock()
+  const window = new SlidingWindow(1, 1000, time.now)
+  expect(window.allow('a')).toBe(true)
+  expect(window.allow('b')).toBe(true)
+  expect(window.allow('a')).toBe(false)
+  time.tick(1000)
+  expect(window.remaining('a')).toBe(1)
+})
+
+test('refuses a limit or window below 1', () => {
+  expect(() => new SlidingWindow(0, 1000)).toThrow(RangeError)
+  expect(() => new SlidingWindow(1, 0)).toThrow(RangeError)
+})

@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement parseMoney(text) in src/money.ts, returning { cents, currency }. The currency is read from a symbol or code anywhere in the text: € or EUR, $ or USD, £ or GBP; anything else, or no currency, throws a TypeError naming the text. Digits may be grouped with commas, dots or spaces; a comma or dot followed by exactly two digits at the end of the number is the decimal separator, and every other separator is grouping, so '€1.234,56' is 123456 cents EUR and '$1,234' is 123400 cents USD. A leading minus, or parentheses around the amount, makes it negative. No digits at all throws a TypeError. Add tests."
+}

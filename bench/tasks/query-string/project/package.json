@@ -1,0 +1,8 @@
+{
+  "name": "query-string",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

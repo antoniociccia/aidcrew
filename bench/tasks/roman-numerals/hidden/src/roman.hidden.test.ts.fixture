@@ -1,0 +1,31 @@
+import { expect, test } from 'bun:test'
+import { fromRoman, toRoman } from './roman.ts'
+
+test('writes the standard forms', () => {
+  expect(toRoman(1994)).toBe('MCMXCIV')
+  expect(toRoman(4)).toBe('IV')
+  expect(toRoman(3999)).toBe('MMMCMXCIX')
+  expect(toRoman(40)).toBe('XL')
+})
+
+test('refuses what it cannot write', () => {
+  expect(() => toRoman(0)).toThrow(RangeError)
+  expect(() => toRoman(4000)).toThrow(RangeError)
+  expect(() => toRoman(2.5)).toThrow(RangeError)
+})
+
+test('reads in either case', () => {
+  expect(fromRoman('mcmxciv')).toBe(1994)
+  expect(fromRoman('XLII')).toBe(42)
+})
+
+test('refuses what is not a standard numeral, by name', () => {
+  for (const bad of ['IIII', 'VX', 'IC', '', 'MMMM', 'ABC']) {
+    expect(() => fromRoman(bad)).toThrow(SyntaxError)
+  }
+  expect(() => fromRoman('VX')).toThrow(/VX/)
+})
+
+test('round trips every number in range', () => {
+  for (let n = 1; n <= 3999; n++) expect(fromRoman(toRoman(n))).toBe(n)
+})

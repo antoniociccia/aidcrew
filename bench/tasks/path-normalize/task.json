@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "normalizePath in src/path.ts loses the leading slash of an absolute path and lets .. climb above the root: normalizePath('/a/../../b') returns 'b' and should return '/b'. Fix it so that an absolute path stays absolute and .. at its root is absorbed; a relative path keeps every .. it cannot resolve, so '../a/../b' is '../b'; runs of slashes collapse; a trailing slash is dropped except on the root itself; '.' segments vanish; and a path that normalizes to nothing is '.'. Add tests."
+}

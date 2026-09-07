@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "cacheKey in src/key.ts is JSON.stringify, so { a: 1, b: 2 } and { b: 2, a: 1 } get different keys and the cache misses on equal inputs. Fix cacheKey so that object keys are sorted at every depth, arrays keep their order, a value that is undefined or a function is left out of an object like JSON.stringify leaves it out, a Date becomes its ISO string, and NaN and Infinity become null as they do in JSON. Two inputs that differ only in key order must get the same key. Add tests."
+}

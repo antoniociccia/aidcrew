@@ -1,0 +1,22 @@
+import { expect, test } from 'bun:test'
+import { wrap } from './wrap.ts'
+
+test('breaks at spaces within the width', () => {
+  expect(wrap('the quick brown fox jumps', 10)).toBe('the quick\nbrown fox\njumps')
+})
+
+test('collapses runs of spaces', () => {
+  expect(wrap('a   b    c', 3)).toBe('a b\nc')
+})
+
+test('splits a word longer than the width', () => {
+  expect(wrap('abcdefghij', 4)).toBe('abcd\nefgh\nij')
+})
+
+test('keeps one blank line between paragraphs', () => {
+  expect(wrap('one two\n\n\nthree', 8)).toBe('one two\n\nthree')
+})
+
+test('refuses a width below 1', () => {
+  expect(() => wrap('x', 0)).toThrow(RangeError)
+})

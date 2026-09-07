@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement parseQuery and stringifyQuery in src/query.ts. parseQuery takes a query string, with or without a leading ?, and returns an object: a key that appears once maps to its string value, a key that appears more than once maps to an array of its values in order, a key with no = maps to '', percent-encoding is decoded and + stands for a space, and an empty string gives {}. stringifyQuery does the reverse, keys in insertion order, an array as one pair per value, values percent-encoded with spaces as %20, and no leading ?. Add tests, including a round trip."
+}

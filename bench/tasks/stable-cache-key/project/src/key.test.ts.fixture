@@ -1,0 +1,6 @@
+import { expect, test } from 'bun:test'
+import { cacheKey } from './key.ts'
+
+test('different values get different keys', () => {
+  expect(cacheKey({ a: 1 })).not.toBe(cacheKey({ a: 2 }))
+})

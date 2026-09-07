@@ -1,0 +1,4 @@
+{
+  "category": "feature",
+  "instruction": "Implement deepMerge(base, over) in src/merge.ts. Plain objects are merged key by key, recursively; arrays and every other value in over replace what base had; a key whose value in over is undefined leaves base's value alone, while null replaces it. The keys __proto__, constructor and prototype in over are ignored, so a parsed JSON document cannot change the prototype of anything. Neither argument is mutated, and the result shares no object with either. Add tests, including one that shows a JSON document with a __proto__ key pollutes nothing."
+}

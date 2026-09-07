@@ -1,0 +1,8 @@
+import { expect, test } from 'bun:test'
+import { run } from './cli.ts'
+
+test('adds and lists', () => {
+  const added = run(['add', 'buy milk'], [])
+  expect(added.code).toBe(0)
+  expect(run(['list'], added.todos).out).toContain('buy milk')
+})

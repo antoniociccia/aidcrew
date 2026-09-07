@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "The Emitter in src/emitter.ts skips listeners: when a listener removes itself, or another, during emit, the listener registered after it is never called for that event — which is what once does, so a once listener registered before an ordinary one silences it. Fix emit so that every listener registered when emit began is called exactly once, in registration order, whatever any of them adds or removes meanwhile; a listener added during emit is called from the next emit on. once must fire exactly once, off must return whether it removed anything, and emit must return how many listeners it called. Add tests."
+}

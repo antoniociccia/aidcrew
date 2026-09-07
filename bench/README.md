@@ -12,6 +12,7 @@ says done when the hidden tests disagree is the failure that matters most.
 bun bench/run.ts                      # every configuration, every task
 bun bench/run.ts --configurations cheap-solo,cheap-team --tasks paginate-off-by-one
 bun bench/run.ts --budget 10 --parallel 2 --out bench/results/2026-09-07.json
+bun bench/run.ts --repeat 3            # every pair three times, for the variance
 ```
 
 The key is aidcrew's own: saved in Settings, or the provider's
@@ -65,7 +66,7 @@ their real names when a task is materialised, so the repository's own suite
 does not run them. `tasks.test.ts` proves every task: the project as given
 fails the hidden tests, and the reference solution passes them.
 
-The tasks are small on purpose — a bug, a feature, a refactor, a change
+Thirty tasks, in four categories. They are small on purpose — a bug, a feature, a refactor, a change
 across files — and dependency-free, so a run is the model's work and nothing
 else. They are for measuring, not for tuning: a prompt changed to pass one
 of them is a prompt changed to pass the benchmark, and that is not the

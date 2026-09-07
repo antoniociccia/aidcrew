@@ -1,0 +1,8 @@
+{
+  "name": "todo-done-command",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

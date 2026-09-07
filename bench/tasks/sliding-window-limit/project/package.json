@@ -1,0 +1,8 @@
+{
+  "name": "sliding-window-limit",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

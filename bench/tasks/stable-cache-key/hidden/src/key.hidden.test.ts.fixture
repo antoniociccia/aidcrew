@@ -1,0 +1,19 @@
+import { expect, test } from 'bun:test'
+import { cacheKey } from './key.ts'
+
+test('key order does not matter, at any depth', () => {
+  expect(cacheKey({ a: 1, b: { c: 2, d: 3 } })).toBe(cacheKey({ b: { d: 3, c: 2 }, a: 1 }))
+})
+
+test('array order does matter', () => {
+  expect(cacheKey([1, 2])).not.toBe(cacheKey([2, 1]))
+})
+
+test('follows JSON on what is left out and what becomes null', () => {
+  expect(cacheKey({ a: undefined, b: () => 1, c: 1 })).toBe(cacheKey({ c: 1 }))
+  expect(cacheKey([Number.NaN, Number.POSITIVE_INFINITY])).toBe(cacheKey([null, null]))
+})
+
+test('a date is its ISO string', () => {
+  expect(cacheKey(new Date('2026-01-01T00:00:00Z'))).toBe(cacheKey('2026-01-01T00:00:00.000Z'))
+})

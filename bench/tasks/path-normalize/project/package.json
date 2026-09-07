@@ -1,0 +1,8 @@
+{
+  "name": "path-normalize",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

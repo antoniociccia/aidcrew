@@ -1,0 +1,10 @@
+import { expect, test } from 'bun:test'
+import { Emitter } from './emitter.ts'
+
+test('calls a listener with the payload', () => {
+  const emitter = new Emitter()
+  const seen: unknown[] = []
+  emitter.on('tick', (payload) => seen.push(payload))
+  emitter.emit('tick', 1)
+  expect(seen).toEqual([1])
+})

@@ -1,0 +1,24 @@
+import { expect, test } from 'bun:test'
+import { mergeIntervals } from './intervals.ts'
+
+test('merges overlapping and touching intervals, sorted', () => {
+  expect(mergeIntervals([[8, 10], [1, 3], [2, 6], [15, 18], [10, 12]])).toEqual([[1, 6], [8, 12], [15, 18]])
+  expect(mergeIntervals([[1, 4], [4, 5]])).toEqual([[1, 5]])
+})
+
+test('leaves the input alone', () => {
+  const input: [number, number][] = [[3, 4], [1, 2]]
+  const out = mergeIntervals(input)
+  expect(input).toEqual([[3, 4], [1, 2]])
+  expect(out[0]).not.toBe(input[1])
+})
+
+test('handles nothing, and one', () => {
+  expect(mergeIntervals([])).toEqual([])
+  expect(mergeIntervals([[1, 1]])).toEqual([[1, 1]])
+})
+
+test('refuses an interval that ends before it starts', () => {
+  expect(() => mergeIntervals([[5, 1]])).toThrow(RangeError)
+  expect(() => mergeIntervals([[5, 1]])).toThrow(/5/)
+})

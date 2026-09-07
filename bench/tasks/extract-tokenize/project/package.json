@@ -1,0 +1,8 @@
+{
+  "name": "extract-tokenize",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

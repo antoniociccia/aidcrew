@@ -1,0 +1,4 @@
+{
+  "category": "bugfix",
+  "instruction": "toCsv in src/csv.ts writes user-supplied strings such as =HYPERLINK(...) into cells unchanged, and a spreadsheet opening the file runs them. Fix it: a string field that starts with =, +, -, @, a tab or a carriage return is written with a single quote prefixed and the whole field quoted, so the spreadsheet shows it as text; a number field is written plainly, negative or not; the existing quoting of fields that contain a comma, a double quote or a newline stays, with a double quote inside a quoted field doubled. Add tests."
+}

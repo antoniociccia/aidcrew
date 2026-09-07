@@ -1,0 +1,8 @@
+{
+  "name": "stable-cache-key",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

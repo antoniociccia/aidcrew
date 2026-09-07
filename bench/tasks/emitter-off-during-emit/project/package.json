@@ -1,0 +1,8 @@
+{
+  "name": "emitter-off-during-emit",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  }
+}

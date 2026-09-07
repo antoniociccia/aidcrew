@@ -1,0 +1,4 @@
+{
+  "category": "refactor",
+  "instruction": "src/stats.ts has wordCount and topWords, and each splits text into words its own way; they have drifted, so topWords counts 'The' and 'the' as different words while wordCount does not. Extract one tokenizer into a new module src/tokenize.ts exporting tokenize(text): string[], with wordCount's behaviour: lower case, a word being a run of letters, digits and apostrophes, everything else a separator, and no empty words. Make both functions use it, so topWords is fixed by the extraction: it counts case-insensitively, returns the n most frequent words as [word, count] pairs, most frequent first, ties broken alphabetically. wordCount's results must not change. Add tests."
+}

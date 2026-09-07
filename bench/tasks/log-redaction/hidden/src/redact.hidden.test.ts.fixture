@@ -1,0 +1,22 @@
+import { expect, test } from 'bun:test'
+import { redact } from './redact.ts'
+
+test('masks secret-named keys at any depth, in any case', () => {
+  const input = { user: 'ann', Password: 'x', nested: { apiKey: 'k', list: [{ token: 't', ok: 1 }] }, AUTHORIZATION: 'a' }
+  expect(redact(input)).toEqual({
+    user: 'ann',
+    Password: '[redacted]',
+    nested: { apiKey: '[redacted]', list: [{ token: '[redacted]', ok: 1 }] },
+    AUTHORIZATION: '[redacted]',
+  })
+})
+
+test('masks bearer tokens inside strings', () => {
+  expect(redact({ header: 'Authorization: Bearer abc.def' })).toEqual({ header: 'Authorization: Bearer [redacted]' })
+})
+
+test('leaves the input alone', () => {
+  const input = { secret: 's', inner: { token: 't' } }
+  redact(input)
+  expect(input).toEqual({ secret: 's', inner: { token: 't' } })
+})

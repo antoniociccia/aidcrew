@@ -1,0 +1,18 @@
+import { expect, test } from 'bun:test'
+import { topWords, wordCount } from './stats.ts'
+import { tokenize } from './tokenize.ts'
+
+test('tokenize lower-cases and keeps apostrophes', () => {
+  expect(tokenize("Don't stop -- DON'T, 42!")).toEqual(["don't", 'stop', "don't", '42'])
+  expect(tokenize('  ')).toEqual([])
+})
+
+test('topWords counts case-insensitively and breaks ties alphabetically', () => {
+  expect(topWords('The the THE cat. A cat, a dog', 2)).toEqual([['the', 3], ['a', 2]])
+  expect(topWords('b a', 2)).toEqual([['a', 1], ['b', 1]])
+})
+
+test('wordCount is unchanged', () => {
+  expect(wordCount("Don't stop. DON'T!")).toBe(3)
+  expect(wordCount('')).toBe(0)
+})

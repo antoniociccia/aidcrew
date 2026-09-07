@@ -1,0 +1,20 @@
+import { expect, test } from 'bun:test'
+import { run } from './cli.ts'
+
+test('done marks a todo and says so', () => {
+  const state = run(['add', 'write tests'], []).todos
+  const result = run(['done', '1'], state)
+  expect(result).toMatchObject({ out: 'done: write tests\n', code: 0 })
+  expect(run(['list'], result.todos).out).toBe('1. [x] write tests\n')
+})
+
+test('done with a bad id is an error, and changes nothing', () => {
+  const state = run(['add', 'a'], []).todos
+  for (const id of ['9', 'x', '1.5']) {
+    const result = run(['done', id], state)
+    expect(result.code).toBe(1)
+    expect(result.out).toMatch(/^error:/)
+    expect(result.out).toContain(id)
+    expect(result.todos).toEqual(state)
+  }
+})
