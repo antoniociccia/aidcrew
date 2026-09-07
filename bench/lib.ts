@@ -50,6 +50,21 @@ export const CONFIGURATIONS: Configuration[] = [
     ],
   },
   {
+    name: 'glm-solo',
+    description: 'one coder on glm-5.3-flash',
+    leader: 'coder',
+    agents: [{ id: 'coder', model: 'glm-5.3-flash' }],
+  },
+  {
+    name: 'glm-team',
+    description: 'architect and coder both on glm-5.3-flash',
+    leader: 'architect',
+    agents: [
+      { id: 'architect', model: 'glm-5.3-flash' },
+      { id: 'coder', model: 'glm-5.3-flash' },
+    ],
+  },
+  {
     name: 'strong-team',
     description: 'architect on deepseek-v4-pro, coder on deepseek-v4-flash',
     leader: 'architect',
