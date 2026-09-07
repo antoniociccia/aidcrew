@@ -26,6 +26,8 @@ export {
   ProviderNotFoundError,
   pluginDirectoriesFor,
 } from './host.ts'
+export type { JobCost } from './job-cost.ts'
+export { COMPARED_TO, comparedTo, jobCost, jobCostSaid } from './job-cost.ts'
 export type { Journal, Line as JournalLine } from './journal.ts'
 export { compactJournal, importDatabase, journalPath, openJournal, slugOf } from './journal.ts'
 export type { Attached, Attachment } from './mentions.ts'

@@ -1,11 +1,14 @@
 import { homedir } from 'node:os'
-import type { AgentDef, TeamEvent } from '@aidcrew/core'
+import type { AgentDef, AgentSnapshot, TeamEvent } from '@aidcrew/core'
 import { DEFAULT_LIMITS } from '@aidcrew/core'
+import { bundledPriceOf, fromConfig, priceOf } from '@aidcrew/prices'
 import type { CliArgs } from './args.ts'
 import type { Config } from './config.ts'
 import { providerOptions } from './config.ts'
 import { resolveTeamCredentials } from './credentials.ts'
 import type { Host } from './host.ts'
+import { jobCostSaid } from './job-cost.ts'
+import { exitCodeOf, outcomeOf, summaryOf } from './outcome.ts'
 import { createTeamRenderer } from './render.ts'
 import type { SettingsStore } from './store.ts'
 import {
@@ -97,6 +100,15 @@ export async function runTeam(
   }
 
   const renderer = createTeamRenderer({ write: io.write, color: io.color })
+  /** Everything that happened, read back at the end into one verdict per job. */
+  const seen: TeamEvent[] = []
+  const stated = fromConfig(session.workspace.prices, 'the project')
+  const priceFor = (model: string) => priceOf(stated, model) ?? bundledPriceOf(model)
+  /** The agents as they were when the work stopped; the shutdown empties the host. */
+  let agents: AgentSnapshot[] = []
+  const costOf = (task: string) => jobCostSaid(agents, task, priceFor)
+  /** What the run returns; the JSON at the end carries it too. */
+  let code = 0
   const orchestration = await readOrchestration(session.workspace.sources.orchestration)
   // Named, or the first agent the project declares: a team always has a
   // leader, and making somebody name one before anything runs would be a
@@ -121,7 +133,10 @@ export async function runTeam(
     // Without git there is nothing to isolate with; the agents share the
     // directory and the summary says so rather than implying otherwise.
     isolate: true,
-    onEvent: (event: TeamEvent) => renderer.handle(event),
+    onEvent: (event: TeamEvent) => {
+      seen.push(event)
+      renderer.handle(event)
+    },
     defaultProvider: session.config.providerId,
     providerOptions: (id) => providerOptions(id, env, session.store),
   })
@@ -138,10 +153,18 @@ export async function runTeam(
     await host.idle()
 
     renderer.finish()
-    io.write(`\n${summarise(host.list())}\n`)
+    agents = host.list()
+    io.write(`\n${summarise(agents)}\n`)
 
     const changed = await reportDiffs(host, team, io)
     if (changed === 0) io.write('\nno agent changed any files\n')
+
+    // What became of each job, in the harness's own words: checked, merged,
+    // sent back, and what it cost beside what it would have cost. A run that
+    // says "done" and exits 0 having done half the work is a green tick on a
+    // branch nobody reads again, so the exit code follows the verdict.
+    const outcomes = outcomeOf(seen)
+    if (outcomes.length > 0) io.write(`\n${summaryOf(outcomes, costOf).join('\n')}\n`)
 
     // `idle()` returns the instant nobody is busy, which on a stall is
     // immediately — so this printed the summary, printed the diffs and said
@@ -157,13 +180,36 @@ export async function runTeam(
         )
       }
       io.writeError('\n')
-      return 1
+      code = 1
+      return code
     }
 
-    return signal.aborted ? 130 : 0
+    code = signal.aborted ? 130 : exitCodeOf(outcomes)
+    return code
   } finally {
     signal.removeEventListener('abort', abort)
     await host.shutdown()
+    // Last of all, after the shutdown has said which checkouts it kept, so a
+    // pipeline reads one line and finds everything in it.
+    if (args.json) {
+      const kept = seen.flatMap((event) =>
+        event.type === 'workspace_kept' ? [{ task: event.task, path: event.path }] : [],
+      )
+      io.write(
+        `${JSON.stringify({
+          jobs: outcomeOf(seen).map((job) => ({ ...job, cost: costOf(job.task) ?? null })),
+          agents: agents.map((agent) => ({
+            id: agent.id,
+            model: agent.model,
+            task: agent.task,
+            usage: agent.usage,
+            turns: agent.turns,
+          })),
+          kept,
+          exitCode: code,
+        })}\n`,
+      )
+    }
   }
 }
 

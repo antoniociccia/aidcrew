@@ -11,6 +11,7 @@ import {
   HISTORY_FILE,
   hired,
   importDatabase,
+  jobCostSaid,
   leaderOf,
   loadWorkspaceConfig,
   openHistory,
@@ -59,7 +60,6 @@ import {
 } from '@aidcrew/prices'
 import { createSkillsPlugin } from '@aidcrew/tool-skills'
 import type { SessionNotice } from './components/notice.tsx'
-import { jobCostSaid } from './job-cost.ts'
 import type { Line } from './screens/session.tsx'
 import { watchDirectories } from './watch.ts'
 

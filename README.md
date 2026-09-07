@@ -198,6 +198,16 @@ stop is real. A project whose jobs are bigger than that raises the bound in its
 config, with `[defaults] toolCallsPerTurn`. Nobody watching means nobody to say "go on", so the harness says
 it. An agent that is asking first stops and waits for you.
 
+### Headless
+
+`aidcrew team -p "add a --json flag to the exporter"` runs the same team with
+no screen, for a pipeline. It ends with one verdict per job — what was
+checked, whether the branch was merged, how many times the leader was sent
+back, what it cost — and the exit code follows the verdict: `0` when every
+job the run touched is checked and merged, `2` when one was left undone, `130`
+on interrupt. `--json` prints the same verdict as one object on the last line,
+with each agent's model, turns and tokens beside it.
+
 ### Side by side
 
 `^l` asks which agents to put next to each other and draws them in their own

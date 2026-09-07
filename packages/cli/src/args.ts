@@ -26,6 +26,8 @@ export type CliArgs = {
   version: boolean
   /** team only: which agent receives the instruction. */
   to?: string
+  /** run and team: print the summary as one JSON object at the end. */
+  json?: boolean
 }
 
 export class UsageError extends Error {
@@ -65,6 +67,7 @@ Options:
   -p, --prompt <text>   The task to work on. Required.
   -C, --cwd <dir>       Workspace directory. Defaults to the current directory.
       --to <agent>      team only: which agent gets the instruction.
+  --json            print the summary as one JSON object at the end.
       --max-turns <n>   Stop after this many model turns. Defaults to 50.
   -h, --help            Show this message.
   -v, --version         Show the version and stop.
@@ -99,6 +102,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
         'max-turns': { type: 'string' },
         to: { type: 'string' },
         all: { type: 'boolean', default: false },
+        json: { type: 'boolean', default: false },
         list: { type: 'boolean', default: false },
         help: { type: 'boolean', short: 'h', default: false },
         version: { type: 'boolean', short: 'v', default: false },
@@ -115,6 +119,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     cwd?: string
     'max-turns'?: string
     to?: string
+    json?: boolean
     help?: boolean
     version?: boolean
   }
@@ -189,6 +194,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
   }
 
   const maxTurns = readMaxTurns(values['max-turns'])
+  const json = values.json === true
 
   return {
     command,
@@ -196,6 +202,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     prompt: values.prompt,
     cwd: workspaceOf(values.cwd),
     maxTurns,
+    json,
     help: false,
     version: false,
     ...(values.to === undefined ? {} : { to: values.to }),

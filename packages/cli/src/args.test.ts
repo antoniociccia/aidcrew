@@ -153,3 +153,10 @@ describe('the commands it will admit to having', () => {
     for (const command of commands) expect(USAGE).toContain(`aidcrew ${command}`)
   })
 })
+
+describe('a summary for a machine', () => {
+  test('--json is carried through for a team run', () => {
+    expect(parseCliArgs(['team', '-p', 'do it', '--json']).json).toBe(true)
+    expect(parseCliArgs(['team', '-p', 'do it']).json).toBe(false)
+  })
+})

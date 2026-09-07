@@ -326,3 +326,48 @@ describe('a team that stopped without finishing', () => {
     expect(err).not.toContain('no answer')
   }, 30_000)
 })
+
+describe('a headless run that ends with a verdict', () => {
+  // `host.idle()` says nobody is busy; it does not say the work is done. The
+  // run used to exit 0 at that point. Now the harness checks each job when
+  // the leader says it is done, and the exit code follows what it found.
+  const leaderSaysDone = {
+    'planner-model': [
+      useTool('agent_send', { to: 'coder', message: 'write the tool' }),
+      say('handed it over'),
+      say('good, we are done'),
+      say('yes, done'),
+      say('done, I said'),
+    ],
+    'coder-model': [
+      useTool('write', { path: 'tool.ts', content: 'export const tool = 1\n' }),
+      say('written'),
+    ],
+  }
+
+  test('work left uncommitted is not done, and the exit code says so', async () => {
+    const { code, out } = await runTeam(serveByModel(leaderSaysDone))
+
+    expect(code).toBe(2)
+    expect(out).toContain('main: not done')
+    expect(out).toContain('not committed')
+    expect(out).toContain('tool.ts')
+  }, 30_000)
+
+  test('--json prints the verdict as one object on the last line', async () => {
+    const { code, out } = await runTeam(serveByModel(leaderSaysDone), ['--json'])
+
+    const last = out.trim().split('\n').at(-1) ?? ''
+    const verdict = JSON.parse(last) as {
+      exitCode: number
+      jobs: { task: string; done: boolean; left?: string }[]
+      agents: { id: string; model: string }[]
+    }
+    expect(code).toBe(2)
+    expect(verdict.exitCode).toBe(2)
+    expect(verdict.jobs).toHaveLength(1)
+    expect(verdict.jobs[0]).toMatchObject({ task: 'main', done: false })
+    expect(verdict.jobs[0]?.left).toContain('tool.ts')
+    expect(verdict.agents.map((agent) => agent.id)).toEqual(['architect', 'coder', 'reviewer'])
+  }, 30_000)
+})

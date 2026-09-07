@@ -14,6 +14,9 @@ the person using it, in the order it matters.
 - A closed terminal ends the process. Listening for the hangup so the store
   could be closed and the screen given back had replaced the exit that used
   to follow, leaving sessions running unseen in the background.
+- An agent that has been thinking for a while says for how long — `thinking
+  · 42s` — because a planner working through a minute of silence reads
+  exactly like a planner that has died.
 
 ### The team
 
@@ -28,6 +31,15 @@ the person using it, in the order it matters.
   branch if it passes. If it fails, or the work was never committed, the
   leader is sent back with the output, twice at most, and the job stays open.
   `[defaults] mergeOnDone = false` keeps a verified branch unmerged.
+- A headless run ends with one verdict per job — what was checked, whether
+  the branch came home, how many times the leader was sent back, what it
+  cost — and its exit code follows the verdict: `0` only when every job it
+  touched is checked and merged, `2` when one was left undone. `--json`
+  prints the verdict as one object on the last line, for a pipeline that
+  reads it. Before this, the run exited `0` the moment nobody was busy.
+- Every agent is told where its checkout is and which branch it is on, in
+  the briefing. A model that is not told guesses — `/workspace`, `/home/user`,
+  the repository root — and every guess was a turn spent on a refusal.
 
 ### Cost
 
