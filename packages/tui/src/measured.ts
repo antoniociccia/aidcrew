@@ -24,6 +24,14 @@ export type Measured = {
 
 export const MEASURED: Measured[] = [
   {
+    models: ['muse-spark-1.3-contributor'],
+    shape: 'alone',
+    passed: 90,
+    runs: 90,
+    centsPerPass: 0.4,
+    when: '2026-09-08',
+  },
+  {
     models: ['glm-5.3-flash', 'deepseek-v4-flash'],
     shape: 'glm-5.3-flash plans, deepseek-v4-flash writes',
     passed: 85,
