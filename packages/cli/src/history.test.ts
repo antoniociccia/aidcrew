@@ -127,7 +127,7 @@ describe('keeping the session record out of the repository', () => {
       .split('\n')
       .filter((line) => line.trim() !== '' && !line.startsWith('#'))
 
-    expect(patterns).toEqual(['history.db*', 'ui.json', 'wt/', 'undo/'])
+    expect(patterns).toEqual(['history.db*', 'ui.json', 'wt/', 'undo/', 'traces/'])
   })
 
   test('does not argue with one somebody has already edited', () => {

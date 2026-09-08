@@ -1,3 +1,4 @@
+import { isMeasured } from './measured.ts'
 /**
  * Asking a provider which models it has.
  *
@@ -87,6 +88,8 @@ const CHEAP = ['flash', 'mini', 'nano', 'lite', 'free']
 
 export function rankForCoding(models: string[]): string[] {
   const score = (model: string): number => {
+    // What the benchmark has run comes before what anybody merely prefers.
+    if (isMeasured(model)) return -1
     const id = model.toLowerCase()
     const family = PREFERRED.findIndex((hint) => id.includes(hint))
     const known = family === -1 ? PREFERRED.length : family

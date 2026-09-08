@@ -5,6 +5,7 @@ import type { AgentTemplate } from '../agents-file.ts'
 import { TEMPLATES } from '../agents-file.ts'
 import { Header, Keys, Panel, Problem, Select, Spinner } from '../components/chrome.tsx'
 import { Field, SecretInput, TextInput } from '../components/input.tsx'
+import { measuredHint } from '../measured.ts'
 import type { ModelListing } from '../models.ts'
 import { isFree, rankForCoding } from '../models.ts'
 import { useTheme } from '../theme-context.tsx'
@@ -301,16 +302,17 @@ function ModelStep({
     return (
       <Panel title="Which model?" focused>
         <Select
-          choices={ranked.map((id) => ({
-            value: id,
-            label: id,
-            ...(isFree(id) ? { hint: 'free' } : {}),
-          }))}
+          choices={ranked.map((id) => {
+            const measured = measuredHint(id)
+            const hint = [isFree(id) ? 'free' : undefined, measured].filter(Boolean).join(' · ')
+            return { value: id, label: id, ...(hint ? { hint } : {}) }
+          })}
           onChoose={onChoose}
         />
         <Box marginTop={1}>
           <Text color={theme.muted}>
-            {listing.models.length} available; the ones that work well with tools are first.
+            {listing.models.length} available; what the benchmark has measured is first, then the
+            ones that work well with tools.
           </Text>
         </Box>
       </Panel>

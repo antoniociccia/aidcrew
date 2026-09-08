@@ -20,7 +20,7 @@ describe('the runtime state under .aidcrew', () => {
     keepStateOutOfGit(root)
 
     const ignore = readFileSync(join(root, STATE_DIR, '.gitignore'), 'utf8')
-    for (const entry of ['wt/', 'undo/', 'ui.json', 'history.db*']) {
+    for (const entry of ['wt/', 'undo/', 'traces/', 'ui.json', 'history.db*']) {
       expect(ignore).toContain(entry)
     }
     expect(existsSync(join(root, STATE_DIR))).toBe(true)

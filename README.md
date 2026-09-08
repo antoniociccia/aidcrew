@@ -232,6 +232,15 @@ the bound with the work unfinished, a few times, before the stop is real. A proj
 config, with `[defaults] toolCallsPerTurn`. Nobody watching means nobody to say "go on", so the harness says
 it. An agent that is asking first stops and waits for you.
 
+### Replaying a run
+
+`AIDCREW_TRACE_DIR=.aidcrew/traces aidcrew team -p "…"` writes every request
+and the raw stream that answered it. A project whose config names
+`provider = "replay"` with that `dir` gets the same answers back, byte for
+byte, through the same parser, with no key and no bill: a run that broke is
+a test that runs in a moment. Only what was recorded is answered; the trace
+holds the whole conversation, so the directory stays out of git.
+
 ### Headless
 
 `aidcrew team -p "add a --json flag to the exporter"` runs the same team with

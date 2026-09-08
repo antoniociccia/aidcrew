@@ -14,7 +14,7 @@ export const STATE_DIR = '.aidcrew'
  * for the contents of a private file an agent read to end up in a public
  * repository.
  */
-const RUNTIME_STATE = ['history.db*', 'ui.json', 'wt/', 'undo/']
+const RUNTIME_STATE = ['history.db*', 'ui.json', 'wt/', 'undo/', 'traces/']
 
 /**
  * Keeps the runtime state out of git, without anyone deciding to.

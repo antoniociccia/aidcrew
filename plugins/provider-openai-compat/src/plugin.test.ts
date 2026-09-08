@@ -8,10 +8,10 @@ function provider(id: string) {
 }
 
 describe('provider-openai-compat plugin', () => {
-  test('declares one provider per preset, plus the generic escape hatch', () => {
+  test('declares one provider per preset, plus the generic escape hatch and the replay', () => {
     const ids = plugin.providers?.map((p) => p.id).sort()
 
-    expect(ids).toEqual([...Object.keys(PRESETS), 'openai-compat'].sort())
+    expect(ids).toEqual([...Object.keys(PRESETS), 'openai-compat', 'replay'].sort())
   })
 
   test('offers OpenCode Go as its own endpoint, not as Zen', () => {

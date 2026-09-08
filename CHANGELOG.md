@@ -85,6 +85,13 @@ the person using it, in the order it matters.
 
 ### The project
 
+- A `replay` provider answers from a trace `AIDCREW_TRACE_DIR` wrote, instead
+  of a service: `provider = "replay"` with `dir` in its config, and a run that
+  broke becomes a test that runs in a moment, with no key and no bill. Only
+  what was recorded is answered; a request the trace never saw is an error
+  naming the directory, never a guess. `.aidcrew/traces/` is kept out of git.
+- The wizard puts the models the benchmark has measured first, with the
+  figure beside each: how many tasks came home, and what a solved one cost.
 - A tool call's arguments arriving under `"name": null` — deepseek through
   OpenCode Go, on every chunk after the first — are more of the call that
   is open, not a nameless call per fragment. Read the old way, no fragment

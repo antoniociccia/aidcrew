@@ -2,6 +2,7 @@ import { definePlugin, defineProvider, withPromptedTools } from '@aidcrew/plugin
 import { z } from 'zod'
 import { listOpenAiModels } from './models.ts'
 import { createOpenAiCompatProvider } from './provider.ts'
+import { createReplayProvider } from './replay.ts'
 
 /**
  * Endpoints for services common enough to be worth not typing. This map lives
@@ -112,11 +113,22 @@ const generic = defineProvider({
   listModels: (config, signal) => listOpenAiModels(config, signal),
 })
 
+/**
+ * Answers from a trace `AIDCREW_TRACE_DIR` wrote, instead of a service: a run
+ * that broke becomes a test that runs in a moment, with no key and no bill.
+ */
+const replay = defineProvider({
+  id: 'replay',
+  configSchema: z.object({ dir: z.string().min(1, 'is required') }),
+  create: (config) => createReplayProvider(config),
+})
+
 export default definePlugin({
   name: 'provider-openai-compat',
   providers: [
     ...Object.entries(PRESETS).map(([id, baseUrl]) => presetProvider(id, baseUrl)),
     generic,
+    replay,
   ],
 })
 
