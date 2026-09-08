@@ -1,0 +1,53 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder · bash(git checkout -b work/rate-limiter && git status --short)
+coder · write(/** A token bucket: a burst up to capacity, then a steady ra…)
+coder · bash(bun test 2>&1 | tail -20)
+coder · bash(git add src/limiter.ts && git commit -m "Implement RateLimit…)
+coder · edit(test('takes n tokens and refuses when empty without consumin…)
+coder · edit(test('starts full', () => {   const limiter = new RateLimite…)
+coder · read(src/limiter.test.ts)
+coder · bash(bun test 2>&1 | tail -20)
+coder · bash(git add src/limiter.test.ts && git commit -m "Add RateLimite…)
+verified: bun run test passes on work/main
+merged work/main into the repository: a2125c5 Merge branch 'work/rate-limiter'
+coder › Implemented `RateLimiter` token bucket on branch `work/rate-limiter`.
+
+What changed:
+- `src/limiter.ts` — lazy-refilling token bucket: starts full (`tokens = capacity`, `last = now()`); private `refill()` adds `elapsedSeconds * refillPerSecond` capped at `capacity` on every `tryTake`/`available` access; `tryTake(n = 1)` returns `false` without consuming when `n > capacity` or `tokens < n`, else subtracts and returns `true`; `available` getter refills then returns current (possibly fractional) tokens. Kept existing constructor signature, field names, and style.
+- `src/limiter.test.ts` — added 4 tests to the existing `starts full` test: multi-token take + failed take consumes nothing, continuous/fractional refill (`10` cap, `2/s`, `250ms → 0.5`), cap on refill after long idle (`60s → 3`), `n > capacity` always refused even when full.
+
+Decisions the task did not specify:
+- Refill is lazy (computed on access from `now()`), not on a timer.
+- `last` only advances when time moves forward (`elapsed <= 0` is a no-op), so a clock going backward never adds or loses tokens.
+- An over-capacity `tryTake` still runs the refill first (so `available` stays correct) but never consumes.
+
+Checks (`bun test`, project's only check via `bun test`):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 5 pass
+ 0 fail
+ 18 expect() calls
+Ran 5 tests across 1 file. [15.00ms]
+```
+
+Commits:
+- `8b43a6f Implement RateLimiter token bucket`
+- `3d53edd Add RateLimiter token bucket tests`
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 80320 tokens
+
+main: done
+  bun run test passed
+  merged: a2125c5 Merge branch 'work/rate-limiter'
+  this job: 80k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a2125c5 Merge branch 'work/rate-limiter'","cost":"this job: 80k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":8095,"outputTokens":7509,"cacheReadTokens":64716,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

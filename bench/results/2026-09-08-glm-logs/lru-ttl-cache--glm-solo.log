@@ -1,0 +1,74 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · bash(ls; cat package.json 2>/dev/null | head -30; ls src tests 2>…)
+coder · error: command failed with exit code 1 package.json src {   "name": "cache",   "type": "module",   "private": true,   "scripts"…
+coder · read(src/cache.ts)
+coder · read(src/cache.test.ts)
+coder · write(src/cache.ts)
+coder · write(src/cache.test.ts)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/cache.test.ts: 76 |   cache.set('b', 2) 77 |   t = 100 …
+coder › The failures are in the test itself: I set `t = 50`, but `t` never goes backwards in a real clock, so `a` and `b` are live again. Fixing the test.
+coder · edit(cache.set('b', 2)   t = 100   expect(cache.size).toBe(0)   c…)
+coder · bash(bun test 2>&1)
+not done: work not committed (rc/cache.test.ts, src/cache.ts) — the leader is sent back
+coder › Done. Implementation and tests are in, all checks pass.
+
+**What I changed**
+
+- `src/cache.ts` — implemented `Cache<K, V>` on top of a `Map` whose insertion order doubles as the recency order:
+  - `get` returns `undefined` for missing/expired keys; a hit deletes and re-inserts the entry so it moves to the most-recent end.
+  - `set` deletes an existing key first (so replacing never evicts anything and the key becomes most-recent), otherwise evicts the least-recently-used entry when at capacity, then inserts with `expiresAt = now() + ttlMs`.
+  - `has`/`get`/`size` all treat an entry as absent once `expiresAt <= now()`; `delete` is plain `Map.delete`.
+  - The constructor throws `RangeError` for `capacity < 1`.
+- `src/cache.test.ts` — kept the existing test and added 8 more: expiry boundary (`t = 99` live, `t = 100` expired), get-refreshes-recency, set-replaces-value-and-time-without-evicting, LRU eviction order, `delete` return values, `size` counting only live entries, and the `RangeError` for capacity 0 and −1. All tests drive time through an injected clock.
+
+**Checks**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 23 expect() calls
+Ran 9 tests across 1 file. [15.00ms]
+```
+
+**Decisions the task didn't specify**
+
+- Expiry is inclusive at the boundary: an entry is absent when `now() >= expiresAt` (expires at exactly `ttlMs` after set, per "expiring ttlMs after it was set").
+- An expired entry that was never touched still occupies an LRU slot until it's overwritten or evicted — `set` evicts the least-recently-used slot regardless of whether that entry has expired. Since expired entries read as absent either way, this can't leak values; it only means the slot chosen for eviction may be an already-expired one, which is the most useful choice.
+- `size` counts live entries without mutating the map, so expired entries don't get purged lazily by a read-only call.
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git add src/cache.ts && git commit -m "Implement LRU cache w…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3dccacb Merge branch 'work/main'
+coder › You were right — the work was sitting uncommitted. It's now on `work/main` in two commits:
+
+- `82a7559` Implement LRU cache with TTL on an injected clock (`src/cache.ts`)
+- `c164e16` Test LRU eviction, expiry, and capacity validation (`src/cache.test.ts`)
+
+`git status` is clean and the branch now carries the full implementation: LRU eviction via `Map` insertion order, TTL expiry checked against the injected `now` (absent at `expiresAt <= now`), get-refreshes-recency, set-replaces-without-evicting, Map-like `has`/`delete`, live-only `size`, and a `RangeError` for capacity below 1. Nine tests cover all of it.
+
+Checks after committing:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 23 expect() calls
+Ran 9 tests across 1 file. [15.00ms]
+```
+
+  coder        z-ai/glm-5.3-flash   2 turns, 62286 tokens
+
+main: done
+  bun run test passed
+  merged: 3dccacb Merge branch 'work/main'
+  sent back once
+  this job: 62k tokens, 0.2¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"3dccacb Merge branch 'work/main'","cost":"this job: 62k tokens, 0.2¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 7¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":19089,"outputTokens":2493,"cacheReadTokens":40704,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

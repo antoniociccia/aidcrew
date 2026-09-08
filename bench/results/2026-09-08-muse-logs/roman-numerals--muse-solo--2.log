@@ -1,0 +1,42 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/roman.ts)
+coder · read(package.json)
+coder · glob(.)
+coder · bash(bun --version && git status --short && git branch --show-cur…)
+coder · bash(git checkout -b work/roman-numerals)
+coder · write(const TABLE: Array<[number, string]> = [   [1000, "M"],   [9…)
+coder · write(import { describe, expect, test } from "bun:test"; import { …)
+coder · bash(git add src/roman.ts && git commit -m "Implement toRoman and…)
+verified: bun run test passes on work/main
+merged work/main into the repository: fb67df4 Merge branch 'work/roman-numerals'
+coder › Implemented `toRoman`/`fromRoman` on branch `work/roman-numerals`.
+
+Changes:
+- `src/roman.ts`: `toRoman` uses a greedy value table (M, CM, D, CD, C, XC, L, XL, X, IX, V, IV, I); throws `RangeError` for non-integers, <1, or >3999. `fromRoman` uppercases input, rejects empty/unknown chars with `SyntaxError` naming the text, sums with subtractive pairing, then re-encodes via `toRoman` and requires the canonical form to match (rejects IIII, VX, IC, etc., including out-of-range totals); mixed/lower case accepted.
+- `src/roman.test.ts`: tests for single symbols, additive forms, subtractive forms (incl. 1994, 3999), `toRoman` RangeError cases, `fromRoman` case-insensitivity, `SyntaxError` cases checking the message names the text, and full 1–3999 `fromRoman(toRoman(n)) === n` round-trip.
+
+Decisions not in the request: `fromRoman` validates by canonical re-encode (strict standard form only); error messages are `Invalid Roman numeral: "<text>"` so the text is always named; empty string is a `SyntaxError` per spec rather than a type error; round-trip test covers all 3999 values.
+
+Checks (`bun test`):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 4071 expect() calls
+Ran 9 tests across 1 file. [12.00ms]
+```
+Project has no lint/typecheck scripts besides `bun test`; no other checks to run.
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 44706 tokens
+
+main: done
+  bun run test passed
+  merged: fb67df4 Merge branch 'work/roman-numerals'
+  this job: 45k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"fb67df4 Merge branch 'work/roman-numerals'","cost":"this job: 45k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 6¢, on gpt-5 ≈ 5¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":7026,"outputTokens":3993,"cacheReadTokens":33687,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

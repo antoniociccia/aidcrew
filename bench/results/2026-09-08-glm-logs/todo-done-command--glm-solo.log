@@ -1,0 +1,81 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · read(src/cli.ts)
+coder · tree()
+coder · read(src/store.ts)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder · bash(git status --short --branch)
+coder · bash(git checkout -b done-command)
+coder · write(import { add, markDone, render, type Todo } from './store.ts…)
+coder · edit(export function markDone(todos: Todo[], id: number): Todo[] …)
+coder › Now the tests, matching the existing `bun:test` style:
+coder · write(import { expect, test } from 'bun:test' import { add, markDo…)
+coder · write(import { expect, test } from 'bun:test' import { run } from …)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/cli.test.ts: 23 |         out: `error: no todo with id …
+coder › Three failures, all mine in `run`:
+
+1. `next[id]` indexes the array by position, but ids start at 1 — I must print the text of the todo whose id matched, not of the element at that offset.
+2. The not-found message prints the id twice, since the `RangeError` message already names it.
+
+The fix for both is to find the todo once and reuse it:
+coder · edit(if (command === 'done') {     const id = Number(rest[0])    …)
+coder · bash(bun test 2>&1)
+coder › All 8 tests pass now, but the success path still has two warts I want out: `todo.text` where `todo` is `Todo | undefined`, and a `try`/`catch` used only for control flow. Cleaner to validate first, then call `markDone` knowing it succeeds (its throwing contract stays, tested directly in `store.test.ts`):
+coder · edit(if (command === 'done') {     const id = Number(rest[0])    …)
+coder · bash(bun test 2>&1 && bunx tsc --noEmit --strict --module nodenex…)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   8 pass  0 fail  32 expect() calls Ran 8 tests across 2 fil…
+coder › Tests pass; my tsc flags were wrong (`--target nodenext` isn't valid). Retrying with a valid target:
+coder · bash(bunx tsc --noEmit --strict --module nodenext --moduleResolut…)
+coder · error: command failed with exit code 2 src/cli.test.ts(1,30): error TS2307: Cannot find module 'bun:test' or its corresponding …
+coder · bash(bunx tsc --noEmit --strict --module nodenext --moduleResolut…)
+coder › Only the test files complain, and only about missing `bun:test` type declarations (bun-types isn't a dev dependency here — pre-existing, not something I introduced); the sources typecheck clean under strict mode including `noUncheckedIndexedAccess`. Let me review the final files and commit:
+coder · read(src/cli.ts)
+coder · read(src/store.ts)
+coder · bash(git add -A && git -c user.name=agent -c user.email=agent@loc…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 63c544a Merge branch 'done-command'
+coder › Done, on branch `done-command` (single commit `ade0cf1`, "add done command and [x]/[ ] rendering in list"). Working tree clean.
+
+## What changed
+
+**`src/store.ts`**
+- New `markDone(todos, id)`: throws `RangeError(`no todo with id ${id}`)` when no todo has that id; otherwise returns a **new** list (`map` + spread) with that todo's `done: true` — the input list is untouched.
+- `render` now shows done todos as `[x]`, others as `[ ]`, so `list` picks this up for free.
+
+**`src/cli.ts`**
+- New `done` branch in `run`: `done <id>` where id must be one whole-number arg (`Number.isInteger` rejects `x`, `1.5`, `''`; a missing/extra arg also errors). Prints `done: <text>` + exit 0 and the updated todos; on bad id or unknown id prints a single `error:` line naming the id and returns exit 1 with the **original** todos. Usage line updated.
+
+**`src/store.test.ts`** (new) — `markDone` returns the new list with the right todo done, leaves the original untouched, and throws a `RangeError` naming the id; `render` emits `1. [x] buy milk` / `2. [ ] walk dog`.
+
+**`src/cli.test.ts`** — success path (`done: buy milk`, list shows `[x]`), no mutation of input todos, `error:` + exit 1 + unchanged todos for `x` / `1.5` / `''`, and exact `error: no todo with id 9` for a missing id.
+
+## Check output
+
+`bun test`:
+```
+bun test v1.3.14 (0d9b296a)
+ 8 pass
+ 0 fail
+ 32 expect() calls
+Ran 8 tests across 2 files. [25.00ms]
+```
+
+Typecheck of `src/cli.ts` + `src/store.ts` (strict, `noUncheckedIndexedAccess`): clean. The test files fail only with `Cannot find module 'bun:test'` because `bun-types` isn't a dev dependency — pre-existing, unrelated to this change.
+
+## Decisions the request didn't specify
+
+- Unknown-id error text is `error: no todo with id <id>` — the same wording as `markDone`'s `RangeError`. The first draft caught that error for the message, but a `find`-first structure (validate id → find todo → then `markDone`, whose throwing contract is still exercised by the store tests) avoided `try/catch` for control flow and indexing the returned array by id. One behavioral consequence: when `markDone` throws, the CLI never reaches it (pre-validated), so the `RangeError` path is only exercised directly in `store.test.ts`.
+- `done` with no id at all (`run(['done'], todos)`) treats it as "not a whole-number id" and prints `error: not a whole-number id: undefined`, exit 1 — that keeps the single-line-error rule without inventing a third message shape.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 110876 tokens
+
+main: done
+  bun run test passed
+  merged: 63c544a Merge branch 'done-command'
+  this job: 111k tokens, 0.6¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 19¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"63c544a Merge branch 'done-command'","cost":"this job: 111k tokens, 0.6¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 19¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":40391,"outputTokens":9621,"cacheReadTokens":60864,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

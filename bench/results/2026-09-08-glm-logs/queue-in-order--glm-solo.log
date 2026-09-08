@@ -1,0 +1,71 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · read(src/queue.ts)
+coder · tree()
+coder · read(src/queue.test.ts)
+coder · read(package.json)
+coder · bash(git status --porcelain -b && git log --oneline -3)
+coder · bash(git checkout -b fix/queue-serial-execution)
+coder › I'll rewrite the queue so each job runs only after the previous one finishes, keeping `push` synchronous.
+coder · write(/** Runs jobs one after another, in the order they were push…)
+coder › I accidentally included drafting notes in that file — rewriting it with just the code:
+coder · write(/** Runs jobs one after another, in the order they were push…)
+coder › Now I understand the shape. Let me check git state and then write the fix and the tests.
+coder · write(/** Runs jobs one after another, in the order they were push…)
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/queue.test.ts: 49 |   await Promise.resolve() 50 |   ex…
+coder › One microtask tick isn't enough for the second job to start — a test-timing issue, not a queue bug. I'll flush with a macrotask instead:
+coder · edit(/** Deferred promise: lets a test hold a job open until it c…)
+coder · error: oldString and newString are identical: nothing to do
+coder · edit(return { promise, resolve, reject } }  /** Runs all pending …)
+coder · edit(// Nothing runs inside push; the first job starts on a later…)
+coder · error: oldString not found in src/queue.test.ts
+coder · edit(// Let microtasks run: only the first job may be running.   …)
+coder · error: oldString not found in src/queue.ts
+coder › Wrong path — the edit belongs in the test file:
+coder · edit(// Let microtasks run: only the first job may be running.   …)
+coder · bash(bun test 2>&1)
+coder › All green. One more property worth checking by hand: a throwing job that nobody drains must not surface as an unhandled rejection.
+coder · bash(cat > /tmp/no-drain.ts <<'EOF' import { Queue } from './src/…)
+coder · error: command failed with exit code 1 error: Cannot find module './src/queue.ts' from '/private/tmp/no-drain.ts'  Bun v1.3.14 …
+coder · bash(cat > scratch-no-drain.ts <<'EOF' import { Queue } from './s…)
+coder › No unhandled rejection, error recorded, second job still ran. Committing:
+coder · bash(git add src/queue.ts src/queue.test.ts && git commit -m "Run…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 29c582a Merge branch 'fix/queue-serial-execution'
+coder › Done. Branch `fix/queue-serial-execution`, commit `c0bc837`.
+
+**What changed in `src/queue.ts`** — the queue no longer starts jobs inside `push`. Each job is wrapped in a `run` helper that awaits it and records any throw in `errors` (wrapping non-`Error` throws in `Error`, preserving the old behavior). That wrapper is chained onto a `#tail` promise, so job *n+1* cannot begin until job *n* settles, in push order:
+
+- `push` stays synchronous and returns nothing — `.then(run)` only schedules the job for a later microtask.
+- A throwing job lands in `errors`; since `run` never rejects, the chain never breaks and the jobs after it still run. `errors` keeps its declared `Error[]` type.
+- `drain` awaits `#tail`, and if a push extended the chain while it was waiting, it follows the new tail — so it also waits for jobs pushed while draining. It no longer resets state, so two `drain()` calls in a row behave correctly.
+
+**Tests** in `src/queue.test.ts` (deferred-promise driven, so timing is deterministic): the old drain test, serial order with no overlap, nothing runs inside `push`, a throwing job is recorded and later jobs run, a non-`Error` throw is wrapped, drain waits for jobs pushed while draining, and a second drain picks up jobs pushed after the first.
+
+**Checks** — the project's only check is `bun test`:
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 13 expect() calls
+Ran 7 tests across 1 file. [16.00ms]
+```
+
+I also ran a throwaway script (not committed) confirming a throwing queue that nobody drains produces no unhandled rejection.
+
+Two notes on things the task didn't specify: jobs pushed during `drain` are picked up by that same `drain` (I read "including jobs pushed while draining" that way); and if a caller passes a function that throws synchronously instead of returning a promise, the throw is recorded in `errors` like any other failure, since `run` awaits inside a `try`.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 139406 tokens
+
+main: done
+  bun run test passed
+  merged: 29c582a Merge branch 'fix/queue-serial-execution'
+  this job: 139k tokens, 1¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 36¢, on gpt-5 ≈ 32¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"29c582a Merge branch 'fix/queue-serial-execution'","cost":"this job: 139k tokens, 1¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 36¢, on gpt-5 ≈ 32¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":55531,"outputTokens":23843,"cacheReadTokens":60032,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

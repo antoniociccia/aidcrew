@@ -1,0 +1,52 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/money.ts)
+coder · tree(.)
+coder · read(package.json)
+coder · bash(git status --short --branch && git log --oneline -5; bun --v…)
+coder · bash(git status --short --branch)
+coder · bash(ls -la; cat bunfig.toml 2>/dev/null; cat tsconfig.json 2>/de…)
+coder · bash(git checkout -b impl/money-parse 2>&1 | head -5; git status …)
+coder · write(export type Money = { cents: number; currency: 'EUR' | 'USD'…)
+coder · write(export type Money = { cents: number; currency: 'EUR' | 'USD'…)
+coder · write(import { describe, expect, test } from 'bun:test' import { p…)
+coder · bash(bun test 2>&1 | tail -30)
+coder · bash(bun test 2>&1 | tail -10 && git add src/money.ts && git comm…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 43d09fe Merge branch 'impl/money-parse'
+coder › Implemented `parseMoney(text)` in `src/money.ts`, added tests in `src/money.test.ts`.
+
+What changed:
+- `src/money.ts`: detects exactly one currency (`€`/EUR, `$`/USD, `£`/GBP, case-insensitive, anywhere in text); extracts the single digit run (allowing `,`, `.`, space grouping); treats a trailing `,`/`.` + exactly two digits as decimals, all other separators as grouping; negates on leading `-`, `-` after the currency sign/code, or `(…)` around the amount; throws `TypeError` naming the text when currency is missing/unknown/ambiguous or no digits are present.
+- `src/money.test.ts`: 6 tests covering the two spec examples, symbols/codes in any position, comma/dot/space grouping, minus/parentheses negatives, and `TypeError`-with-text for bad currency and digit-less input.
+
+Decisions not in the spec:
+- Two different currencies in one text (e.g. `€ $10`) also throws `TypeError`, since no single currency can be read.
+- `-0` is normalized to `0` cents.
+- Codes match with letter boundaries, so `NEURO 100` does not read as EUR.
+- One space-separated digit run counts as one amount; two separate amounts throw `TypeError`.
+
+Checks (`bun test`):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 27 expect() calls
+Ran 6 tests across 1 file. [13.00ms]
+```
+
+Commits on branch `impl/money-parse`:
+- `724c7a3 Implement parseMoney with currency, grouping and negatives`
+- `3ddad31 Add tests for parseMoney`
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 113695 tokens
+
+main: done
+  bun run test passed
+  merged: 43d09fe Merge branch 'impl/money-parse'
+  this job: 114k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 44¢, on gpt-5 ≈ 43¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"43d09fe Merge branch 'impl/money-parse'","cost":"this job: 114k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 44¢, on gpt-5 ≈ 43¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":5896,"outputTokens":41178,"cacheReadTokens":66621,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,47 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/cli.ts)
+coder · tree(.)
+coder · json(package.json)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder · bash(git status --short; git branch --show-current; git log --one…)
+coder · bash(git checkout -b work/json-flag && git status --short)
+coder · bash(bun --version && bun test 2>&1 | tail -20)
+coder · write(/** Parse one CSV line into fields.  *  * A field wrapped in…)
+coder · edit(import { parseCsv } from './csv.ts'  /** What a run of csvto…)
+coder · bash(git add src/csv.ts && git commit -m "Add src/csv.ts CSV pars…)
+coder · read(src/cli.ts)
+coder · write(import { expect, test } from 'bun:test' import { parseCsv } …)
+coder · read(src/cli.test.ts)
+coder · edit(test('anything else is usage', () => {   expect(run([], ''))…)
+coder · bash(bun test 2>&1 | tail -20)
+coder · bash(bun -e " import { run } from './src/cli.ts'; import { parseC…)
+coder · bash(ls node_modules 2>&1 | head -5; which tsc; bunx tsc --noEmit…)
+coder · bash(tsc --noEmit --module esnext --target esnext --moduleResolut…)
+coder · bash(git add src/cli.test.ts src/csv.test.ts && git commit -m "Ad…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 0d63304 Merge branch 'work/json-flag'
+coder › Done on branch `work/json-flag` (3 commits on top of `bc6079e`).
+
+What changed:
+- New `src/csv.ts` exporting `parseCsv(text: string): string[][]`. Splits on `\n`, strips one trailing `\r` per line (CRLF), drops a single trailing newline. Per line: quote opens a quoted section only at field start; inside quotes `""` → `"`, commas are literal; otherwise fields split on `,`. Matches the existing small-module style in `src/cli.ts`.
+- `src/cli.ts`: added `--json` handling — first row is the header, each data row becomes an object keyed by header names (values stay strings), printed as `JSON.stringify(objs) + "\n"`. Empty input or header-only prints `[]\n`. A row whose field count differs from the header returns `{ out: "error: line N has X fields, expected Y\n", code: 1 }` with 1-based N, no JSON. Usage line now `usage: csvtool --upper | --count | --json`.
+- Tests: new `src/csv.test.ts` (empty, simple, CRLF, quoted comma, doubled quote); extended `src/cli.test.ts` (usage text, basic conversion, string values, quotes+commas+CRLF, empty and header-only, ragged rows on lines 2 and 3 naming the line).
+
+Decisions not in the plan: `--json` is checked after `--upper`/`--count` (same precedence pattern as the existing flags); the error line format `error: line N has X fields, expected Y` — the spec only required naming the line, so I picked this wording; unquoted quotes mid-field are treated as literal characters.
+
+Checks:
+- `bun test`: 15 pass, 0 fail across 2 files (was 3 pass before).
+- `tsc --noEmit` (ad-hoc flags, since repo has no tsconfig/node_modules): exit 0, no errors. No lint configured (`bun test` is the only script).
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 151241 tokens
+
+main: done
+  bun run test passed
+  merged: 0d63304 Merge branch 'work/json-flag'
+  this job: 151k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 31¢, on gpt-5 ≈ 30¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"0d63304 Merge branch 'work/json-flag'","cost":"this job: 151k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 31¢, on gpt-5 ≈ 30¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":6483,"outputTokens":27524,"cacheReadTokens":117234,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

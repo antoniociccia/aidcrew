@@ -1,0 +1,48 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/wrap.ts)
+coder · read(package.json)
+coder · bash(bun --version; ls -la; cat src/wrap.ts; cat package.json)
+coder · bash(git status --short; git branch --show-current; git log --one…)
+coder · bash(git checkout -b implement-wrap 2>&1; git status --short)
+coder · bash(ls -la src/ .aidcrew/ 2>&1; find . -path ./node_modules -pru…)
+coder · read(.aidcrew/config.toml)
+coder · write(/** The text in lines of at most width characters. */ export…)
+coder · bash(bun -e ' import { wrap } from "./src/wrap.ts"; const cases =…)
+coder · write(import { describe, expect, test } from "bun:test" import { w…)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/wrap.ts src/wrap.test.ts && git commit -m "Imple…)
+coder · bash(git log --oneline -4; git reset --soft HEAD~2; git status --…)
+coder · bash(git reset HEAD~1; git status --short; git add src/wrap.ts; g…)
+coder · bash(bun test 2>&1; git log --oneline -3; git status --short)
+verified: bun run test passes on work/main
+merged work/main into the repository: 1cd70ca Merge branch 'implement-wrap'
+coder › Implemented `wrap(text, width)` and added tests, on branch `implement-wrap` (2 commits).
+
+What changed:
+- `src/wrap.ts` — implemented `wrap`: splits input on newlines; a blank/whitespace-only line separates paragraphs, consecutive blank lines collapse, output paragraphs joined with a single `\n\n`. Within a paragraph lines are split on `[ \t]+` (empty tokens dropped, so space runs collapse to one), words packed greedily up to `width`, words longer than `width` split across lines (filling the remainder of the current line first). Lines are joined with single spaces so none ends in a space. `width < 1` (including `0`, negatives, `NaN`) throws `RangeError`.
+- `src/wrap.test.ts` — 14 tests covering: breaking/packing, space collapsing, long-word splitting (standalone and mid-line), one blank line kept / multiple collapsed, single newline joined with space, no trailing spaces + line lengths, empty input, width 1, `RangeError` for widths 0/-1/-100.
+
+Checks (`bun test`):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 14 pass
+ 0 fail
+ 28 expect() calls
+Ran 14 tests across 1 file. [15.00ms]
+```
+
+Decisions not in the spec: whitespace-only lines count as blank separators; tabs treated like spaces within a paragraph; single newlines inside a paragraph reflow to a space; `NaN` width throws `RangeError` (via `!(width >= 1)`); empty/blank-only input returns `""`.
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 124498 tokens
+
+main: done
+  bun run test passed
+  merged: 1cd70ca Merge branch 'implement-wrap'
+  this job: 124k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 30¢, on gpt-5 ≈ 28¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"1cd70ca Merge branch 'implement-wrap'","cost":"this job: 124k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 30¢, on gpt-5 ≈ 28¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":9202,"outputTokens":26049,"cacheReadTokens":89247,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

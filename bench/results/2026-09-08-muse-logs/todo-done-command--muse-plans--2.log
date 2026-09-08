@@ -1,0 +1,74 @@
++ architect on meta/muse-spark-1.3-contributor
++ coder on deepseek/deepseek-v4-flash
+  architect    meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+  coder        deepseek/deepseek-v4-flash 0 turns, 0 tokens
+
+architect · read(src/cli.ts)
+architect · read(src/store.ts)
+architect · read(package.json)
+architect · glob(.)
+architect · glob(.)
+architect · read(src/cli.test.ts)
+architect · agent_send(Plan: add `done <id>` command to todo tool.  Files to touch …)
+architect → coder Plan: add `done <id>` command to todo tool.  Files to touch and done-state:  1. `src/store.ts`:    - Add `export functio…
+architect › Plan sent to coder; awaiting report with `bun test` results.
+coder · tree(.)
+coder · read(src/store.ts)
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder · edit(src/store.ts)
+coder · edit(import { add, render, type Todo } from './store.ts')
+coder · edit(if (command === 'list') return { out: `${render(todos)}\n`, …)
+coder › Now I need to expand the tests. Let me also check what the current test file exports:
+coder · outline(src/store.ts)
+coder · outline(src/cli.ts)
+coder › Now let me update the tests. I'll extend `src/cli.test.ts` for the done command and create `src/store.test.ts` for `markDone`.
+coder · edit(import { expect, test } from 'bun:test' import { run } from …)
+coder · write(import { expect, test } from 'bun:test' import { add, markDo…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 13 tests pass. Let me commit in
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › **Files changed:** `src/store.ts`, `src/cli.ts`, `src/cli.test.ts`, `src/store.test.ts` (new)
+
+**`bun test` output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 13 pass
+ 0 fail
+ 23 expect() calls
+Ran 13 tests across 2 files. [13.00ms]
+```
+
+**Behavior verified:**
+
+- `markDone(todos, 1)` returns a new array with `done: true` on id 1, does not mutate the input.
+- `markDone(todos, 99)` throws `RangeError: no such todo: 99`.
+- `done add` with valid id prints `done: buy milk\n` with code 0.
+- `done abc`, `done 1.5`, `done` (missing), `done 99` each print one line starting `error:` naming the id, code 1, `todos` unchanged.
+- `list` shows `1. [x] a` for done and `2. [ ] b` for pending.
+- Usage line mentions `done <id>`.
+
+Committed in 3 small steps. Ready for handoff.
+coder → architect **Files changed:** `src/store.ts`, `src/cli.ts`, `src/cli.test.ts`, `src/store.test.ts` (new)  **`bun test` output:** ``…
+verified: bun run test passes on work/main
+merged work/main into the repository: 907b251 Merge branch 'work/main'
+architect › Job is done.
+
+Changed `src/store.ts` (added `markDone(todos, id)` returning a new list with that todo done, throwing `RangeError` naming the id when missing, no mutation; `render` now shows `[x]`/`[ ]`), `src/cli.ts` (added `done <id>` printing `done: <text>`, `error:` + exit 1 on non-whole-number or unknown id with todos unchanged), and tests in `src/cli.test.ts` + new `src/store.test.ts`.
+
+Verified by `bun test`: 13 pass, 0 fail across 2 files.
+
+  architect    meta/muse-spark-1.3-contributor 2 turns, 21872 tokens
+  coder        deepseek/deepseek-v4-flash 1 turns, 93460 tokens
+
+main: done
+  bun run test passed
+  merged: 907b251 Merge branch 'work/main'
+  this job: 115k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"907b251 Merge branch 'work/main'","cost":"this job: 115k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":4588,"outputTokens":2255,"cacheReadTokens":15029,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek/deepseek-v4-flash","task":"main","usage":{"inputTokens":9784,"outputTokens":3292,"cacheReadTokens":80384,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

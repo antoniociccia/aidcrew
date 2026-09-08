@@ -121,3 +121,25 @@ tests refuted, ten were one task, `route-match`, whose instruction left
 stand as they were. Read with the same care as before: one family of
 models, small tasks, list prices.
 
+**2026-09-08** — two rounds on OpenRouter (`--provider openrouter`), the same
+models under its names, metered: `results/2026-09-08-muse.md`, Muse Spark
+1.3 Contributor alone and as the planner over `deepseek-v4-flash`, thirty
+tasks three times; and a partial round of `glm-5.3-flash` alone, stopped at
+25 runs for its speed.
+
+| configuration | passed | said done, failed | cost per pass | mean time |
+|---|---|---|---|---|
+| muse-solo | 90/90 (100%) | 0 | 0.4¢ | 147s |
+| muse-plans (Muse plans, deepseek-v4-flash writes) | 73/90 (81%) | 0 | 0.5¢ | 113s |
+| glm-solo, 25 runs | 23/25 (92%) | 2 | 0.4¢ | 342s |
+
+Muse alone solved every task of every run, at the same cost per solved task
+as the cheap team and with no refuted claim. The seventeen the Muse-planned
+team missed were one harness race, found here and fixed the same day: the
+leader said done while the coder was still finishing its turn, and nothing
+asked again. Muse Spark's contributor tier uses requests for training —
+fine for these public tasks, a choice to make with open eyes for real code.
+The Go rounds' cautions hold; this one adds that a metered gateway and a
+flat-rate one route the same model differently, and glm-5.3-flash's four
+minutes a run are its long reasoning, not the gateway.
+

@@ -1,0 +1,60 @@
++ architect on meta/muse-spark-1.3-contributor
++ coder on deepseek/deepseek-v4-flash
+  architect    meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+  coder        deepseek/deepseek-v4-flash 0 turns, 0 tokens
+
+architect · read(src/stats.ts)
+architect · read(package.json)
+architect · glob(.)
+architect · glob(.)
+architect · read(src/stats.test.ts)
+architect · agent_send(Job: extract shared tokenizer and fix topWords casing.  Cont…)
+architect → coder Job: extract shared tokenizer and fix topWords casing.  Context: src/stats.ts has wordCount (lowercases, splits on /[^a-…
+architect › Plan sent to coder: new src/tokenize.ts with wordCount's lowercasing split behaviour, src/stats.ts using it for both functions with alphabetical tie-break in topWords, plus tests. Awaiting report with `bun test` pass output.
+coder › Let me start by reading the existing files to understand the current code.
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · tree(src)
+coder · stat(package.json)
+coder › Good, I understand the current code. Now let me implement the changes.
+
+1. Create `src/tokenize.ts`
+2. Edit `src/stats.ts` to import and use `tokenize`
+3. Extend `src/stats.test.ts` with tests for tokenize and topWords
+coder · write(src/tokenize.ts)
+coder · edit(src/stats.ts)
+coder › Now extend the tests:
+coder · edit(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · bash(bun test 2>&1)
+coder › All 6 tests pass. Let me commit.
+coder · bash(git add -A && git commit -m "Extract shared tokenize functio…)
+coder · bash(git log --oneline -2 && git status --short 2>&1)
+coder › Done. Committing and reporting back to the architect.
+coder · agent_send(architect)
+coder → architect Job done: commit e59bb29 on work/main (working tree clean).  Changes: - NEW src/tokenize.ts: exports tokenize(text) = te…
+architect › Job is done.
+
+Changed: new `src/tokenize.ts` exporting `tokenize(text)` (lowercase, split on `[^a-z0-9']+`, drop empties); `src/stats.ts` now uses it for both `wordCount` (unchanged results) and `topWords` (now case-insensitive, most-frequent-first with alphabetical tie-break); tests extended in `src/stats.test.ts`.
+
+Verified by: `bun test` in checkout root — 6 pass, 0 fail.
+coder › All done. Here's a summary of the work:
+
+**Commits:** `e59bb29` on `work/main` (working tree clean)
+
+**Files changed:**
+
+1. **NEW `src/tokenize.ts`** — Exports `tokenize(text)` that lowercases and splits on `/[^a-z0-9']+/`, dropping empties. `tokenize("")` → `[]`.
+
+2. **EDITED `src/stats.ts`** — Imports `tokenize`. `wordCount` delegates to `tokenize(text).length` (same results). `topWords` now uses `tokenize(text)`, counts in a `Map`, sorts by descending frequency then alphabetical for ties, slices to `n`. This makes it case-insensitive, fixing the original bug where `'The'` vs `'the'` were counted separately.
+
+3. **EDITED `src/stats.test.ts`** — Added tests for `tokenize` (lowercase, punctuation splitting, digits/apostrophes, no empties) and `topWords` (case-insensitive, most-frequent-first, alphabetical tie-break). Existing `wordCount` test kept and passes.
+
+**Check:** `bun test` — 6 pass, 0 fail, 8 expect() calls.
+
+  architect    meta/muse-spark-1.3-contributor 2 turns, 20522 tokens
+  coder        deepseek/deepseek-v4-flash 1 turns, 59206 tokens
+
+no agent changed any files
+{"jobs":[],"agents":[{"id":"architect","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":7833,"outputTokens":1884,"cacheReadTokens":10805,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek/deepseek-v4-flash","task":"main","usage":{"inputTokens":16550,"outputTokens":2336,"cacheReadTokens":40320,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

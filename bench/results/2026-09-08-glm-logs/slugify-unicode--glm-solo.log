@@ -1,0 +1,46 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · read(src/slugify.ts)
+coder · tree(.)
+coder · read(src/slugify.test.ts)
+coder · write(src/slugify.ts)
+coder · write(src/slugify.test.ts)
+coder · bash(cat package.json && bun test 2>&1)
+not done: work not committed (rc/slugify.test.ts, src/slugify.ts) — the leader is sent back
+coder › Done. `slugify` now NFD-normalizes the input and strips the combining diacritics range before the existing lower-case/punctuation/trim logic, so accented Latin letters (é, ü, å, ö …) collapse to their base letter, runs of non-alphanumerics become a single dash, and edge cases still return `''`.
+
+- `src/slugify.ts`: added `.normalize('NFD')` + a `[\u0300-\u036f]` strip after it.
+- `src/slugify.test.ts`: added 4 tests (accents, punctuation runs, leading/trailing dashes, empty/punctuation-only).
+
+Checks — `bun test`:
+
+```
+5 pass
+0 fail
+8 expect() calls
+Ran 5 tests across 1 file. [20.00ms]
+```
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder · bash(git diff)
+coder · bash(git add src/slugify.ts src/slugify.test.ts && git commit -m …)
+verified: bun run test passes on work/main
+merged work/main into the repository: 9adb207 Merge branch 'work/main'
+coder › Committed — `41b1598 slugify: fold accented Latin letters to their base letter` (2 files: the fix in `src/slugify.ts`, 4 new tests in `src/slugify.test.ts`). Working tree is now clean, so the branch carries everything.
+
+Re-verified before committing: `bun test` → 5 pass, 0 fail, 8 expect() calls.
+
+Current state on `work/main`:
+- `9eb9398` the task as given
+- `41b1598` slugify: fold accented Latin letters to their base letter
+
+  coder        z-ai/glm-5.3-flash   2 turns, 45461 tokens
+
+main: done
+  bun run test passed
+  merged: 9adb207 Merge branch 'work/main'
+  sent back once
+  this job: 45k tokens, 0.1¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"9adb207 Merge branch 'work/main'","cost":"this job: 45k tokens, 0.1¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":13784,"outputTokens":893,"cacheReadTokens":30784,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

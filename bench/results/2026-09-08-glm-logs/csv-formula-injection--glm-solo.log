@@ -1,0 +1,61 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · read(src/csv.ts)
+coder · glob(**/*.test.ts)
+coder · read(src/csv.test.ts)
+coder · bash(git status --short --branch)
+coder · json(package.json)
+coder · bash(git checkout -b fix/csv-formula-injection)
+coder · json(scripts)
+coder › Now the fix:
+coder · write(export type Cell = string | number  /** Spreadsheets treat a…)
+coder · write(import { expect, test } from 'bun:test' import { toCsv } fro…)
+coder · edit(expect(toCsv([['=a,b']])).toBe(`'"=a,b"\n`))
+coder · error: oldString and newString are identical: nothing to do
+coder · edit(expect(toCsv([['=a,b']])).toBe('\'"=a,b"\n'))
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/csv.test.ts: 17 |   expect(toCsv([[1, -2, 3.5]])).toBe…
+coder › The test data was wrong, not the code: `a\tb` doesn't *start* with a tab, so it correctly gets no prefix. Tabs and carriage returns matter at the start of a field:
+coder · edit(for (const text of ['=HYPERLINK("http://x")', '+1', '-1', '@…)
+coder · bash(bun test)
+coder · bash(git add -A && git commit -m "Prefix a quote before CSV field…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 2cd2988 Merge branch 'fix/csv-formula-injection'
+coder › Done, on branch `fix/csv-formula-injection`, commit `1dd6746`.
+
+**What changed — `src/csv.ts`:**
+
+```ts
+export type Cell = string | number
+
+/** Spreadsheets treat a field starting with one of these as a formula. */
+const FORMULA_START = /^[=+\-@\t\r]/
+
+function field(cell: Cell): string {
+  if (typeof cell === 'number') return String(cell)
+  const quoted = `"${cell.replace(/"/g, '""')}"`
+  if (FORMULA_START.test(cell)) return `'${quoted}`
+  return /[",\n]/.test(cell) ? quoted : cell
+}
+```
+
+- A string field starting with `=`, `+`, `-`, `@`, tab or CR is emitted as `'"<field>"` — quote prefix, whole field quoted, embedded double quotes doubled — so the spreadsheet shows text.
+- A number field (negative included) is written plainly and never quoted; the `'` prefix also can't leak into one, since `field` branches on `typeof cell === 'number'` rather than on the stringified value.
+- The existing comma / double quote / newline quoting is unchanged for safe fields.
+
+**Tests — `src/csv.test.ts`** (was 1 test, now 7): kept your comma test; added double-quote doubling, newline quoting, plain negative numbers, one test looping over all six formula-leading strings (asserting `'` prefix plus quoting), a safe-string case (`a=b` stays bare), and `=a,b` to pin the prefix-plus-quoting combination.
+
+**Checks:** `bun test` → `7 pass, 0 fail, 12 expect() calls`. Nothing else in the repo (no lint/typecheck config; the package's only script is `test`).
+
+One thing worth flagging: the original quoting rule only handles `\n`, not `\r`, so a field containing a lone carriage return still goes out unquoted — I left that as-is since you scoped the change to leading characters, but it's a one-character fix (`/[",\n\r]/`) if you want it.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 64732 tokens
+
+main: done
+  bun run test passed
+  merged: 2cd2988 Merge branch 'fix/csv-formula-injection'
+  this job: 65k tokens, 0.3¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"2cd2988 Merge branch 'fix/csv-formula-injection'","cost":"this job: 65k tokens, 0.3¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":24541,"outputTokens":4543,"cacheReadTokens":35648,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

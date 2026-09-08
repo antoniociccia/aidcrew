@@ -1,0 +1,50 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/toc.ts)
+coder · tree(.)
+coder · json(package.json)
+coder · read(package.json)
+coder · bash(bun --version; ls -la; cat src/toc.ts)
+coder · bash(git status --short --branch; git log --oneline -5; ls src/)
+coder · bash(git checkout -b feat/toc 2>&1; git status --short --branch)
+coder · tree(.aidcrew)
+coder · bash(ls -R .aidcrew 2>&1; cat .git 2>&1; git show --stat HEAD 2>&…)
+coder · write(export type Heading = { level: number; text: string; slug: s…)
+coder · write(import { describe, expect, test } from "bun:test" import { t…)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/toc.ts src/toc.test.ts && git commit -m "Impleme…)
+coder · bash(git reset HEAD~1 2>&1; git status --short; git add src/toc.t…)
+coder · bash(bun test 2>&1; git diff --stat main...HEAD 2>&1 || git diff …)
+verified: bun run test passes on work/main
+merged work/main into the repository: f9449f9 Merge branch 'feat/toc'
+coder › Implemented `toc(markdown)` in `src/toc.ts`, added tests in `src/toc.test.ts`, on branch `feat/toc` (2 commits).
+
+What changed:
+- `src/toc.ts` — `toc()` splits on lines, toggles `inFence` on lines whose left-trimmed text starts with ` ``` ` and skips fenced lines; matches ATX headings with `/^ {0,3}(#{1,6}) (.*)$/`, takes `level` from the `#` count and `text` as the rest trimmed of surrounding whitespace; builds `slug` by lowercasing `text`, replacing each run of non-letter/digit chars with one `-` (Unicode-aware `[^\\p{L}\\p{N}]+/gu`) and trimming `-` from both ends; dedups with a global used-set plus per-base counter, appending `-2`, `-3`, … and skipping taken `-N` slugs.
+- `src/toc.test.ts` — 9 tests: heading levels/text/slugs, 1–6 levels plus whitespace trim, non-headings (`#######`, `#No space`, plain text) ignored, fenced blocks ignored, slug punctuation/unicode handling, dash trimming, `-2/-3` duplicates incl. colliding slug bases (`Hello World` vs `Hello-World`), taken-`-2` skip, empty input.
+
+Checks (`bun test`, the project's only check via `bun test`):
+```
+bun test v1.3.14 (0d9b296a)
+9 pass
+0 fail
+10 expect() calls
+Ran 9 tests across 1 file. [23.00ms]
+```
+
+Decisions the task did not spell out:
+- Allowed up to 3 leading spaces before `#` (CommonMark allows indented ATX headings); otherwise strict: 1–6 `#` then exactly one space required before text.
+- A fence is any line whose left-trimmed text starts with ` ``` ` (so ` ```js ` opens/closes); fence marker lines themselves are never headings.
+- Slug char class is Unicode letters/digits, so e.g. `Café` → `café-au-lait` rather than `caf-au-lait`.
+- Headings with empty text after trim produce an empty slug, which still participates in dedup (`""`, `"-2"`, …).
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 102235 tokens
+
+main: done
+  bun run test passed
+  merged: f9449f9 Merge branch 'feat/toc'
+  this job: 102k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 26¢, on gpt-5 ≈ 24¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"f9449f9 Merge branch 'feat/toc'","cost":"this job: 102k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 26¢, on gpt-5 ≈ 24¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":13932,"outputTokens":21411,"cacheReadTokens":66892,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

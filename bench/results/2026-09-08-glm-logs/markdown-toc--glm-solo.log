@@ -1,0 +1,50 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · tree()
+coder · glob(**/*.{ts,js,json,toml})
+coder · read(src/toc.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder › A bare package using `bun test`. Let me check git state, then implement.
+coder · bash(git status --short --branch && git log --oneline -3)
+coder · write(export type Heading = { level: number; text: string; slug: s…)
+coder · write(src/toc.test.ts)
+coder · edit(expect(toc("# 汉字 heading")).toEqual([{ level: 1, text: "汉字 h…)
+coder · bash(bun test 2>&1)
+coder › All 10 pass. Quick sanity on the edge cases I reasoned about:
+coder · bash(bun -e ' import { toc } from "./src/toc" console.log(JSON.st…)
+coder › All edge cases behave: a backtick inside a fence doesn't close it early, seven `#`s are ignored, and an empty heading slugs to `-`. Committing:
+coder · bash(git add src/ && git commit -m "implement toc(): ATX headings…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 15bc45a Merge branch 'work/main'
+coder › Done. `toc(markdown)` is implemented in `src/toc.ts` with tests in `src/toc.test.ts`, committed as `b4933fc` on `work/main`.
+
+**What changed**
+- `src/toc.ts` — fills in the existing stub, keeping the exported `Heading` type. Implementation: splits on lines, toggles fence state on lines starting with ```` ``` ```` or `~~~`, and outside fences matches `^(#{1,6})(\s+.*)?$` — so `####### G` (seven hashes) and `#no-space` don't count, and the text is the remainder trimmed. Slugs lowercase, collapse every non-`[a-z0-9]` run to one dash, trim dashes, and deduplicate with `-2`, `-3`, … via a counter map (so `Hello, world!` and `Hello world?` correctly collide as `hello-world` / `hello-world-2`).
+- `src/toc.test.ts` — 10 tests: levels 1–6 with 7 hashes rejected, space-after-`#` requirement, whitespace stripping, fenced-block exclusion, slug rules (punctuation, leading/trailing dashes, non-ASCII dropped), slug dedup for identical and merely equivalent text, empty document.
+
+**Check output** (`bun test`, the project's only script):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 10 pass
+ 0 fail
+ 13 expect() calls
+Ran 10 tests across 1 file. [15.00ms]
+```
+
+**Decisions the request didn't specify** (my reading of markdown conventions):
+- `~~~` tilde fences also toggle code state, not just backticks — but any other line starting with ```` ``` ````, e.g. four-space indented code, does not, and a backtick run inside a fence doesn't close it early.
+- An empty heading (`#  `) keeps `text: ""` and gets slug `"-"` rather than `""`, so it still anchors and dedupes (`-2` if repeated). Easy to change if you'd rather have `""`.
+- Heading text is taken raw after the hashes — no inline-formatting stripping (so `## **Bold**` keeps its asterisks) — matching the strict spec you gave.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 57082 tokens
+
+main: done
+  bun run test passed
+  merged: 15bc45a Merge branch 'work/main'
+  this job: 57k tokens, 0.4¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"15bc45a Merge branch 'work/main'","cost":"this job: 57k tokens, 0.4¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":33832,"outputTokens":5970,"cacheReadTokens":17280,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,54 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · tree(.)
+coder · read(src/invoice.test.ts)
+coder · read(src/receipt.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current)
+coder · bash(git checkout -b extract-money && git status --short)
+coder · write(/** "1,234.50 EUR": thousands separated, two decimals, the c…)
+coder · edit(import { formatMoney } from './money.ts'  /** A line of an i…)
+coder · edit(/** "1,234.50 EUR": thousands separated, two decimals, the c…)
+coder · edit(import { formatMoney } from './money.ts'  /** An item on a t…)
+coder · edit(/** "12.50 EUR": two decimals, the currency after. */ export…)
+coder · write(import { expect, test } from 'bun:test' import { formatMoney…)
+coder · bash(bun test 2>&1)
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · bash(git status --short && git diff --stat)
+coder · bash(git add src/money.ts && git commit -m "Add shared formatMone…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 83cb355 Merge branch 'extract-money'
+coder › Done on branch `extract-money` (3 small commits).
+
+What changed:
+- New `src/money.ts` exporting `formatMoney(cents, currency)` with the invoice's behaviour: thousands grouped with commas, two decimals, leading minus for negatives, space + currency code.
+- `src/invoice.ts`: `formatInvoiceAmount` kept exported but is now a thin wrapper returning `formatMoney(cents, currency)`; `renderInvoice` unchanged.
+- `src/receipt.ts`: `formatReceiptAmount` kept exported but is now a thin wrapper returning `formatMoney(cents, currency)`, fixing the receipt (thousands separator restored, `-1250` cents now renders `-12.50 EUR` instead of `-13.-50 EUR`); `renderReceipt` unchanged for positive amounts.
+- New `src/money.test.ts`: covers `formatMoney(1250)` → `12.50 EUR`, `formatMoney(123450)` → `1,234.50 EUR`, `formatMoney(-1250)` → `-12.50 EUR`, `formatMoney(0)` → `0.00 EUR`, and asserts both wrappers match `formatMoney` on `[1250, 123450, -1250, 0]`.
+
+Decisions not in the plan: none — copied the invoice implementation verbatim into `formatMoney`, kept existing comments/signatures, and used `./money.ts` import style to match the existing `./invoice.ts`-style relative imports in tests.
+
+Checks (`bun test`, project has only `bun test` as its check):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 14 expect() calls
+Ran 7 tests across 3 files. [8.00ms]
+```
+Existing `invoice.test.ts` and `receipt.test.ts` positive-amount cases still pass unchanged.
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 98690 tokens
+
+main: done
+  bun run test passed
+  merged: 83cb355 Merge branch 'extract-money'
+  this job: 99k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"83cb355 Merge branch 'extract-money'","cost":"this job: 99k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":9016,"outputTokens":5276,"cacheReadTokens":84398,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

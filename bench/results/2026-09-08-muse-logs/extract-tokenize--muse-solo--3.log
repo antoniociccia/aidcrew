@@ -1,0 +1,47 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/stats.ts)
+coder · tree(.)
+coder · json(package.json)
+coder · read(src/stats.test.ts)
+coder · read(package.json)
+coder · bash(git status --short --branch && git log --oneline -5; echo --…)
+coder · bash(git checkout -b work/tokenize 2>&1; git status --short --bra…)
+coder · write(/** Split text into words: lower-cased runs of letters, digi…)
+coder · edit(import { tokenize } from './tokenize.ts'  /** How many words…)
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · edit(import { expect, test } from 'bun:test' import { topWords, w…)
+coder · bash(bun test 2>&1)
+coder · bash(git status --short && git add src/tokenize.ts src/stats.ts &…)
+coder · read(src/stats.ts)
+coder · read(src/tokenize.ts)
+verified: bun run test passes on work/main
+merged work/main into the repository: 67004e1 Merge branch 'work/tokenize'
+coder › Done on branch `work/tokenize` (2 commits).
+
+What changed:
+- New `src/tokenize.ts` exporting `tokenize(text): string[]` — exact `wordCount` behaviour moved verbatim: `toLowerCase()`, split on `/[^a-z0-9']+/`, drop empty strings.
+- `src/stats.ts`: `wordCount` is now `tokenize(text).length` (results unchanged); `topWords` now counts over `tokenize(text)` instead of its own `split(/\s+/)` + strip logic, so it counts case-insensitively, and sorts `b[1]-a[1]` with alphabetical tie-break before `.slice(0, n)`.
+- Tests: new `src/tokenize.test.ts` (lower-casing, separators incl. apostrophes/digits, no empty words); extended `src/stats.test.ts` (topWords case-insensitive `'The the THE cat'`, frequency order, alphabetical ties).
+
+Checks — `bun test` (the project's only check, `package.json` script `test`):
+```
+bun test v1.3.14 (0d9b296a)
+6 pass
+0 fail
+8 expect() calls
+Ran 6 tests across 2 files. [15.00ms]
+```
+
+Decisions not in the plan: alphabetical tie-break uses `<`/`>` string comparison on the already lower-cased tokens (equivalent to `localeCompare`-free code-unit order, deterministic and matching existing code style with no new deps).
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 77309 tokens
+
+main: done
+  bun run test passed
+  merged: 67004e1 Merge branch 'work/tokenize'
+  this job: 77k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"67004e1 Merge branch 'work/tokenize'","cost":"this job: 77k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":13750,"outputTokens":4716,"cacheReadTokens":58843,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

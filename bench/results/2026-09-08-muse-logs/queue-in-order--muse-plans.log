@@ -1,0 +1,79 @@
++ architect on meta/muse-spark-1.3-contributor
++ coder on deepseek/deepseek-v4-flash
+  architect    meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+  coder        deepseek/deepseek-v4-flash 0 turns, 0 tokens
+
+architect · read(src/queue.ts)
+architect · glob(.)
+architect · glob(.)
+architect · read(src/queue.test.ts)
+architect · read(package.json)
+architect · agent_send(Implement the Queue fix per this plan. Checkout is /private/…)
+architect → coder Implement the Queue fix per this plan. Checkout is /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-benc…
+architect › Plan sent to coder: chain Queue jobs serially via a promise tail with deferred start, error capture, and drain-during-push handling, plus serial/order/sync/error/drain tests; expecting back full `bun test` pass output and committed status.
+coder · read(src/queue.ts)
+coder · read(src/queue.test.ts)
+coder › Now I'll implement the changes. First, `src/queue.ts`
+coder · write(src/queue.ts)
+coder › Now extend `src/queue.test.ts`:
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder › Now let's run the tests:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/queue.test.ts: 69 |   }) 70 |   expect(started).toBe(f…
+coder › The plan says the job "starts after a tick / after drain" — my intermediate assertion wrongly required it to still be pending after a tick. The property to prove is only "never synchronous inside push". Fixing the test:
+coder · edit(src/queue.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 6 tests pass, 0 fail. Let me commit the changes:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 6 tests pass, 0 fail, and both files are committed. Here's the summary:
+
+**What changed:**
+
+- **`src/queue.ts`** — Replaced `#pending: Promise<void>[]` with a promise chain `#tail: Promise<void> = Promise.resolve()`. In `push`, each job is appended to the chain via `.then(async () => { await job(); })` with a `.catch` that normalises any rejection into `this.errors` (as `Error`). `drain()` loops snapshotting `this.#tail`, awaiting it, and breaking when the tail hasn't changed — so jobs pushed during drain are also awaited.
+
+- **`src/queue.test.ts`** — Kept the existing `drain waits for every job` test. Added 5 new tests:
+  1. **serial order** — three deferred jobs run in push order, never overlapping (second starts only after first resolves).
+  2. **never synchronous inside push** — after `push`, the job hasn't started yet; it starts after a tick.
+  3. **error isolation (async reject)** — a `throw new Error(...)` job is recorded in `errors` and the next job still runs.
+  4. **error isolation (sync throw)** — a synchronous `throw 'kaboom'` is normalised to `Error` and the next job still runs.
+  5. **drain includes jobs pushed while draining** — job A pushes job B during execution, `drain()` finishes B too.
+
+**Check output:**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 16 expect() calls
+Ran 6 tests across 1 file. [19.00ms]
+```
+
+**Git status:**
+
+```
+35e20db Queue: replace #pending array with #tail promise chain for strict serial execution
+26095ec the task as given
+```
+
+No uncommitted files. The job is done — over to you to confirm.
+coder → architect All 6 tests pass, 0 fail, and both files are committed. Here's the summary:  **What changed:**  - **`src/queue.ts`** — R…
+verified: bun run test passes on work/main
+merged work/main into the repository: ea9bd91 Merge branch 'work/main'
+architect › Job is done.
+
+What changed: `src/queue.ts` now runs jobs strictly serially in push order via a `#tail` promise chain — jobs never start synchronously inside `push`, throwing jobs are normalized into `errors` without breaking the chain, and `drain()` loops on the tail snapshot so jobs pushed while draining are awaited. `src/queue.test.ts` keeps the original test and adds serial-order/no-overlap, deferred-start, async/sync error isolation, and push-during-drain coverage.
+
+Verified by: `bun test` — 6 pass, 0 fail, 16 expect() calls, committed clean.
+
+  architect    meta/muse-spark-1.3-contributor 2 turns, 21303 tokens
+  coder        deepseek/deepseek-v4-flash 1 turns, 62465 tokens
+
+main: done
+  bun run test passed
+  merged: ea9bd91 Merge branch 'work/main'
+  this job: 84k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"ea9bd91 Merge branch 'work/main'","cost":"this job: 84k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":4249,"outputTokens":2552,"cacheReadTokens":14502,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek/deepseek-v4-flash","task":"main","usage":{"inputTokens":9941,"outputTokens":3502,"cacheReadTokens":49022,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

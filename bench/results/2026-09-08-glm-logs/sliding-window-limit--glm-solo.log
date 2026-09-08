@@ -1,0 +1,65 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · glob(**/*.test.ts)
+coder · tree()
+coder · read(src/window.ts)
+coder · read(package.json)
+coder › Fresh project — Bun, single stub file. I'll implement the class, add tests with a fake clock, and check git for branching.
+coder · bash(git status --porcelain && git branch --show-current && bun -…)
+coder · bash(git log --oneline -5 2>/dev/null; git rev-parse --is-inside-…)
+coder · bash(git checkout -b sliding-window-impl)
+coder · edit(private readonly events = new Map<string, number[]>()    all…)
+coder · edit(constructor(     readonly limit: number,     readonly window…)
+coder · read(src/window.ts)
+coder › Implementation looks right. Now the tests with a controlled clock:
+coder · write(import { describe, expect, test } from "bun:test" import { S…)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/window.test.ts: 91 |     // No 1000ms span ever sees mo…
+coder › The implementation is fine — my property assertion was wrong (it demanded events ≥1000ms apart, which isn't what a sliding window guarantees). The correct invariant: at most `limit` admitted events within any `windowMs` span. Fixing the test:
+coder · edit(test("events stagger out: no windowMs span ever holds more t…)
+coder · bash(bun test 2>&1)
+coder › All green. Let me try a typecheck for completeness — no tsconfig exists, so I'll ask tsc directly:
+coder · bash(bunx tsc --noEmit --strict --target es2022 --module esnext -…)
+coder › Both errors are test-file tooling artifacts (`bun:test` types need `@types/bun`, which this dependency-free project doesn't install; and the `.ts` extension flag). `src/window.ts` itself typechecks clean, and Bun runs the tests natively. Not adding dependencies uninvited. Committing:
+coder · bash(git add src/window.ts && git commit -m "Implement SlidingWin…)
+verified: bun run test passes on work/main
+merged work/main into the repository: cd55936 Merge branch 'sliding-window-impl'
+coder › Done, on branch `sliding-window-impl` (two commits).
+
+**What I changed**
+
+- **`src/window.ts`** — implemented the stub:
+  - `allow(key)` prunes the key's recorded timestamps, then admits only if fewer than `limit` remain — it appends the current `now()` and returns `true`; otherwise it records nothing and returns `false`.
+  - `remaining(key)` prunes and returns `limit − count`, never negative.
+  - Pruning drops timestamps where `now − t >= windowMs`, so an event exactly `windowMs` old no longer counts; done in place so the same array is mutated and reused.
+  - Constructor throws `RangeError` for `limit < 1` or `windowMs < 1`. Beyond the ask, I also reject non-integers (`0.5` limit is equally nonsensical) — easy to strip if you want the literal spec only.
+  - Keys are separate `Map` entries; memory only holds events inside the window.
+
+- **`src/window.test.ts`** (new) — 12 tests on a hand-moved fake clock: constructor RangeError and boundary cases; limit admission then refusal; readmission exactly at the boundary (1000ms) and just before it; refused events not recorded (verified via `remaining` after time passes); key independence; a sliding-span property test (no 1000ms span ever holds more than 2 admissions); `remaining` counting down and back up, mixed-age counting, per-key counts.
+
+**Checks**
+
+```
+bun test
+  12 pass
+  0 fail
+  44 expect() calls
+Ran 12 tests across 1 file. [13.00ms]
+```
+
+One test failed on the first run — my own property assertion was wrong (it required admissions to be ≥1000ms apart, which isn't the guarantee); I rewrote it to assert the actual invariant (≤ limit admissions in any window span) and left the implementation untouched.
+
+**Notes**
+- `bunx tsc --strict` on `src/window.ts` is clean. The two errors from typechecking the test file are environmental — `@types/bun` isn't installed and this project has zero dependencies, so I didn't add it uninvited; Bun runs `bun:test` natively.
+- The `now` default remains `Date.now`; the tests always inject the fake clock.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 87425 tokens
+
+main: done
+  bun run test passed
+  merged: cd55936 Merge branch 'sliding-window-impl'
+  this job: 87k tokens, 0.3¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"cd55936 Merge branch 'sliding-window-impl'","cost":"this job: 87k tokens, 0.3¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":16794,"outputTokens":6119,"cacheReadTokens":64512,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

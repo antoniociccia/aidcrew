@@ -1,0 +1,47 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/search.ts)
+coder · tree(.)
+coder · glob(.)
+coder · json(package.json)
+coder · read(src/search.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder · bash(git checkout -b fix/insertion-index-lower-bound && git statu…)
+coder · edit(if ((sorted[mid] as number) < target) low = mid + 1)
+coder · edit(test('inserts before equal elements', () => {   expect(inser…)
+coder · read(src/search.test.ts)
+coder · edit(test('finds where a new value goes', () => {   expect(insert…)
+coder · bash(bun test 2>&1; git diff)
+coder · bash(git add src/search.ts && git commit -m "Fix insertionIndex t…)
+verified: bun run test passes on work/main
+merged work/main into the repository: a01ea77 Merge branch 'fix/insertion-index-lower-bound'
+coder › Changed `insertionIndex` in `src/search.ts` from upper-bound to lower-bound behavior: the binary-search step now advances past `sorted[mid]` only when it is strictly `< target` (was `<= target`), so equal elements converge to the first of them. Kept the binary structure (`low`/`high` halving); no other code touched.
+
+Added three tests in `src/search.test.ts`, keeping the existing test as-is:
+- duplicates: `insertionIndex([1, 2, 2, 2, 3], 2)` is `1`
+- below every element: `insertionIndex([1, 3, 5], 0)` is `0`
+- above every element: `insertionIndex([1, 3, 5], 6)` is `3`
+
+Checks (`bun test`, the project's only `test` script):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 5 expect() calls
+Ran 4 tests across 1 file. [7.00ms]
+```
+
+Decisions not in the plan: none — one-character logic change plus additive tests. Commits on branch `fix/insertion-index-lower-bound`: `0037b35` (fix), `2c8a1a4` (tests).
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 66146 tokens
+
+main: done
+  bun run test passed
+  merged: a01ea77 Merge branch 'fix/insertion-index-lower-bound'
+  this job: 66k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"a01ea77 Merge branch 'fix/insertion-index-lower-bound'","cost":"this job: 66k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 5¢, on gpt-5 ≈ 4¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":7224,"outputTokens":2511,"cacheReadTokens":56411,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

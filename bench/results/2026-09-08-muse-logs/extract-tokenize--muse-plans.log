@@ -1,0 +1,74 @@
++ architect on meta/muse-spark-1.3-contributor
++ coder on deepseek/deepseek-v4-flash
+  architect    meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+  coder        deepseek/deepseek-v4-flash 0 turns, 0 tokens
+
+architect · read(src/stats.ts)
+architect · glob(.)
+architect · read(package.json)
+architect · read(src/stats.test.ts)
+architect · agent_send(Job: extract shared tokenizer and fix topWords case handling…)
+architect → coder Job: extract shared tokenizer and fix topWords case handling.  Context: src/stats.ts has wordCount (lowercases, splits o…
+architect › Plan sent to coder: new `src/tokenize.ts` with `wordCount`'s behaviour, both functions in `src/stats.ts` using it (fixing `topWords` to count case-insensitively with alphabetical tie-break), plus tests; `bun test` must pass. Awaiting coder's report.
+coder · read(src/stats.ts)
+coder · read(src/stats.test.ts)
+coder · tree(src)
+coder · write(src/tokenize.ts)
+coder · edit(/** How many words the text has. */ export function wordCoun…)
+coder › Now let me update the test file and create a new one for tokenize
+coder · write(import { expect, test } from 'bun:test' import { tokenize } …)
+coder · write(import { expect, test } from 'bun:test' import { wordCount, …)
+coder · bash(bun test 2>&1)
+coder › All tests pass. Let me verify the final state of each file:
+coder · read(src/tokenize.ts)
+coder · read(src/stats.ts)
+coder · stat(src/tokenize.test.ts)
+coder · stat(src/stats.test.ts)
+coder · bash(git add -A && git commit -m "extract shared tokenize functio…)
+coder › ---
+
+**Report to architect**
+
+**Files changed/added:**
+- **NEW** `src/tokenize.ts` — exports `tokenize(text)` with the exact behaviour of the old `wordCount`'s inner logic (lowercase, split on `/[^a-z0-9']+/`, drop empties).
+- **EDITED** `src/stats.ts` — imports `tokenize`; `wordCount` delegates to `tokenize(text).length`; `topWords` iterates `tokenize(text)` (case-insensitive now), counts into a Map, sorts by count desc then alphabetically, returns `[word, count]` pairs.
+- **EDITED** `src/stats.test.ts` — existing `wordCount` test kept; added tests for `topWords` case-insensitivity, alphabetical tie-breaking, `[word,count]` pair shape, and `n` limit.
+- **NEW** `src/tokenize.test.ts` — tests for lowercasing, punctuation/whitespace splitting, digit/apostrophe preservation, empty/punctuation-only input.
+
+**Check command and output:**
+```
+$ bun test
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 10 expect() calls
+Ran 9 tests across 2 files. [12.00ms]
+```
+
+**Confirmed:**
+- `topWords` is now case-insensitive (e.g. `'The'`, `'the'`, `'THE'` merge into `'the'`).
+- `wordCount` results are unchanged (delegates to the same tokenizer logic).
+- Ties break alphabetically, results are most-frequent-first `[word, count]` pairs.
+coder → architect ---  **Report to architect**  **Files changed/added:** - **NEW** `src/tokenize.ts` — exports `tokenize(text)` with the e…
+verified: bun run test passes on work/main
+merged work/main into the repository: e1bbed4 Merge branch 'work/main'
+architect › Job is done.
+
+What changed:
+- New `src/tokenize.ts` exporting `tokenize(text)` with wordCount's behaviour (lowercase, run of letters/digits/apostrophes, no empties).
+- `src/stats.ts`: both `wordCount` and `topWords` use it, fixing `topWords` to count case-insensitively, most-frequent-first with alphabetical tie-break; `wordCount` unchanged.
+- Tests added in `src/stats.test.ts` and new `src/tokenize.test.ts`.
+
+Verified by coder with `bun test`: 9 pass, 0 fail.
+
+  architect    meta/muse-spark-1.3-contributor 2 turns, 21487 tokens
+  coder        deepseek/deepseek-v4-flash 1 turns, 46810 tokens
+
+main: done
+  bun run test passed
+  merged: e1bbed4 Merge branch 'work/main'
+  this job: 68k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e1bbed4 Merge branch 'work/main'","cost":"this job: 68k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":4730,"outputTokens":2496,"cacheReadTokens":14261,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek/deepseek-v4-flash","task":"main","usage":{"inputTokens":8074,"outputTokens":2128,"cacheReadTokens":36608,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

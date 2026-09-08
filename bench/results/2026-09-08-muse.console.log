@@ -1,0 +1,401 @@
+180 runs to go, 0 already in bench/results/2026-09-08-muse.json, budget $5
+-> roman-numerals on muse-solo (run 1)
+-> interval-merge on muse-solo (run 1)
+-> retry-backoff on muse-solo (run 1)
+-> csv-formula-injection on muse-solo (run 1)
+   roman-numerals on muse-solo: passed, $0.002, 40s
+-> emitter-off-during-emit on muse-solo (run 1)
+   retry-backoff on muse-solo: passed, $0.002, 51s
+-> lower-bound on muse-solo (run 1)
+   interval-merge on muse-solo: passed, $0.002, 56s
+-> extract-money on muse-solo (run 1)
+   csv-formula-injection on muse-solo: passed, $0.002, 63s
+-> todo-done-command on muse-solo (run 1)
+   lower-bound on muse-solo: passed, $0.001, 32s
+-> query-string on muse-solo (run 1)
+   extract-money on muse-solo: passed, $0.003, 44s
+-> debounce on muse-solo (run 1)
+   query-string on muse-solo: passed, $0.003, 94s
+-> paginate-off-by-one on muse-solo (run 1)
+   paginate-off-by-one on muse-solo: passed, $0.001, 35s
+-> stable-cache-key on muse-solo (run 1)
+   debounce on muse-solo: passed, $0.004, 118s
+-> lru-ttl-cache on muse-solo (run 1)
+   todo-done-command on muse-solo: passed, $0.005, 181s
+-> money-parse on muse-solo (run 1)
+   emitter-off-during-emit on muse-solo: passed, $0.006, 209s
+-> slugify-unicode on muse-solo (run 1)
+   slugify-unicode on muse-solo: passed, $0.002, 50s
+-> word-wrap on muse-solo (run 1)
+   lru-ttl-cache on muse-solo: passed, $0.005, 209s
+-> config-from-env on muse-solo (run 1)
+   word-wrap on muse-solo: passed, $0.003, 178s
+-> csv-json-cli on muse-solo (run 1)
+   money-parse on muse-solo: passed, $0.006, 266s
+-> markdown-toc on muse-solo (run 1)
+   stable-cache-key on muse-solo: passed, $0.009, 427s
+-> queue-in-order on muse-solo (run 1)
+   config-from-env on muse-solo: passed, $0.006, 229s
+-> path-normalize on muse-solo (run 1)
+   csv-json-cli on muse-solo: passed, $0.006, 229s
+-> deep-merge on muse-solo (run 1)
+   path-normalize on muse-solo: passed, $0.002, 64s
+-> date-range-overlap on muse-solo (run 1)
+   markdown-toc on muse-solo: passed, $0.006, 249s
+-> sliding-window-limit on muse-solo (run 1)
+   date-range-overlap on muse-solo: passed, $0.002, 72s
+-> token-bucket on muse-solo (run 1)
+   queue-in-order on muse-solo: passed, $0.004, 170s
+-> extract-tokenize on muse-solo (run 1)
+   extract-tokenize on muse-solo: passed, $0.002, 46s
+-> ini-parser on muse-solo (run 1)
+   sliding-window-limit on muse-solo: passed, $0.004, 99s
+-> semver-compare on muse-solo (run 1)
+   token-bucket on muse-solo: passed, $0.003, 80s
+-> route-match on muse-solo (run 1)
+   semver-compare on muse-solo: passed, $0.003, 78s
+-> log-redaction on muse-solo (run 1)
+   ini-parser on muse-solo: passed, $0.005, 223s
+-> roman-numerals on muse-plans (run 1)
+   log-redaction on muse-solo: passed, $0.004, 165s
+-> interval-merge on muse-plans (run 1)
+   route-match on muse-solo: passed, $0.006, 274s
+-> retry-backoff on muse-plans (run 1)
+   interval-merge on muse-plans: passed, $0.003, 99s
+-> csv-formula-injection on muse-plans (run 1)
+   roman-numerals on muse-plans: not done, $0.004, 135s
+-> emitter-off-during-emit on muse-plans (run 1)
+   retry-backoff on muse-plans: passed, $0.003, 75s
+-> lower-bound on muse-plans (run 1)
+   lower-bound on muse-plans: passed, $0.002, 67s
+-> extract-money on muse-plans (run 1)
+   emitter-off-during-emit on muse-plans: passed, $0.003, 85s
+-> todo-done-command on muse-plans (run 1)
+   csv-formula-injection on muse-plans: passed, $0.003, 120s
+-> query-string on muse-plans (run 1)
+   deep-merge on muse-solo: passed, $0.015, 713s
+-> debounce on muse-plans (run 1)
+   todo-done-command on muse-plans: passed, $0.004, 136s
+-> paginate-off-by-one on muse-plans (run 1)
+   extract-money on muse-plans: passed, $0.005, 151s
+-> stable-cache-key on muse-plans (run 1)
+   query-string on muse-plans: passed, $0.003, 128s
+-> lru-ttl-cache on muse-plans (run 1)
+   debounce on muse-plans: passed, $0.004, 91s
+-> money-parse on muse-plans (run 1)
+   stable-cache-key on muse-plans: passed, $0.003, 74s
+-> slugify-unicode on muse-plans (run 1)
+   paginate-off-by-one on muse-plans: passed, $0.003, 93s
+-> word-wrap on muse-plans (run 1)
+   lru-ttl-cache on muse-plans: passed, $0.005, 112s
+-> config-from-env on muse-plans (run 1)
+   slugify-unicode on muse-plans: not done, $0.003, 53s
+-> csv-json-cli on muse-plans (run 1)
+   word-wrap on muse-plans: passed, $0.003, 98s
+-> markdown-toc on muse-plans (run 1)
+   money-parse on muse-plans: passed, $0.005, 160s
+-> queue-in-order on muse-plans (run 1)
+   csv-json-cli on muse-plans: passed, $0.005, 124s
+-> path-normalize on muse-plans (run 1)
+   config-from-env on muse-plans: passed, $0.005, 137s
+-> deep-merge on muse-plans (run 1)
+   queue-in-order on muse-plans: passed, $0.003, 109s
+-> date-range-overlap on muse-plans (run 1)
+   path-normalize on muse-plans: passed, $0.005, 90s
+-> sliding-window-limit on muse-plans (run 1)
+   markdown-toc on muse-plans: passed, $0.005, 158s
+-> token-bucket on muse-plans (run 1)
+   deep-merge on muse-plans: passed, $0.005, 114s
+-> extract-tokenize on muse-plans (run 1)
+   extract-tokenize on muse-plans: passed, $0.003, 58s
+-> ini-parser on muse-plans (run 1)
+   sliding-window-limit on muse-plans: passed, $0.003, 86s
+-> semver-compare on muse-plans (run 1)
+   token-bucket on muse-plans: passed, $0.003, 90s
+-> route-match on muse-plans (run 1)
+   date-range-overlap on muse-plans: passed, $0.007, 183s
+-> log-redaction on muse-plans (run 1)
+   ini-parser on muse-plans: passed, $0.003, 104s
+-> roman-numerals on muse-solo (run 2)
+   roman-numerals on muse-solo: passed, $0.002, 39s
+-> interval-merge on muse-solo (run 2)
+   route-match on muse-plans: passed, $0.005, 141s
+-> retry-backoff on muse-solo (run 2)
+   interval-merge on muse-solo: passed, $0.002, 46s
+-> csv-formula-injection on muse-solo (run 2)
+   retry-backoff on muse-solo: passed, $0.002, 48s
+-> emitter-off-during-emit on muse-solo (run 2)
+   semver-compare on muse-plans: passed, $0.008, 199s
+-> lower-bound on muse-solo (run 2)
+   lower-bound on muse-solo: passed, $0.002, 29s
+-> extract-money on muse-solo (run 2)
+   csv-formula-injection on muse-solo: passed, $0.003, 62s
+-> todo-done-command on muse-solo (run 2)
+   log-redaction on muse-plans: passed, $0.006, 167s
+-> query-string on muse-solo (run 2)
+   extract-money on muse-solo: passed, $0.003, 57s
+-> debounce on muse-solo (run 2)
+   emitter-off-during-emit on muse-solo: passed, $0.003, 99s
+-> paginate-off-by-one on muse-solo (run 2)
+   paginate-off-by-one on muse-solo: passed, $0.002, 33s
+-> stable-cache-key on muse-solo (run 2)
+   query-string on muse-solo: passed, $0.002, 67s
+-> lru-ttl-cache on muse-solo (run 2)
+   debounce on muse-solo: passed, $0.003, 75s
+-> money-parse on muse-solo (run 2)
+   todo-done-command on muse-solo: passed, $0.006, 215s
+-> slugify-unicode on muse-solo (run 2)
+   lru-ttl-cache on muse-solo: passed, $0.004, 149s
+-> word-wrap on muse-solo (run 2)
+   slugify-unicode on muse-solo: passed, $0.003, 54s
+-> config-from-env on muse-solo (run 2)
+   stable-cache-key on muse-solo: passed, $0.007, 288s
+-> csv-json-cli on muse-solo (run 2)
+   config-from-env on muse-solo: passed, $0.004, 122s
+-> markdown-toc on muse-solo (run 2)
+   word-wrap on muse-solo: passed, $0.007, 315s
+-> queue-in-order on muse-solo (run 2)
+   markdown-toc on muse-solo: passed, $0.006, 240s
+-> path-normalize on muse-solo (run 2)
+   csv-json-cli on muse-solo: passed, $0.007, 305s
+-> deep-merge on muse-solo (run 2)
+   queue-in-order on muse-solo: passed, $0.004, 128s
+-> date-range-overlap on muse-solo (run 2)
+   path-normalize on muse-solo: passed, $0.003, 70s
+-> sliding-window-limit on muse-solo (run 2)
+   date-range-overlap on muse-solo: passed, $0.003, 67s
+-> token-bucket on muse-solo (run 2)
+   money-parse on muse-solo: passed, $0.014, 632s
+-> extract-tokenize on muse-solo (run 2)
+   sliding-window-limit on muse-solo: passed, $0.003, 85s
+-> ini-parser on muse-solo (run 2)
+   token-bucket on muse-solo: passed, $0.003, 65s
+-> semver-compare on muse-solo (run 2)
+   extract-tokenize on muse-solo: passed, $0.003, 66s
+-> route-match on muse-solo (run 2)
+   semver-compare on muse-solo: passed, $0.002, 58s
+-> log-redaction on muse-solo (run 2)
+   ini-parser on muse-solo: passed, $0.005, 151s
+-> roman-numerals on muse-plans (run 2)
+   roman-numerals on muse-plans: passed, $0.002, 79s
+-> interval-merge on muse-plans (run 2)
+   log-redaction on muse-solo: passed, $0.007, 198s
+-> retry-backoff on muse-plans (run 2)
+   interval-merge on muse-plans: not done, $0.003, 73s
+-> csv-formula-injection on muse-plans (run 2)
+   route-match on muse-solo: passed, $0.009, 327s
+-> emitter-off-during-emit on muse-plans (run 2)
+   retry-backoff on muse-plans: passed, $0.004, 84s
+-> lower-bound on muse-plans (run 2)
+   csv-formula-injection on muse-plans: passed, $0.003, 54s
+-> extract-money on muse-plans (run 2)
+   deep-merge on muse-solo: passed, $0.011, 511s
+-> todo-done-command on muse-plans (run 2)
+   lower-bound on muse-plans: passed, $0.002, 45s
+-> query-string on muse-plans (run 2)
+   emitter-off-during-emit on muse-plans: passed, $0.002, 77s
+-> debounce on muse-plans (run 2)
+   extract-money on muse-plans: passed, $0.003, 86s
+-> paginate-off-by-one on muse-plans (run 2)
+   debounce on muse-plans: passed, $0.003, 75s
+-> stable-cache-key on muse-plans (run 2)
+   todo-done-command on muse-plans: passed, $0.003, 109s
+-> lru-ttl-cache on muse-plans (run 2)
+   paginate-off-by-one on muse-plans: passed, $0.002, 74s
+-> money-parse on muse-plans (run 2)
+   query-string on muse-plans: passed, $0.004, 130s
+-> slugify-unicode on muse-plans (run 2)
+   stable-cache-key on muse-plans: passed, $0.002, 71s
+-> word-wrap on muse-plans (run 2)
+   slugify-unicode on muse-plans: passed, $0.002, 62s
+-> config-from-env on muse-plans (run 2)
+   lru-ttl-cache on muse-plans: passed, $0.003, 128s
+-> csv-json-cli on muse-plans (run 2)
+   word-wrap on muse-plans: passed, $0.003, 136s
+-> markdown-toc on muse-plans (run 2)
+   config-from-env on muse-plans: passed, $0.003, 116s
+-> queue-in-order on muse-plans (run 2)
+   money-parse on muse-plans: passed, $0.005, 241s
+-> path-normalize on muse-plans (run 2)
+   csv-json-cli on muse-plans: passed, $0.004, 127s
+-> deep-merge on muse-plans (run 2)
+   queue-in-order on muse-plans: passed, $0.003, 113s
+-> date-range-overlap on muse-plans (run 2)
+   path-normalize on muse-plans: passed, $0.002, 67s
+-> sliding-window-limit on muse-plans (run 2)
+   markdown-toc on muse-plans: passed, $0.003, 133s
+-> token-bucket on muse-plans (run 2)
+   deep-merge on muse-plans: not done, $0.003, 112s
+-> extract-tokenize on muse-plans (run 2)
+   sliding-window-limit on muse-plans: not done, $0.003, 113s
+-> ini-parser on muse-plans (run 2)
+   token-bucket on muse-plans: passed, $0.002, 102s
+-> semver-compare on muse-plans (run 2)
+   extract-tokenize on muse-plans: passed, $0.003, 136s
+-> route-match on muse-plans (run 2)
+   date-range-overlap on muse-plans: not done, $0.005, 219s
+-> log-redaction on muse-plans (run 2)
+   ini-parser on muse-plans: not done, $0.003, 107s
+-> roman-numerals on muse-solo (run 3)
+   semver-compare on muse-plans: passed, $0.003, 124s
+-> interval-merge on muse-solo (run 3)
+   interval-merge on muse-solo: passed, $0.002, 43s
+-> retry-backoff on muse-solo (run 3)
+   roman-numerals on muse-solo: passed, $0.003, 65s
+-> csv-formula-injection on muse-solo (run 3)
+   route-match on muse-plans: not done, $0.004, 169s
+-> emitter-off-during-emit on muse-solo (run 3)
+   retry-backoff on muse-solo: passed, $0.003, 70s
+-> lower-bound on muse-solo (run 3)
+   csv-formula-injection on muse-solo: passed, $0.003, 74s
+-> extract-money on muse-solo (run 3)
+   lower-bound on muse-solo: passed, $0.002, 44s
+-> todo-done-command on muse-solo (run 3)
+   log-redaction on muse-plans: passed, $0.004, 185s
+-> query-string on muse-solo (run 3)
+   extract-money on muse-solo: passed, $0.003, 48s
+-> debounce on muse-solo (run 3)
+   emitter-off-during-emit on muse-solo: passed, $0.003, 94s
+-> paginate-off-by-one on muse-solo (run 3)
+   paginate-off-by-one on muse-solo: passed, $0.002, 27s
+-> stable-cache-key on muse-solo (run 3)
+   debounce on muse-solo: passed, $0.003, 72s
+-> lru-ttl-cache on muse-solo (run 3)
+   query-string on muse-solo: passed, $0.004, 89s
+-> money-parse on muse-solo (run 3)
+   todo-done-command on muse-solo: passed, $0.004, 132s
+-> slugify-unicode on muse-solo (run 3)
+   slugify-unicode on muse-solo: passed, $0.002, 45s
+-> word-wrap on muse-solo (run 3)
+   stable-cache-key on muse-solo: passed, $0.004, 133s
+-> config-from-env on muse-solo (run 3)
+   lru-ttl-cache on muse-solo: passed, $0.007, 216s
+-> csv-json-cli on muse-solo (run 3)
+   config-from-env on muse-solo: passed, $0.005, 155s
+-> markdown-toc on muse-solo (run 3)
+   word-wrap on muse-solo: passed, $0.005, 201s
+-> queue-in-order on muse-solo (run 3)
+   queue-in-order on muse-solo: passed, $0.003, 119s
+-> path-normalize on muse-solo (run 3)
+   path-normalize on muse-solo: passed, $0.002, 55s
+-> deep-merge on muse-solo (run 3)
+   markdown-toc on muse-solo: passed, $0.004, 196s
+-> date-range-overlap on muse-solo (run 3)
+   money-parse on muse-solo: passed, $0.009, 468s
+-> sliding-window-limit on muse-solo (run 3)
+   csv-json-cli on muse-solo: passed, $0.008, 290s
+-> token-bucket on muse-solo (run 3)
+   date-range-overlap on muse-solo: passed, $0.003, 103s
+-> extract-tokenize on muse-solo (run 3)
+   sliding-window-limit on muse-solo: passed, $0.003, 106s
+-> ini-parser on muse-solo (run 3)
+   token-bucket on muse-solo: passed, $0.003, 88s
+-> semver-compare on muse-solo (run 3)
+   extract-tokenize on muse-solo: passed, $0.003, 53s
+-> route-match on muse-solo (run 3)
+   semver-compare on muse-solo: passed, $0.003, 66s
+-> log-redaction on muse-solo (run 3)
+   deep-merge on muse-solo: passed, $0.006, 220s
+-> roman-numerals on muse-plans (run 3)
+   ini-parser on muse-solo: passed, $0.005, 198s
+-> interval-merge on muse-plans (run 3)
+   roman-numerals on muse-plans: passed, $0.003, 107s
+-> retry-backoff on muse-plans (run 3)
+   log-redaction on muse-solo: passed, $0.004, 167s
+-> csv-formula-injection on muse-plans (run 3)
+   interval-merge on muse-plans: passed, $0.003, 72s
+-> emitter-off-during-emit on muse-plans (run 3)
+   retry-backoff on muse-plans: not done, $0.003, 74s
+-> lower-bound on muse-plans (run 3)
+   route-match on muse-solo: passed, $0.007, 287s
+-> extract-money on muse-plans (run 3)
+   emitter-off-during-emit on muse-plans: passed, $0.002, 87s
+-> todo-done-command on muse-plans (run 3)
+   csv-formula-injection on muse-plans: not done, $0.005, 125s
+-> query-string on muse-plans (run 3)
+   lower-bound on muse-plans: passed, $0.003, 94s
+-> debounce on muse-plans (run 3)
+   extract-money on muse-plans: not done, $0.005, 104s
+-> paginate-off-by-one on muse-plans (run 3)
+   query-string on muse-plans: not done, $0.004, 124s
+-> stable-cache-key on muse-plans (run 3)
+   debounce on muse-plans: passed, $0.005, 142s
+-> lru-ttl-cache on muse-plans (run 3)
+   paginate-off-by-one on muse-plans: passed, $0.004, 87s
+-> money-parse on muse-plans (run 3)
+   todo-done-command on muse-plans: passed, $0.006, 193s
+-> slugify-unicode on muse-plans (run 3)
+   stable-cache-key on muse-plans: not done, $0.003, 80s
+-> word-wrap on muse-plans (run 3)
+   slugify-unicode on muse-plans: not done, $0.003, 53s
+-> config-from-env on muse-plans (run 3)
+   lru-ttl-cache on muse-plans: passed, $0.003, 88s
+-> csv-json-cli on muse-plans (run 3)
+   word-wrap on muse-plans: passed, $0.003, 68s
+-> markdown-toc on muse-plans (run 3)
+   money-parse on muse-plans: passed, $0.005, 153s
+-> queue-in-order on muse-plans (run 3)
+   csv-json-cli on muse-plans: passed, $0.004, 101s
+-> path-normalize on muse-plans (run 3)
+   config-from-env on muse-plans: passed, $0.006, 125s
+-> deep-merge on muse-plans (run 3)
+   path-normalize on muse-plans: passed, $0.003, 63s
+-> date-range-overlap on muse-plans (run 3)
+   markdown-toc on muse-plans: passed, $0.005, 142s
+-> sliding-window-limit on muse-plans (run 3)
+   date-range-overlap on muse-plans: passed, $0.004, 70s
+-> token-bucket on muse-plans (run 3)
+   sliding-window-limit on muse-plans: passed, $0.004, 98s
+-> extract-tokenize on muse-plans (run 3)
+   queue-in-order on muse-plans: not done, $0.007, 229s
+-> ini-parser on muse-plans (run 3)
+   token-bucket on muse-plans: not done, $0.003, 77s
+-> semver-compare on muse-plans (run 3)
+   extract-tokenize on muse-plans: not done, $0.004, 88s
+-> route-match on muse-plans (run 3)
+   deep-merge on muse-plans: passed, $0.008, 256s
+-> log-redaction on muse-plans (run 3)
+   ini-parser on muse-plans: passed, $0.004, 102s
+   semver-compare on muse-plans: passed, $0.004, 117s
+   log-redaction on muse-plans: passed, $0.005, 115s
+   route-match on muse-plans: passed, $0.005, 148s
+
+| configuration | passed | said done | said done, failed | total cost | cost per pass | mean time |
+|---|---|---|---|---|---|---|
+| muse-solo | 90/90 | 90 | 0 | $0.38 | 0.4c | 147s |
+| muse-plans | 73/90 | 73 | 0 | $0.34 | 0.5c | 113s |
+
+| task | category | muse-solo | muse-plans |
+|---|---|---|---|
+| roman-numerals | feature | 3/3 0.2c 48s | 2/3 0.3c 107s |
+| retry-backoff | feature | 3/3 0.2c 56s | 2/3 0.3c 78s |
+| interval-merge | feature | 3/3 0.2c 48s | 2/3 0.3c 82s |
+| csv-formula-injection | bugfix | 3/3 0.3c 66s | 2/3 0.4c 100s |
+| lower-bound | bugfix | 3/3 0.2c 35s | 3/3 0.3c 68s |
+| extract-money | refactor | 3/3 0.3c 50s | 2/3 0.4c 114s |
+| query-string | feature | 3/3 0.3c 84s | 2/3 0.4c 127s |
+| paginate-off-by-one | bugfix | 3/3 0.2c 31s | 3/3 0.3c 85s |
+| debounce | feature | 3/3 0.3c 88s | 3/3 0.4c 102s |
+| todo-done-command | multi-file | 3/3 0.5c 176s | 3/3 0.4c 146s |
+| emitter-off-during-emit | bugfix | 3/3 0.4c 134s | 3/3 0.3c 83s |
+| slugify-unicode | bugfix | 3/3 0.2c 50s | 1/3 0.3c 56s |
+| lru-ttl-cache | feature | 3/3 0.5c 191s | 3/3 0.4c 109s |
+| word-wrap | feature | 3/3 0.5c 231s | 3/3 0.3c 100s |
+| money-parse | feature | 3/3 1.0c 455s | 3/3 0.5c 185s |
+| stable-cache-key | bugfix | 3/3 0.7c 283s | 2/3 0.3c 75s |
+| config-from-env | multi-file | 3/3 0.5c 169s | 3/3 0.5c 126s |
+| csv-json-cli | multi-file | 3/3 0.7c 275s | 3/3 0.4c 117s |
+| path-normalize | bugfix | 3/3 0.2c 63s | 3/3 0.3c 74s |
+| markdown-toc | feature | 3/3 0.6c 228s | 3/3 0.4c 144s |
+| date-range-overlap | bugfix | 3/3 0.3c 80s | 2/3 0.5c 157s |
+| queue-in-order | bugfix | 3/3 0.4c 139s | 2/3 0.5c 150s |
+| extract-tokenize | refactor | 3/3 0.3c 55s | 2/3 0.3c 94s |
+| sliding-window-limit | feature | 3/3 0.3c 97s | 2/3 0.3c 99s |
+| token-bucket | feature | 3/3 0.3c 78s | 2/3 0.3c 90s |
+| semver-compare | feature | 3/3 0.3c 67s | 3/3 0.5c 147s |
+| ini-parser | feature | 3/3 0.5c 191s | 2/3 0.3c 104s |
+| log-redaction | multi-file | 3/3 0.5c 177s | 3/3 0.5c 156s |
+| route-match | feature | 3/3 0.7c 296s | 2/3 0.5c 153s |
+| deep-merge | feature | 3/3 1.1c 481s | 2/3 0.5c 160s |
+
+spent $0.72 in total; results in bench/results/2026-09-08-muse.json

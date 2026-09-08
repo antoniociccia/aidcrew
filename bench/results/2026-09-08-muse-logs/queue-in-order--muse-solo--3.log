@@ -1,0 +1,49 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/queue.ts)
+coder · tree(.)
+coder · read(src/queue.test.ts)
+coder · read(package.json)
+coder · bash(git status --short --branch; git log --oneline -5)
+coder · bash(git checkout -b fix/queue-sequential && bun --version)
+coder · edit(/** Runs jobs one after another, in the order they were push…)
+coder · bash(git add src/queue.ts && git commit -m "Make Queue run jobs s…)
+coder · write(import { expect, test } from 'bun:test' import { Queue } fro…)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/queue.test.ts && git commit -m "Add tests for se…)
+verified: bun run test passes on work/main
+merged work/main into the repository: d39c668 Merge branch 'fix/queue-sequential'
+coder › Changed `src/queue.ts` on branch `fix/queue-sequential` so jobs chain through a `#tail` promise instead of starting immediately:
+
+- `push` appends `() => job()` onto `#tail` via `.then`, so each job starts only after the previous settles, in push order. The `.then` callback is async, so nothing runs synchronously inside `push`; `push` stays synchronous and returns `void`.
+- Throwing jobs (async rejection or sync throw) are caught and recorded in `errors` (non-`Error` wrapped via `new Error(String(cause))`) without breaking the chain, so later jobs still run.
+- `drain` snapshots `#tail`, awaits it, and repeats while `#tail` changed, so jobs pushed during the job run or during `drain` are also waited for.
+
+Added tests in `src/queue.test.ts` for: sequential non-overlapping execution in push order, no synchronous execution inside `push`, `push` returns `undefined`, error recording without stopping the queue, and `drain` covering jobs pushed while draining.
+
+Checks — `bun test`:
+```
+bun test v1.3.14 (0d9b296a)
+
+6 pass
+0 fail
+10 expect() calls
+Ran 6 tests across 1 file. [27.00ms]
+```
+
+Commits:
+- `1ac580d Make Queue run jobs sequentially in push order`
+- `4dabd97 Add tests for sequential Queue behavior`
+
+Decision not in the brief: sync-throwing `job()` is also caught into `errors` (old `job().catch(...)` would have propagated it); this keeps the “throw does not stop later jobs” guarantee for both sync and async failures.
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 64025 tokens
+
+main: done
+  bun run test passed
+  merged: d39c668 Merge branch 'fix/queue-sequential'
+  this job: 64k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 12¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"d39c668 Merge branch 'fix/queue-sequential'","cost":"this job: 64k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 12¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":6857,"outputTokens":10839,"cacheReadTokens":46329,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

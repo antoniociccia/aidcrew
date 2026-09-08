@@ -1,0 +1,45 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/csv.ts)
+coder · tree(.)
+coder · read(src/csv.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current && git log -…)
+coder · bash(git checkout -b fix/csv-formula-injection && bun --version)
+coder · edit(function field(cell: Cell): string {   if (typeof cell === '…)
+coder · read(src/csv.ts)
+coder · edit(test('prefixes a formula string with a single quote and quot…)
+coder · read(src/csv.test.ts)
+coder · edit(test('keeps quoting fields with comma, quote or newline', ()…)
+coder · bash(bun test 2>&1)
+coder · bash(git diff --stat && git status --short && git add src/csv.ts …)
+verified: bun run test passes on work/main
+merged work/main into the repository: c40e45c Merge branch 'fix/csv-formula-injection'
+coder › Done on branch `fix/csv-formula-injection` (2 commits).
+
+What changed:
+- `src/csv.ts`: `field()` now branches on type. `number` cells are written plainly via `String(cell)` (so `-2.5` stays `-2.5`). `string` cells starting with `=`, `+`, `-`, `@`, `\t`, or `\r` are written as `"'<text>"` (single-quote prefix, whole field double-quoted, inner `"` doubled). All other strings keep the existing rule: quote only if containing `,`, `"`, or `\n`, doubling inner `"`.
+- `src/csv.test.ts`: kept the original comma test, added tests for `=HYPERLINK(...)` with embedded quotes, for `+`/`-`/`@`/tab/CR prefixes, for plain negative/positive numbers, and for quote/newline/plain quoting.
+
+Checks (`bun test`, the project's only check — no typecheck/lint scripts):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 4 pass
+ 0 fail
+ 11 expect() calls
+Ran 4 tests across 1 file. [13.00ms]
+```
+
+Decisions not in the request: empty strings stay unquoted (unchanged behavior); the mitigation branch always quotes and doubles inner quotes even if the field has no `,",\n` (required so the `'` prefix survives as text).
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 76928 tokens
+
+main: done
+  bun run test passed
+  merged: c40e45c Merge branch 'fix/csv-formula-injection'
+  this job: 77k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"c40e45c Merge branch 'fix/csv-formula-injection'","cost":"this job: 77k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":7892,"outputTokens":6880,"cacheReadTokens":62156,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

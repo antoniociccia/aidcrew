@@ -1,0 +1,32 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · read(src/emitter.ts)
+coder · glob(**/*.test.ts)
+coder · read(src/emitter.test.ts)
+coder · edit(src/emitter.ts)
+coder › The spec says every listener registered when emit began is called exactly once, so removals during emit don't cancel the call — the snapshot handles that. Now tests:
+coder · write(src/emitter.test.ts)
+coder · bash(bun test 2>&1)
+coder · bash(git add -A && git commit -m "emitter: call every listener re…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 8899cf0 Merge branch 'work/main'
+coder › Fixed and committed (f85f9a2).
+
+**Change** (`src/emitter.ts`): `emit` now iterates over a snapshot `[...(this.#listeners.get(event) ?? [])]` instead of the live array, so a listener removing itself (or another) during emit can't shift indices and skip the one after it. That also fixes `once`, whose self-removal was the visible symptom. Because removals no longer cancel calls, every listener registered when emit began is called exactly once, in registration order; additions during emit only affect later emits (the snapshot is taken before any listener runs).
+
+`once` and `off` needed no change — off already returned a boolean.
+
+**Tests** (`src/emitter.test.ts`), now 7: listener-removes-itself (next still called), `once` before an ordinary listener, `once` fires exactly once across emits, listener added during emit deferred to next emit, `off` return value, and emit's count.
+
+**Checks**: `bun test` → 7 pass, 0 fail, 15 expect() calls.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 33947 tokens
+
+main: done
+  bun run test passed
+  merged: 8899cf0 Merge branch 'work/main'
+  this job: 34k tokens, 0.1¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"8899cf0 Merge branch 'work/main'","cost":"this job: 34k tokens, 0.1¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":9264,"outputTokens":1643,"cacheReadTokens":23040,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

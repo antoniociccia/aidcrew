@@ -1,0 +1,64 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/key.ts)
+coder · tree(.)
+coder · glob(.)
+coder · json(package.json)
+coder · read(src/key.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current && bun test …)
+coder · bash(bun -e ' console.log(JSON.stringify(new Date("2020-01-01T00:…)
+coder · git-log(.)
+coder · error: git log failed: fatal: empty string is not a valid pathspec. please use . instead if you meant to match all paths
+coder · bash(git checkout -b fix/stable-cache-key 2>&1 | tail -5; git sta…)
+coder · bash(bun -e ' console.log(JSON.stringify(new Number(5)), JSON.str…)
+coder · write(/** One string per distinct value, for a cache to look up. *…)
+coder · read(src/key.ts)
+coder · bash(bun -e ' import { cacheKey } from "./src/key.ts"; const chec…)
+coder · edit(test('key order does not matter', () => {   expect(cacheKey(…)
+coder · read(src/key.test.ts)
+coder · edit(function normalize(value: unknown): unknown {   if (value !=…)
+coder · read(src/key.ts)
+coder · edit(if (Array.isArray(value)) {       return value.map((item) =>…)
+coder · error: oldString not found in src/key.ts; the nearest line is line 13: if (Array.isArray(value)) {
+coder · bash(cat -A src/key.ts | sed -n '1,40p')
+coder · bash(sed -n '1,40p' src/key.ts | cat -e)
+coder · write(/** One string per distinct value, for a cache to look up. *…)
+coder · bash(bun test 2>&1 | tail -10 && bun -e ' import { cacheKey } fro…)
+coder · bash(git add src/key.ts && git commit -m "Make cacheKey sort obje…)
+coder · bash(bun test 2>&1 | tail -6; git log --oneline -3; git status --…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3957c98 Merge branch 'fix/stable-cache-key'
+coder › Done on branch `fix/stable-cache-key` (2 commits).
+
+What changed:
+- `src/key.ts`: `cacheKey` now normalizes before `JSON.stringify` — plain objects get their keys sorted at every depth, arrays keep order, `undefined`/function values are skipped in objects, `Date`s go through `toJSON` (valid → ISO string, invalid → `null`), non-finite numbers (`NaN`, `Infinity`, `-Infinity`) become `null`.
+- `src/key.test.ts`: kept the existing distinct-values idea, replaced with 6 tests: top-level key order, nested key order (object in object + objects in arrays), array order preserved, `undefined`/function omitted from objects, `Date` → ISO string, `NaN`/`Infinity` → `null`.
+
+Exact check output (`bun test`):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 10 expect() calls
+Ran 6 tests across 1 file. [14.00ms]
+```
+
+Decisions the request did not spell out (kept to match `JSON.stringify`):
+- `symbol` values treated like `undefined`/functions: omitted from objects, `null` in arrays.
+- `undefined`/function/symbol inside arrays become `null` (JSON behavior), not omitted.
+- `toJSON` is honored for any object (this is what makes `Date` work), including nested values.
+- Invalid `Date` → `null`, matching `JSON.stringify({d: new Date(NaN)})` → `{"d":null}`.
+- Top-level `undefined`/function/symbol returns `undefined` (what `JSON.stringify` returns), not the string `"null"`.
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 202716 tokens
+
+main: done
+  bun run test passed
+  merged: 3957c98 Merge branch 'fix/stable-cache-key'
+  this job: 203k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 38¢, on gpt-5 ≈ 36¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3957c98 Merge branch 'fix/stable-cache-key'","cost":"this job: 203k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 38¢, on gpt-5 ≈ 36¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":12581,"outputTokens":32001,"cacheReadTokens":158134,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

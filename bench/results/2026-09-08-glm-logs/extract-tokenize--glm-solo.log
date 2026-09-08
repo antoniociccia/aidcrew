@@ -1,0 +1,83 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · read(src/stats.ts)
+coder · glob(**/*.test.*)
+coder · read(src/stats.test.ts)
+coder · bash(ls -a && cat package.json 2>/dev/null)
+coder › The project uses `bun test`. I'll create a branch, then make the changes.
+coder · bash(git checkout -b extract-tokenize)
+coder · write(/**  * Split text into words: lower case, a word being a run…)
+coder · write(import { tokenize } from './tokenize.ts' import { topWords, …)
+coder › Now the tests. Let me verify the written file first:
+coder · read(src/stats.ts)
+coder › The `import { topWords, wordCount } from './stats.ts'` line is a self-import mistake — it should be a re-export for callers of the module. Fixing:
+coder · edit(import { tokenize } from './tokenize.ts'  export { tokenize …)
+coder · edit(export { tokenize }  /** How many words the text has. */)
+coder · error: oldString and newString are identical: nothing to do
+coder › Let me look at the current state — I fumbled that edit; I want stats.ts to keep its original export surface (wordCount, topWords) without an extra re-export:
+coder · read(src/stats.ts)
+coder · edit(import { tokenize } from './tokenize.ts'  /** How many words…)
+coder › Now the tests:
+coder · write(import { describe, expect, test } from 'bun:test' import { t…)
+coder › Two of my test expectations are wrong (hyphens and apostrophes are separators/word-chars respectively). Fixing before running:
+coder · edit(test('words are runs of letters, digits and apostrophes', ()…)
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/stats.test.ts: 10 |   test('lower cases', () => { 11 |…
+coder › Both failures are wrong expectations in my tests, not the implementation: `o.k.` does split into `o`,`k`, and `d d d` counts 3 (making c/d a tie at the cut, c first alphabetically). Fixing the expectations:
+coder · edit('2nd',       'rate',       'o',       'k',     ]))
+coder · edit(test('returns the n most frequent', () => {     expect(topWo…)
+coder · error: ENOENT: no such file or directory, open '/private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/aidcrew-bench-extract-…
+coder › Typo in the path — retrying on the right file:
+coder · edit(test('returns the n most frequent', () => {     expect(topWo…)
+coder · bash(bun test)
+coder › All 9 tests pass. Committing:
+coder · bash(git add src/tokenize.ts src/stats.ts src/stats.test.ts && gi…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 3ae7e52 Merge branch 'extract-tokenize'
+coder › Done. Branch `extract-tokenize`, commit `ce8eb59`, working tree clean.
+
+## What changed
+
+**New `src/tokenize.ts`** — the single tokenizer, extracted from `wordCount`'s behaviour:
+```ts
+export function tokenize(text: string): string[] {
+  return text.toLowerCase().split(/[^a-z0-9']+/).filter((word) => word !== '')
+}
+```
+
+**`src/stats.ts`**
+- `wordCount` is now `tokenize(text).length` — same regex, same empty filter, so its results are unchanged (the original test still passes untouched).
+- `topWords` now counts `tokenize`'s tokens (fixing the drift: case-insensitive, apostrophes kept inside words, punctuation/digits are separators rather than stripped), then sorts most-frequent-first with ties broken alphabetically, then slices to `n`:
+  ```ts
+  .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+  ```
+  The sort is the only other behavioural delta besides the tokenizer: previously ties came out in insertion order.
+
+**`src/stats.test.ts`** — kept the existing `wordCount` test, added coverage: `tokenize` (lower-casing, word-character class incl. `"2nd-rate"` → `2nd`,`rate` and `"o.k."` → `o`,`k`, empty input / separators-only → `[]`), and `topWords` (case-insensitivity `"The the THE"` → `[['the',3]]`, frequency-then-alphabetical ordering, `n` truncation at the tie boundary, `n` larger than the distinct words, apostrophe handling `"don't don't don.t"`).
+
+## Check output
+```
+bun test v1.3.14 (0d9b296a)
+
+ 9 pass
+ 0 fail
+ 10 expect() calls
+Ran 9 tests across 1 file. [16.00ms]
+```
+That's the project's only check (`bun test`; no typecheck/lint configured).
+
+## Things worth flagging
+- First test run failed on two of my own expectations, which I corrected after reading the errors: `o.k.` does split into `o`,`k` (period is a separator, not stripped), and I'd miscounted `d d d` as 2 — which incidentally produced a better test, since the `n=2` cut now lands exactly on a c/d tie and exercises the alphabetical tie-break.
+- One deliberate edge of the fix: inputs like `don.t` used to become the pseudo-word `dont` under the old `topWords`; they now tokenize as `don`, `t`, matching `wordCount`. That's the drift being removed, not a regression.
+- No other callers exist in the repo, so the `stats.ts` export surface (`wordCount`, `topWords`) is unchanged and nothing else needed updating.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 104270 tokens
+
+main: done
+  bun run test passed
+  merged: 3ae7e52 Merge branch 'extract-tokenize'
+  this job: 104k tokens, 0.4¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"3ae7e52 Merge branch 'extract-tokenize'","cost":"this job: 104k tokens, 0.4¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 13¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":39236,"outputTokens":4362,"cacheReadTokens":60672,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,63 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current && bun --ver…)
+coder · git-log()
+coder · bash(git checkout -b feat/env-config 2>&1 | head -20)
+coder · write(import type { Config } from './config.ts'  /** The environme…)
+coder · read(src/env.ts)
+coder · edit(/** The defaults, with whatever the file overrides on top. *…)
+coder · edit(import { type Config, DEFAULTS, merge, validate } from './co…)
+coder · bash(git add src/env.ts src/config.ts src/index.ts && git commit …)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/env.ts)
+coder · write(import { expect, test } from 'bun:test' import { validate } …)
+coder · write(import { expect, test } from 'bun:test' import { fromEnv } f…)
+coder · read(src/index.test.ts)
+coder · edit(test('the file overrides the defaults', () => {   expect(res…)
+coder · bash(bun test 2>&1)
+coder · bash(bun test 2>&1; echo "---"; bunx --bun tsc --noEmit 2>&1 | he…)
+coder · bash(bunx --bun tsc --noEmit --strict --target esnext --module no…)
+coder · bash(git add src/config.test.ts src/env.test.ts src/index.test.ts…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 85a8cde Merge branch 'feat/env-config'
+coder › Done on branch `feat/env-config` (2 commits on top of `c708006`).
+
+What changed:
+- New `src/env.ts`: `fromEnv(env, prefix='APP_'): Partial<Config>` reads `APP_PORT/APP_HOST/APP_DEBUG/APP_NAME`. Absent or `''` left out. Port via `Number()` (throws `TypeError` naming `APP_PORT` when not finite), debug maps `true/1/yes` → true and `false/0/no` → false case-insensitively (throws `TypeError` naming `APP_DEBUG` otherwise), host/name stay strings. Unknown vars ignored, custom prefix supported.
+- `src/config.ts`: added `validate(config): Config` — returns config, throws `TypeError` naming the field when port isn't an integer 1–65535 or host/name is empty.
+- `src/index.ts`: `resolveConfig(file = {}, env = process.env)` = `validate(merge(merge(DEFAULTS, file), fromEnv(env)))` — file over defaults, env over both, then validate.
+- Tests: new `src/env.test.ts` (absent/empty, parsing/types, debug variants, custom prefix, error cases), new `src/config.test.ts` (valid passthrough, bad ports incl. 0/65536/1.5/NaN, empty host/name), extended `src/index.test.ts` (env-over-file layering, validated output, env parse error propagates).
+
+Decisions the plan didn't say:
+- `fromEnv` accepts fractional/hex/whitespace-padded numbers (e.g. `"80.5"`); range/integer enforcement is left to `validate`, since the spec only asks `fromEnv` to reject non-numbers.
+- Debug values are trimmed then lowercased before matching.
+- `validate` checks `=== ''` for host/name only (types already guarantee strings).
+- Existing `index.test.ts` cases now pass `{}` as env explicitly so they don't depend on ambient `process.env`.
+
+Checks:
+- `bun test`: all pass —
+```
+bun test v1.3.14 (0d9b296a)
+ 11 pass
+ 0 fail
+ 47 expect() calls
+Ran 11 tests across 3 files. [17.00ms]
+```
+- `tsc --noEmit --strict` on the sources: no errors in new logic; only missing-module/name complaints for `bun:test` and `process` (no tsconfig/`@types/node` in this repo — pre-existing setup, same as before the change).
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 161006 tokens
+
+main: done
+  bun run test passed
+  merged: 85a8cde Merge branch 'feat/env-config'
+  this job: 161k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 25¢, on gpt-5 ≈ 23¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"85a8cde Merge branch 'feat/env-config'","cost":"this job: 161k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 25¢, on gpt-5 ≈ 23¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":10978,"outputTokens":19753,"cacheReadTokens":130275,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,94 @@
++ architect on meta/muse-spark-1.3-contributor
++ coder on deepseek/deepseek-v4-flash
+  architect    meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+  coder        deepseek/deepseek-v4-flash 0 turns, 0 tokens
+
+architect · read(src/csv.ts)
+architect · glob(.)
+architect · glob(.)
+architect · read(src/csv.test.ts)
+architect · read(package.json)
+architect · agent_send(Implement CSV formula-injection fix.  Files to touch: 1. src…)
+architect → coder Implement CSV formula-injection fix.  Files to touch: 1. src/csv.ts — update `field(cell: Cell)`:    - If `typeof cell =…
+architect › Plan sent to coder; expecting implementation plus `bun test` passing.
+coder › Let me start by understanding the current code before making changes.
+coder · read(src/csv.ts)
+coder · read(src/csv.test.ts)
+coder › Now I have the full picture. Let me implement the changes.
+coder · write(export type Cell = string | number  const DANGEROUS_FIRST_CH…)
+coder · write(import { expect, test } from 'bun:test' import { toCsv } fro…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 14 tests pass. Here's what changed:
+
+**`src/csv.ts`** — Updated `field(cell)`:
+- Numbers (`typeof cell === 'number'`) return `String(cell)` directly, no quoting or prefixing, so `-1` stays `-1`.
+- Strings whose first character is one of `= + - @ \t \r` are defanged by returning `"'` + doubled-quote-escaped text + `"`. Example: `=HYPERLINK("x")` → `"'=HYPERLINK(""x"")"`.
+- The existing fallback (quote if `/[",\n]/` matches, double internal quotes) is unchanged.
+
+**`src/csv.test.ts`** — Added 11 tests covering:
+- Each dangerous prefix (`=`, `+`, `-`, `@`, `\t`, `\r`) on a string → single-quote-prefixed fully-quoted field.
+- Number fields (including negative `-1` and `0`) stay plain.
+- Existing quoting behavior (comma, embedded double-quote doubling, newline, safe strings unchanged).
+- Mixed row with dangerous and safe values.
+
+**Check output:**
+```
+bun test v1.3.14 (0d9b296a)
+ 14 pass
+ 0 fail
+ 15 expect() calls
+Ran 14 tests across 1 file. [14.00ms]
+```
+coder → architect All 14 tests pass. Here's what changed:  **`src/csv.ts`** — Updated `field(cell)`: - Numbers (`typeof cell === 'number'`…
+not done: work not committed (rc/csv.test.ts, src/csv.ts) — the leader is sent back
+architect › Job is done.
+
+What changed:
+- `src/csv.ts` `field()`: number fields written plainly; string fields starting with `= + - @ tab CR` written with single-quote prefix and whole field quoted with embedded `"` doubled; existing comma/quote/newline quoting unchanged.
+- `src/csv.test.ts`: 11 new tests for dangerous prefixes, plain numbers including negative, and existing quoting.
+
+Verified by: `bun test` — 14 pass, 0 fail.
+architect · agent_send(Harness reports uncommitted changes (rc/csv.test.ts, src/csv…)
+architect → coder Harness reports uncommitted changes (rc/csv.test.ts, src/csv.ts) on the job branch. Please commit them now: run git stat…
+architect › Commit requested from coder; awaiting confirmation with clean `git status` and `bun test` output.
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Committed and verified.
+
+**Commit:** `b6678e3` — "Defang formula-injection prefixes in CSV output" (2 files changed, 62 insertions, 1 deletion).
+
+**Git status:** clean — `nothing to commit, working tree clean` on branch `work/main`.
+
+**Test output:**
+```
+bun test v1.3.14 (0d9b296a)
+ 14 pass
+ 0 fail
+ 15 expect() calls
+Ran 14 tests across 1 file. [12.00ms]
+```
+
+No merge, no reset/push --force performed.
+coder → architect Committed and verified.  **Commit:** `b6678e3` — "Defang formula-injection prefixes in CSV output" (2 files changed, 62 …
+verified: bun run test passes on work/main
+merged work/main into the repository: 5d18e1e Merge branch 'work/main'
+architect › Job is done.
+
+What changed (commit `b6678e3` "Defang formula-injection prefixes in CSV output", 2 files, working tree clean on `work/main`):
+- `src/csv.ts` `field()`: number fields written plainly; string fields starting with `= + - @ tab CR` written with single-quote prefix and whole field quoted with embedded `"` doubled; existing comma/quote/newline quoting unchanged.
+- `src/csv.test.ts`: new tests for dangerous prefixes, plain numbers including negative, and existing quoting.
+
+Verified by: `bun test` — 14 pass, 0 fail.
+
+  architect    meta/muse-spark-1.3-contributor 4 turns, 32446 tokens
+  coder        deepseek/deepseek-v4-flash 2 turns, 51639 tokens
+
+main: done
+  bun run test passed
+  merged: 5d18e1e Merge branch 'work/main'
+  sent back once
+  this job: 84k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢
+{"jobs":[{"task":"main","failures":1,"sentBack":1,"done":true,"verified":"bun run test","merged":"5d18e1e Merge branch 'work/main'","cost":"this job: 84k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 10¢, on gpt-5 ≈ 8¢"}],"agents":[{"id":"architect","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":4735,"outputTokens":2871,"cacheReadTokens":24840,"unstatedTurns":4},"turns":4},{"id":"coder","model":"deepseek/deepseek-v4-flash","task":"main","usage":{"inputTokens":16246,"outputTokens":2007,"cacheReadTokens":33386,"unstatedTurns":2},"turns":2}],"kept":[],"exitCode":0}
+
+--- stderr ---

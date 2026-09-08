@@ -1,0 +1,45 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · bash(ls; cat package.json 2>/dev/null; ls src test tests 2>/dev/n…)
+coder · error: command failed with exit code 1 package.json src {   "name": "debounce",   "type": "module",   "private": true,   "scrip…
+coder · read(src/debounce.test.ts)
+coder · read(src/debounce.ts)
+coder · write(src/debounce.ts)
+coder · write(src/debounce.test.ts)
+coder › Let me simplify the fake timers helper before running:
+coder · edit(src/debounce.test.ts)
+coder · edit(src/debounce.test.ts)
+coder · bash(bun test)
+coder · bash(git checkout -b debounce && git add src/debounce.ts src/debo…)
+verified: bun run test passes on work/main
+merged work/main into the repository: ea419a2 Merge branch 'debounce'
+coder › Done, on branch `debounce`, commit `d9243cd`.
+
+**Implementation** (`src/debounce.ts`, types were already in place):
+- `ms < 0` throws a `RangeError` up front; `ms: 0` is allowed.
+- The debounced function stores the latest args, clears any prior timer, and schedules `fn(...args)` via the injected `timers.setTimeout`.
+- `cancel()` clears the timer and drops the pending args; safe to call with nothing pending.
+- `flush()` clears the timer and runs the pending call immediately; a no-op if nothing is pending. After either, the debounced function accepts new calls.
+
+**Tests** (`src/debounce.test.ts`, 9 tests): timing via a small fake-timers helper with a controllable clock (advance-by-ms), covering latest-args-only delivery, timer reset, exactly-one run per burst, cancel, flush, re-use after cancel/flush, the `RangeError` (and that 0 is fine), and one integration test with the real default timers via `Bun.sleep`.
+
+**Checks** — `bun test`:
+```
+ 9 pass
+ 0 fail
+ 17 expect() calls
+Ran 9 tests across 1 file. (37.00ms)
+```
+
+Nothing surprising: no typecheck/lint script exists in the package (only `bun test`), so that's all the project's own checks.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 49105 tokens
+
+main: done
+  bun run test passed
+  merged: ea419a2 Merge branch 'debounce'
+  this job: 49k tokens, 0.1¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"ea419a2 Merge branch 'debounce'","cost":"this job: 49k tokens, 0.1¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 4¢, on gpt-5 ≈ 3¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":2971,"outputTokens":2294,"cacheReadTokens":43840,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

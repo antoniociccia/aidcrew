@@ -1,0 +1,91 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · glob(**/*.{json,ts,md})
+coder · tree()
+coder · read(src/wrap.ts)
+coder · read(package.json)
+coder · read(.aidcrew/agents/coder.md)
+coder · bash(git status --porcelain && git branch --show-current && git l…)
+coder › Clean slate: `work/main`, one stub file, `bun test` as the project's check. I'll branch, implement, add tests, and run them.
+coder · bash(git checkout -b feat/wrap)
+coder · write(/** The text in lines of at most width characters. */ export…)
+coder · write(import { describe, expect, test } from "bun:test"  import { …)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/wrap.test.ts: 24 |       } 25 |       for (let rest = w…
+coder › Two real bugs, both in `wrap.ts` — my tests caught them as intended:
+
+1. `rest` was scoped to the `for` header, invisible after the loop.
+2. A blank-line run longer than two leaves a middle paragraph of stray `\n`s; a paragraph with no words must wrap to `""`, not an empty `join`.
+coder · edit(for (let rest = word; rest.length > width; ) {         lines…)
+coder · error: oldString and newString are identical: nothing to do
+coder · edit(const words = paragraph.split(/\s+/).filter((word) => word !…)
+coder · edit(let rest = word       while (rest.length > width) {         …)
+coder · edit(if (line !== "") {     lines.push(line)   }    return lines.…)
+coder · read(src/wrap.ts)
+coder › Small tidy while I'm here: the word list is now computed twice.
+coder · edit(for (const word of words) {)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/wrap.test.ts: 33 |   test("fills the line before a long…
+coder › The long-word bug is fixed. The paragraph failures are mine, both about blank-line runs — and the diff tells the story: `split("\n\n")` consumes the separator, so a *run* of blank lines yields consecutive empty parts, each of which re-adds a `\n\n` on join. Empty parts must be dropped; the join itself provides the one blank line. (My test 38 expectation was also wrong — "three" is 5 chars and must be split at width 3; I'll use short words there.)
+coder · edit(return text     .split("\n\n")     .map((paragraph) => wrapP…)
+coder · edit(test("keeps one blank line between paragraphs", () => {     …)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/wrap.test.ts: 33 |   test("fills the line before a long…
+coder › My rewritten expectation was sloppy twice over: I dropped the `\n\n` (there *is* a blank line between paragraphs) and missed that `"c d"` is 3 characters, which fits on one line at width 3. The implementation's `"a b\n\nc d"` is correct.
+coder · edit(test("keeps one blank line between paragraphs", () => {     …)
+coder · bash(bun test 2>&1)
+coder › All green. Let me also try a typecheck, in case TypeScript is available, and then commit.
+coder · bash(bunx --yes tsc --noEmit src/wrap.ts 2>&1 | head -20; echo "t…)
+coder › Typecheck clean too. Committing in two commits: implementation, then tests.
+coder · read(src/wrap.ts)
+coder · bash(git diff --stat)
+coder · bash(git add src/wrap.ts && git commit -m "implement wrap: break …)
+coder · bash(bun test 2>&1 | tail -5)
+verified: bun run test passes on work/main
+merged work/main into the repository: 77fdab3 Merge branch 'feat/wrap'
+coder › Done, on branch `feat/wrap` (two commits, working tree clean).
+
+**What I changed**
+
+`src/wrap.ts` — implemented `wrap(text, width)`:
+- `width < 1` throws `RangeError` up front.
+- Input is split on `"\n\n"` into paragraphs; each is word-wrapped independently, then rejoined with `"\n\n"`, so exactly one blank line separates paragraphs. Empty paragraphs are dropped, which collapses runs of blank lines to one.
+- Within a paragraph, words come from `split(/\s+/)` with empties filtered, so runs of spaces (and newlines inside a paragraph) count as one separator. Leading/trailing spaces vanish.
+- Greedy line filling: a word is appended when `line.length + 1 + word.length <= width`, otherwise the line is flushed. Lines never end in a space because words are joined with a single `"`"` only when a space fits.
+- A word longer than `width` flushes the current line and is sliced into `width`-character chunks; the final partial chunk stays on the last line and can absorb following words if they fit.
+- Empty input (or an all-blank input) returns `""`.
+
+`src/wrap.test.ts` — 16 tests in `bun test` style: greedy filling, space runs, long-word splitting, paragraphs and blank-line runs, trailing-space and width-cap invariants over several widths, idempotence, empty/blank input, `RangeError` cases.
+
+**Checks, exact output**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 16 pass
+ 0 fail
+ 279 expect() calls
+Ran 16 tests across 1 file. [16.00ms]
+```
+
+Typecheck: `bunx tsc --noEmit src/wrap.ts` exited 0, no output (there is no tsconfig or lint script in the project; `bun test` is the only check in `package.json`).
+
+**Things the task didn't specify, and what I decided**
+
+- A paragraph is delimited only by two newlines; single newlines inside a paragraph are treated as word separators (space runs count as one, per the spec).
+- Runs of 2+ blank lines, and paragraphs containing only spaces, collapse to a single blank line in the output.
+- Words are split only where they don't fit — never at hyphens — and split long words leave no filler.
+- Blank-line normalization means wrapping can shrink runs of blank lines; it is otherwise idempotent (tested).
+
+**Test failures I hit along the way, all fixed**: a `let rest` scoped inside the `for` header (ReferenceError after the loop — rewritten as `while`), empty paragraphs re-materializing as blank lines on join (fixed with the `filter`), and two wrong expectations in my own tests: I wrote `"three four"` in a width-3 case without splitting it, then dropped the required `\n\n` when correcting it. The final expectation `"a b\n\nc d"` matches the spec's one-blank-line rule.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 217404 tokens
+
+main: done
+  bun run test passed
+  merged: 77fdab3 Merge branch 'feat/wrap'
+  this job: 217k tokens, 0.9¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 31¢, on gpt-5 ≈ 29¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"77fdab3 Merge branch 'feat/wrap'","cost":"this job: 217k tokens, 0.9¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 31¢, on gpt-5 ≈ 29¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":15795,"outputTokens":24713,"cacheReadTokens":176896,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,49 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/wrap.ts)
+coder · tree(.)
+coder · read(package.json)
+coder · bash(git status --short && git branch --show-current; bun --versi…)
+coder · bash(git checkout -b work/wrap 2>&1 | head -5; ls src/)
+coder · write(/** The text in lines of at most width characters. */ export…)
+coder · write(import { describe, expect, test } from 'bun:test' import { w…)
+coder · bash(bun test 2>&1 | tail -20)
+coder · bash(git add src/wrap.ts && git commit -m "Implement wrap(text, w…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 212c3bc Merge branch 'work/wrap'
+coder › Implemented `wrap(text, width)` on branch `work/wrap`.
+
+What changed:
+- `src/wrap.ts`: replaced the `not implemented` stub with a greedy word-wrap. Paragraphs are split on blank lines, words on `/\s+/` (runs of spaces/tabs collapse), lines packed to at most `width` chars breaking at spaces, over-long words chunked across lines, paragraphs joined with one blank line, and `width < 1` throws `RangeError`.
+- `src/wrap.test.ts` (new): 7 tests covering line length/space breaks, space-run collapsing, long-word splitting, paragraph separation/collapsing to one blank line, no trailing spaces, `RangeError` on `width < 1`, empty/blank input.
+
+Checks — `bun test`:
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 19 expect() calls
+Ran 7 tests across 1 file. [20.00ms]
+```
+
+Decisions the request did not spell out:
+- Blank line = empty or whitespace-only; runs of blank lines collapse to one separator; leading/trailing blank lines are dropped (so `""` / `"\n\n"` return `""`).
+- Input split on `/\r?\n/` so CRLF works; within a paragraph newlines act as a single space.
+- `width` is floored (`5.9` behaves as `5`); the `RangeError` check is `!(width >= 1)`, so `NaN` also throws.
+- A split long word's last chunk stays on the current line, so a following short word can join it if it fits (e.g. `wrap("hi abcdefgh bye", 3)` → `"hi\nabc\ndef\ngh\nbye"`).
+
+Commits:
+- `27ba628 Implement wrap(text, width) in src/wrap.ts`
+- `6ceb8f0 Add tests for wrap`
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 59690 tokens
+
+main: done
+  bun run test passed
+  merged: 212c3bc Merge branch 'work/wrap'
+  this job: 60k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 15¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"212c3bc Merge branch 'work/wrap'","cost":"this job: 60k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 15¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":2702,"outputTokens":13987,"cacheReadTokens":43001,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

@@ -1,0 +1,74 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · tree()
+coder · read(src/cli.ts)
+coder · read(src/cli.test.ts)
+coder · json(package.json)
+coder · json(scripts)
+coder › A tiny Bun project. I'll add `src/csv.ts` with the parser, wire `--json` into the CLI, then tests. Let me check the git state first.
+coder · bash(git status --porcelain && git branch --show-current)
+coder › Clean tree on `work/main`. The plan: new `src/csv.ts` with the parser, `--json` branch in `run()`, tests for both.
+coder · write(/** Parse CSV text into rows of fields. Lines may end in \r\…)
+coder › Now the CLI:
+coder · edit(/** The csvtool command line: reads the input, writes the re…)
+coder · edit(import { run } from './cli.ts' import { parseCsv } from './c…)
+coder · edit(test('anything else is usage', () => {   expect(run([], '').…)
+coder › Now parser tests of its own, since the point of the separate module is testing it in isolation:
+coder · write(import { expect, test } from 'bun:test' import { parseCsv } …)
+coder · bash(bun test 2>&1)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)  src/cli.test.ts:  7 |   if (args.includes('--count')) {  8 …
+coder › The import went into the test file but not `cli.ts` itself — the failure says exactly that. Fixing:
+coder · edit(/** What a run of csvtool prints, and how it exits. */ impor…)
+coder › The import landed under the module doc comment — imports belong above it. Let me check and tidy:
+coder · read(src/cli.ts)
+coder · edit(import { parseCsv } from './csv.ts'  /** What a run of csvto…)
+coder · bash(bun test 2>&1)
+coder › All green. A quick end-to-end check of the real output shape through `run`, since the tests assert exact strings:
+coder · bash(bun -e 'import { run } from "./src/cli.ts"; console.log(JSON…)
+coder · bash(bunx tsc --noEmit 2>&1 || true)
+coder › No tsconfig in this project; the only script is `bun test`. Still, a typecheck of the sources is cheap:
+coder · bash(bunx tsc --noEmit --strict --target esnext --module esnext s…)
+coder · bash(bunx tsc --noEmit --strict --target esnext --module esnext -…)
+coder › Typecheck passes under `--strict`. Now commit in two logical steps, then a final test run:
+coder · bash(git add src/csv.ts src/csv.test.ts && git commit -q -m "add …)
+verified: bun run test passes on work/main
+merged work/main into the repository: e95010d Merge branch 'work/main'
+coder › Done. Everything is on `work/main` in two commits.
+
+**What changed**
+
+- **`src/csv.ts` (new)** — `parseCsv(text: string): string[][]`. Splits on `\n`, strips one trailing `\r` per line (so `\r\n` works), drops the final empty line from a trailing newline, and skips interior blank lines (they carry no fields). Per line: a field beginning with `"` is quoted, commas inside are literal, and `""` inside a quoted field is one `"`. An unclosed quote runs to end of line rather than erroring.
+- **`src/cli.ts`** — added the `--json` branch: parses, returns `[]\n` for no rows, checks every data row against the header length, then emits `JSON.stringify` of objects keyed by header names + `\n`. All values are strings because they come straight out of `parseCsv`. Usage line now reads `usage: csvtool --upper | --count | --json`.
+- **`src/csv.test.ts` (new)** — 9 parser tests: comma splitting, trailing-newline vs. empty fields/lines, `\r\n`, empty input, quoted commas, doubled quotes, quote closing against a comma, unclosed quote.
+- **`src/cli.test.ts`** — 7 added tests: basic rows, empty input, header-only, string values with quotes/commas, `\r\n`, wrong field count, and the usage line mentioning `--json`.
+
+**Checks**
+
+`bun test` (the project's only script):
+```
+ 17 pass
+ 0 fail
+ 19 expect() calls
+Ran 17 tests across 2 files. [10.00ms]
+```
+
+There's no tsconfig, so I also typechecked the two source files directly:
+`bunx tsc --noEmit --strict --module esnext --allowImportingTsExtensions src/cli.ts src/csv.ts` — exit 0.
+
+**Decisions beyond the brief**
+
+- Bad-row message format wasn't specified; I used `line 2: expected 2 fields, got 3` — the 1-based input line number, counted with the header as line 1 (so a data row at index 0 of `data` is line 2). Swap the format string in `cli.ts` if you want different wording.
+- Duplicate header names silently collapse via `Object.fromEntries` (last wins); JSON keys can't collide, so nothing else was possible without renaming.
+- Header-only and empty input both print `[]\n` with code 0, since "one per data row" is zero rows in both cases.
+- My first `bun test` run failed with `ReferenceError: parseCsv is not defined` — I'd put the import only in the test file, not `cli.ts`. Fixed the cause; also moved the import above the module doc comment where imports conventionally sit.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 145313 tokens
+
+main: done
+  bun run test passed
+  merged: e95010d Merge branch 'work/main'
+  this job: 145k tokens, 0.4¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 12¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e95010d Merge branch 'work/main'","cost":"this job: 145k tokens, 0.4¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 14¢, on gpt-5 ≈ 12¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":17777,"outputTokens":8112,"cacheReadTokens":119424,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

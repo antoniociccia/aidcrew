@@ -1,0 +1,67 @@
++ architect on meta/muse-spark-1.3-contributor
++ coder on deepseek/deepseek-v4-flash
+  architect    meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+  coder        deepseek/deepseek-v4-flash 0 turns, 0 tokens
+
+architect · read(src/limiter.ts)
+architect · read(package.json)
+architect · glob(.)
+architect · glob(.)
+architect · read(src/limiter.test.ts)
+architect · agent_send(Implement token-bucket RateLimiter in src/limiter.ts with te…)
+architect → coder Implement token-bucket RateLimiter in src/limiter.ts with tests in src/limiter.test.ts.  Done state for src/limiter.ts —…
+architect › Plan sent to coder for token-bucket RateLimiter in `src/limiter.ts` plus tests; awaiting `bun test` pass report.
+coder · read(src/limiter.ts)
+coder · read(src/limiter.test.ts)
+coder · json(package.json)
+coder › Now I'll implement the `RateLimiter` class in `src/limiter.ts`.
+coder · write(src/limiter.ts)
+coder › Now write the test file with all the required tests:
+coder · write(import { expect, test } from 'bun:test' import { RateLimiter…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 7 tests pass. Let me commit the changes
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Here's what I changed:
+
+**`src/limiter.ts`** — Implemented `RateLimiter` with:
+- Private `tokens` and `last` state, initialized in constructor.
+- Private `refill()` that computes elapsed seconds from `now()`, clamps at 0, adds `elapsed * refillPerSecond`, caps at `capacity`.
+- `get available` calls `refill()` and returns `tokens`.
+- `tryTake(n)`: returns `true` for `n <= 0` (taking nothing); calls `refill()` first; returns `false` if `n > capacity` (without consuming); otherwise subtracts `n` if `tokens >= n`.
+
+**`src/limiter.test.ts`** — Added 6 tests beyond the existing "starts full":
+1. Starts full with capacity burst then refuses
+2. `tryTake(n)` takes n, partial failure takes nothing
+3. `n > capacity` always refused even after long idle
+4. Continuous fractional refill
+5. Refill caps at capacity
+6. Available refills without taking
+
+**`bun test` output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 7 pass
+ 0 fail
+ 18 expect() calls
+Ran 7 tests across 1 file. [14.00ms]
+```
+coder → architect Done. Here's what I changed:  **`src/limiter.ts`** — Implemented `RateLimiter` with: - Private `tokens` and `last` state…
+verified: bun run test passes on work/main
+merged work/main into the repository: 336af00 Merge branch 'work/main'
+architect › Job is done.
+
+Changed `src/limiter.ts` to a token-bucket RateLimiter (starts full, continuous refill capped at capacity, `tryTake(n)` with `n > capacity` always refused, fractional `available`), and extended `src/limiter.test.ts` with burst/refill/cap/fractional tests.
+
+Verified by coder with `bun test`: 7 pass, 0 fail.
+
+  architect    meta/muse-spark-1.3-contributor 2 turns, 20439 tokens
+  coder        deepseek/deepseek-v4-flash 1 turns, 38729 tokens
+
+main: done
+  bun run test passed
+  merged: 336af00 Merge branch 'work/main'
+  this job: 59k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"336af00 Merge branch 'work/main'","cost":"this job: 59k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"architect","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":4133,"outputTokens":2301,"cacheReadTokens":14005,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek/deepseek-v4-flash","task":"main","usage":{"inputTokens":7515,"outputTokens":2030,"cacheReadTokens":29184,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

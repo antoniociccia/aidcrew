@@ -1,0 +1,67 @@
++ architect on meta/muse-spark-1.3-contributor
++ coder on deepseek/deepseek-v4-flash
+  architect    meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+  coder        deepseek/deepseek-v4-flash 0 turns, 0 tokens
+
+architect · read(src/key.ts)
+architect · read(package.json)
+architect · glob(**/*.test.*)
+architect · glob(src/*)
+architect · read(src/key.test.ts)
+architect · agent_send(Plan to fix stable cacheKey:  Files to touch: 1. src/key.ts …)
+architect → coder Plan to fix stable cacheKey:  Files to touch: 1. src/key.ts — replace JSON.stringify passthrough with stable serializati…
+architect › Plan sent to coder for stable cacheKey with sorted-keys serialization and tests; expecting back committed change plus passing `bun test` output.
+coder › Let me start by reading the current files to understand what's there.
+coder · read(src/key.ts)
+coder · read(src/key.test.ts)
+coder › Good. Now I'll implement the changes as specified.
+coder · write(src/key.ts)
+coder · write(src/key.test.ts)
+coder › Now run the tests:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 11 tests pass. Now commit:
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Committed on `work/main` as `d99ecb1`.
+
+**What changed:**
+
+- `src/key.ts` — kept `export function cacheKey(value: unknown): string`, added internal recursive `canonical()`:
+  - null/primitives return as-is (JSON.stringify handles NaN/±Infinity → null)
+  - objects with a working `toJSON` (Date) return untouched, so JSON.stringify calls `toJSON` → ISO string, invalid Date → null
+  - arrays recurse with `map(canonical)`, order preserved
+  - plain objects get a new object built from `Object.keys(value).sort()` at every depth; undefined/function/symbol values skipped (matching JSON.stringify's omission); `Object.keys` only, so symbol keys ignored
+  - `JSON.stringify(canonical(value))` as the return — top-level undefined/function yields `undefined`, exactly like before
+- `src/key.test.ts` — kept the existing test and added 10: key-order equality, nested order, arrays keep order (`!==`), array-of-objects reordered-keys equality, undefined omitted, function omitted, Date → ISO equality, `NaN` → `'null'`, `Infinity` → `'null'`, `{a:NaN}` equal to `{a:null}`
+
+**Check output (`bun test`):**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+ 11 pass
+ 0 fail
+ 11 expect() calls
+Ran 11 tests across 1 file. [10.00ms]
+```
+
+No merge, no extra files. Nothing decided that deviated from the plan.
+coder → architect Done. Committed on `work/main` as `d99ecb1`.  **What changed:**  - `src/key.ts` — kept `export function cacheKey(value: …
+verified: bun run test passes on work/main
+merged work/main into the repository: e03dcdf Merge branch 'work/main'
+architect › Job is done.
+
+What changed: `src/key.ts` now stable-serializes via recursive canonicalization (sorted object keys at every depth, arrays keep order, undefined/function/symbol omitted from objects, Date via toJSON to ISO, NaN/Infinity left for JSON to map to null) with `JSON.stringify(canonical(value))`; `src/key.test.ts` adds coverage for key-order equality, nested order, array order, undefined/function omission, Date ISO, and NaN/Infinity null.
+
+How verified: `bun test` — 11 pass, 0 fail.
+
+  architect    meta/muse-spark-1.3-contributor 2 turns, 21153 tokens
+  coder        deepseek/deepseek-v4-flash 1 turns, 38689 tokens
+
+main: done
+  bun run test passed
+  merged: e03dcdf Merge branch 'work/main'
+  this job: 60k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e03dcdf Merge branch 'work/main'","cost":"this job: 60k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 9¢, on gpt-5 ≈ 7¢"}],"agents":[{"id":"architect","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":4215,"outputTokens":3189,"cacheReadTokens":13749,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek/deepseek-v4-flash","task":"main","usage":{"inputTokens":11242,"outputTokens":1834,"cacheReadTokens":25613,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

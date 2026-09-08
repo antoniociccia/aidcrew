@@ -1,0 +1,69 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · glob(**/roman*)
+coder · tree()
+coder · read(src/roman.ts)
+coder · read(package.json)
+coder › A tiny Bun project with a stub `src/roman.ts`. Let me check git state, then implement.
+coder · bash(git status --porcelain && git branch --show-current && git l…)
+coder › Clean tree on `work/main`. I'll branch and implement.
+coder · bash(git checkout -b roman-numerals)
+coder · write(/**  * Roman numeral conversion.  *  * toRoman maps an integ…)
+coder › Now the tests. The project uses `bun test`, so I'll add `src/roman.test.ts` in that style.
+coder · write(import { describe, expect, test } from 'bun:test' import { f…)
+coder › Now run the project's checks: the test script, plus a typecheck since none is scripted.
+coder · bash(bun test)
+coder · error: command failed with exit code 1 bun test v1.3.14 (0d9b296a)   src/roman.test.ts:  8 |   try {  9 |     run() 10 |   } ca…
+coder · bash(bunx tsc --noEmit --strict src/roman.ts src/roman.test.ts)
+coder · error: command failed with exit code 2 src/roman.test.ts(1,40): error TS2307: Cannot find module 'bun:test' or its correspondin…
+coder › The tests caught a real bug: greedy longest-token matching alone accepts additive junk like `IIII` → 4, `VX` → 15, `IC` → 101. I need to validate against the canonical grammar first, then sum. Fixing `fromRoman`:
+coder · edit(/**  * The standard numeral grammar: exactly the canonical f…)
+coder › Rerun the tests:
+coder · bash(bun test)
+coder › All 6 tests pass, 12078 assertions. The tsc failure earlier was tooling noise — the repo has no tsconfig, so tsc ran with a default ES5 lib and couldn't find `bun:test` types. Let me verify my source file typechecks properly with explicit modern flags, and clean up a cryptic expression in the case-insensitivity test while I'm at it:
+coder · edit(test('reads numerals in any case', () => {     const cases: …)
+coder · bash(bunx --bun tsc --noEmit --strict --target es2022 --lib es202…)
+coder › Source typechecks clean under strict mode. The test file can't be checked by standalone tsc because the repo has no `bun:test` type declarations installed (no devDependencies at all) — it runs fine under the Bun runtime, which is the project's only configured check. Committing in two small commits:
+coder · bash(git add src/roman.ts && git commit -m "implement toRoman and…)
+coder · bash(bun test 2>&1)
+verified: bun run test passes on work/main
+merged work/main into the repository: 97a851c Merge branch 'roman-numerals'
+coder › Done. On branch `roman-numerals` (two commits: `97066e9` implementation, `6d1b94d` tests), working tree clean.
+
+## What changed
+
+**`src/roman.ts`**
+- `toRoman(n)`: greedy match against a descending value table `[1000 M, 900 CM, 500 D, 400 CD, 100 C, 90 XC, 50 L, 40 XL, 10 X, 9 IX, 5 V, 4 IV, 1 I]`, so the subtractive pairs come out naturally. Rejects non-integers and anything outside 1–3999 with a `RangeError` whose message includes the rejected value.
+- `fromRoman(text)`: validates against the canonical grammar `^(M{0,3})(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$` after uppercasing (so either case is accepted, and the empty string fails since it must match at least one symbol), then sums the tokens. Anything non-standard — `IIII`, `VX`, `IC`, `MMMM`, `ABC`, whitespace, etc. — throws a `SyntaxError` naming the input via `JSON.stringify` so empty/whitespace strings stay visible in the message.
+
+**`src/roman.test.ts`** (new, `bun:test`): canonical-value table (I, IV, IX, XLIV, CDXLIV, MCMXCIV, 3999 …); a full loop over 1–3999 asserting every output matches the grammar and round-trips; RangeError cases (`0, -1, 4000, 1e9, NaN, ±Infinity, 1.5`); case-insensitivity; SyntaxError cases including the ones you listed plus `IL`, `XM`, `VIV`, `DD`, `MCMC`, leading/trailing/embedded whitespace, and `Ⅻ`.
+
+## Checks
+
+`bun test` (the project's only configured script):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 6 pass
+ 0 fail
+ 12078 expect() calls
+Ran 6 tests across 1 file. [43.00ms]
+```
+
+## Decisions the task didn't specify
+
+- **Validation before summation in `fromRoman`, not instead of it.** My first cut was longest-token greedy matching alone; the tests immediately failed it because greedy matching silently *accepts* additive junk (`IIII` → 4, `VX` → 15, `IC` → 101) rather than rejecting it. The regex gate is what makes those a `SyntaxError`; the greedy sum then works unchanged because the grammar guarantees a token always matches.
+- **`SyntaxError` messages quote the input** (`not a standard Roman numeral: "IIII"`) so the empty string is still "named".
+- **Verification beyond the script:** `bunx tsc --noEmit --strict --target es2022 --lib es2022 src/roman.ts` passes clean. The test file can't be checked by standalone tsc — the repo has no tsconfig and no `bun:test` type declarations installed (zero dependencies), so that's a workspace limitation, not a code issue; the tests run green under the Bun runtime.
+- Cleaned up a cryptic arithmetic expression in the case test after the first run, replacing it with an explicit `(text, expected)` table.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 80888 tokens
+
+main: done
+  bun run test passed
+  merged: 97a851c Merge branch 'roman-numerals'
+  this job: 81k tokens, 0.5¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 18¢, on gpt-5 ≈ 16¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"97a851c Merge branch 'roman-numerals'","cost":"this job: 81k tokens, 0.5¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 18¢, on gpt-5 ≈ 16¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":17871,"outputTokens":13225,"cacheReadTokens":49792,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

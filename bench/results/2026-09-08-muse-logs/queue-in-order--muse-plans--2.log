@@ -1,0 +1,74 @@
++ architect on meta/muse-spark-1.3-contributor
++ coder on deepseek/deepseek-v4-flash
+  architect    meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+  coder        deepseek/deepseek-v4-flash 0 turns, 0 tokens
+
+architect · read(src/queue.ts)
+architect · agent_send(Plan to fix Queue in src/queue.ts (job: sequential in-order …)
+architect → coder Plan to fix Queue in src/queue.ts (job: sequential in-order execution):  Files to touch: 1. src/queue.ts — fix implement…
+architect › Plan sent to coder. Expecting back a report with files changed, tests added, and passing check output.
+coder · read(src/queue.ts)
+coder · glob(**/*queue*test*)
+coder · glob(**/*queue*spec*)
+coder · read(src/queue.test.ts)
+coder › Now let me check what test runner and package manager are in use:
+coder · json(package.json)
+coder · json(package.json)
+coder · error: dependencies does not exist: the top level has no key "dependencies". Keys there: name, type, private, scripts
+coder › Now I'll implement the new Queue and comprehensive
+coder · write(src/queue.ts)
+coder · write(src/queue.test.ts)
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › All 10 tests pass. Let me commit the
+coder · bash(cd /private/var/folders/n0/s619yhq953bdp1k85z3bhc6w0000gn/T/…)
+coder › Done. Here is what changed:
+
+**`src/queue.ts`** — Rewrote the `Queue` class:
+- Replaced `#pending: Promise<void>[]` with a private promise chain `#tail` initialised to `Promise.resolve()`.
+- `push(job)` is synchronous, returns nothing. Inside it defines an `async run` that `await job()` and catches both sync throws and async rejections, normalising non-`Error` causes via `new Error(String(cause))` and pushing them to `errors`. The chain is extended with `this.#tail = this.#tail.then(run, run)` so a prior rejection cannot break the chain.
+- `drain()` snapshots `this.#tail` in a loop: `await t; if (t === this.#tail) return;` — this catches jobs pushed while draining. Empty queue resolves immediately.
+
+**`src/queue.test.ts`** (extended from 1 test to 10 tests):
+- `drain waits for every job` (existing, unchanged)
+- `sequential push order` — defers the first job, asserts second does not start until first finishes
+- `push is not synchronous` — asserts flag not set immediately after push
+- `push returns undefined and is synchronous`
+- `error isolation: rejecting job` — middle rejection does not block later job
+- `error isolation: synchronously throwing job` — sync throw handled the same
+- `non-Error rejection is normalized` — string rejection becomes an Error
+- `drain includes jobs pushed while draining` — job pushed from inside another during drain is waited on
+- `drain empty queue resolves immediately`
+- `drain works when called multiple times`
+
+**Check output:**
+```
+bun test v1.3.14 (0d9b296a)
+
+ 10 pass
+ 0 fail
+ 17 expect() calls
+Ran 10 tests across 1 file. [38.00ms]
+```
+
+All 10 tests pass, committed as `98fc9e1` on `work/main`.
+coder → architect Done. Here is what changed:  **`src/queue.ts`** — Rewrote the `Queue` class: - Replaced `#pending: Promise<void>[]` with…
+verified: bun run test passes on work/main
+merged work/main into the repository: 31786d8 Merge branch 'work/main'
+architect › Job is done.
+
+What changed:
+- `src/queue.ts`: replaced eager `#pending` array with a `#tail` promise chain (`then(run, run)`), so jobs start only after the prior finishes in push order, never synchronously inside `push`; throwing jobs are normalized and recorded in `errors` without breaking the chain; `drain()` loops on tail snapshots to include jobs pushed while draining. `push` stays synchronous returning nothing.
+- `src/queue.test.ts`: extended to 10 tests covering sequential order, non-synchronous start, sync return, rejection/sync-throw isolation, non-Error normalization, drain-including-late-pushes, empty and repeated drain.
+
+How verified: `bun test` — 10 pass, 0 fail, 17 expect() calls across 1 file, committed as `98fc9e1` on `work/main`.
+
+  architect    meta/muse-spark-1.3-contributor 2 turns, 15297 tokens
+  coder        deepseek/deepseek-v4-flash 1 turns, 51506 tokens
+
+main: done
+  bun run test passed
+  merged: 31786d8 Merge branch 'work/main'
+  this job: 67k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"31786d8 Merge branch 'work/main'","cost":"this job: 67k tokens on meta/muse-spark-1.3-contributor + deepseek/deepseek-v4-flash — on claude-sonnet-5 ≈ 11¢, on gpt-5 ≈ 9¢"}],"agents":[{"id":"architect","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":7161,"outputTokens":3430,"cacheReadTokens":4706,"unstatedTurns":2},"turns":2},{"id":"coder","model":"deepseek/deepseek-v4-flash","task":"main","usage":{"inputTokens":14130,"outputTokens":2560,"cacheReadTokens":34816,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

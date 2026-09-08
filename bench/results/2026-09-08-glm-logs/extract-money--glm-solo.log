@@ -1,0 +1,48 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · read(src/invoice.ts)
+coder · read(src/receipt.ts)
+coder · write(src/money.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · edit(src/invoice.ts)
+coder · edit(src/receipt.ts)
+coder · glob(**/*.test.ts)
+coder · read(src/receipt.test.ts)
+coder · write(src/money.test.ts)
+coder · edit(src/receipt.test.ts)
+coder · read(src/invoice.test.ts)
+coder · edit(src/invoice.test.ts)
+coder · bash(bun test 2>&1; bunx tsc --noEmit 2>&1 | head -20)
+coder · bash(bunx tsc --noEmit --strict --module nodenext --moduleResolut…)
+coder · glob(tsconfig.json)
+verified: bun run test passes on work/main
+merged work/main into the repository: e03b4e5 Merge branch 'work/main'
+coder › Done. Committed as `ca62715 extract formatMoney into src/money.ts, fix receipt formatting` (on the current branch — there was no existing branch plan given, so it's committed where HEAD was).
+
+What changed:
+- **New `src/money.ts`** exporting `formatMoney(cents, currency)` with the invoice's behaviour: comma-grouped thousands, two decimals, leading `-` for negatives, space then currency code.
+- **`src/invoice.ts`**: `formatInvoiceAmount` is now a one-line wrapper around `formatMoney`; renders identically.
+- **`src/receipt.ts`**: `formatReceiptAmount` is now the same wrapper — this fixes the bug (previously `-1250` rendered as `-13.-50 EUR`, now `-12.50 EUR`) and restores the thousands separator the receipt had dropped.
+- **Tests added**: `src/money.test.ts` (positive, thousands grouping, negative, cent padding), plus negative-amount cases in `invoice.test.ts` and `receipt.test.ts`. Existing tests untouched and still pass.
+
+Checks — `bun test`:
+```
+ 8 pass
+ 0 fail
+ 8 expect() calls
+Ran 8 tests across 3 files. [15.00ms]
+```
+
+One note: the repo has no `tsconfig.json`, so a standalone `tsc` run with my ad-hoc flags reported only environmental complaints (no `bun:test` types, `.ts` import extensions), not real errors — the existing source files trigger the same complaints, so this matches the project's status quo.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 76035 tokens
+
+main: done
+  bun run test passed
+  merged: e03b4e5 Merge branch 'work/main'
+  this job: 76k tokens, 0.3¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 6¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"e03b4e5 Merge branch 'work/main'","cost":"this job: 76k tokens, 0.3¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 8¢, on gpt-5 ≈ 6¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":28426,"outputTokens":1785,"cacheReadTokens":45824,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

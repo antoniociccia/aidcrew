@@ -1,0 +1,60 @@
++ coder on z-ai/glm-5.3-flash
+  coder        z-ai/glm-5.3-flash   0 turns, 0 tokens
+
+coder · read(src/range.ts)
+coder · glob(**/*.test.ts)
+coder · read(src/range.test.ts)
+coder › Now I'll check the project setup before changing anything.
+coder · json(package.json)
+coder · json(scripts)
+coder · bash(git status --short --branch)
+coder · git-log()
+coder › The current `overlaps` uses `<=` on both sides (so touching counts as overlap) and `Date.parse`'s `NaN` propagates silently into comparisons, which always come out `false`. Let me fix both, plus the two new validations.
+coder · write(/** A span of time, as ISO 8601 strings. The end is exclusiv…)
+coder › Now the tests, covering every rule in the request:
+coder · write(import { expect, test } from 'bun:test' import { overlaps } …)
+coder › Now let me run the checks:
+coder · bash(bun test 2>&1)
+coder · glob({tsconfig.json,biome.json,.eslintrc*,eslint.config.*})
+coder › No tsconfig or lint config exists — `bun test` is the project's only check, and it passes. Committing:
+coder · bash(git add src/range.ts src/range.test.ts && git commit -m "fix…)
+verified: bun run test passes on work/main
+merged work/main into the repository: 398538f Merge branch 'work/main'
+coder › Done, on `work/main` as `fc3d6da`.
+
+**What changed**
+
+`src/range.ts`:
+- The overlap test is now `Math.max(aStart, bStart) < Math.min(aEnd, bEnd)`. The strict `<` makes touching ranges disjoint (end is exclusive) and makes a zero-length range — whose min and max meet — overlap nothing, including itself.
+- Added a `parseInstant` helper: an unparseable start or end throws `TypeError` with the label (`start of first range` … `end of second range`) and the offending value in the message, instead of silently answering `false` via `NaN`.
+- An end before its start throws `RangeError`, for either range.
+
+`src/range.test.ts` — 10 tests covering: the original shared-hour case, a range overlapping itself, touching ranges in both argument orders, equal starts, zero-length against itself and inside another range, ranges that touch *and* extend past each other (which must still overlap), both `TypeError` messages including the offending value, `RangeError` in both argument orders, and precedence — an unparseable end must raise `TypeError`, not the `RangeError` that its `NaN` would otherwise trigger.
+
+**Checks**
+
+```
+bun test v1.3.14 (0d9b296a)
+
+  10 pass
+  0 fail
+  16 expect() calls
+Ran 10 tests across 1 file. [18.00ms]
+```
+
+There is no tsconfig, lint config, or other script in the repo; `bun test` is the project's only check.
+
+**Decisions the request did not spell out**
+- Validation order: parsing happens first for all four bounds, then the inversion checks. So an unparseable value yields `TypeError` even though `NaN` would also look inverted; that precedence is pinned by the last test.
+- The `TypeError`/`RangeError` messages name which of the four bounds failed (e.g. `end of first range is before its start: … < …`), so failures are diagnosable without a debugger.
+- On the branch: there was no other branch in play, so I committed to `work/main` where the working tree already was.
+
+  coder        z-ai/glm-5.3-flash   1 turns, 65193 tokens
+
+main: done
+  bun run test passed
+  merged: 398538f Merge branch 'work/main'
+  this job: 65k tokens, 0.4¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"398538f Merge branch 'work/main'","cost":"this job: 65k tokens, 0.4¢ on z-ai/glm-5.3-flash — on claude-sonnet-5 ≈ 12¢, on gpt-5 ≈ 10¢"}],"agents":[{"id":"coder","model":"z-ai/glm-5.3-flash","task":"main","usage":{"inputTokens":21998,"outputTokens":6907,"cacheReadTokens":36288,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

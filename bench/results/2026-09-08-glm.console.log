@@ -1,0 +1,55 @@
+180 runs to go, 0 already in bench/results/2026-09-08-glm.json, budget $5
+-> roman-numerals on glm-solo (run 1)
+-> interval-merge on glm-solo (run 1)
+-> retry-backoff on glm-solo (run 1)
+-> csv-formula-injection on glm-solo (run 1)
+   interval-merge on glm-solo: passed, $0.002, 166s
+-> emitter-off-during-emit on glm-solo (run 1)
+   emitter-off-during-emit on glm-solo: passed, $0.001, 37s
+-> lower-bound on glm-solo (run 1)
+   csv-formula-injection on glm-solo: said done, failed, $0.003, 204s
+-> extract-money on glm-solo (run 1)
+   retry-backoff on glm-solo: passed, $0.004, 233s
+-> todo-done-command on glm-solo (run 1)
+   lower-bound on glm-solo: passed, $0.001, 36s
+-> query-string on glm-solo (run 1)
+   extract-money on glm-solo: passed, $0.003, 64s
+-> debounce on glm-solo (run 1)
+   debounce on glm-solo: passed, $0.001, 112s
+-> paginate-off-by-one on glm-solo (run 1)
+   paginate-off-by-one on glm-solo: passed, $0.002, 59s
+-> stable-cache-key on glm-solo (run 1)
+   roman-numerals on glm-solo: passed, $0.005, 444s
+-> lru-ttl-cache on glm-solo (run 1)
+   todo-done-command on glm-solo: passed, $0.006, 326s
+-> money-parse on glm-solo (run 1)
+   query-string on glm-solo: passed, $0.005, 353s
+-> slugify-unicode on glm-solo (run 1)
+   slugify-unicode on glm-solo: passed, $0.001, 71s
+-> word-wrap on glm-solo (run 1)
+   lru-ttl-cache on glm-solo: said done, failed, $0.002, 275s
+-> config-from-env on glm-solo (run 1)
+   money-parse on glm-solo: passed, $0.006, 804s
+-> csv-json-cli on glm-solo (run 1)
+   word-wrap on glm-solo: passed, $0.009, 796s
+-> markdown-toc on glm-solo (run 1)
+   stable-cache-key on glm-solo: passed, $0.007, 1096s
+-> queue-in-order on glm-solo (run 1)
+   csv-json-cli on glm-solo: passed, $0.004, 254s
+-> path-normalize on glm-solo (run 1)
+   markdown-toc on glm-solo: passed, $0.004, 251s
+-> deep-merge on glm-solo (run 1)
+   config-from-env on glm-solo: passed, $0.003, 1066s
+-> date-range-overlap on glm-solo (run 1)
+   path-normalize on glm-solo: passed, $0.003, 180s
+-> sliding-window-limit on glm-solo (run 1)
+   date-range-overlap on glm-solo: passed, $0.004, 228s
+-> token-bucket on glm-solo (run 1)
+   sliding-window-limit on glm-solo: passed, $0.003, 224s
+-> extract-tokenize on glm-solo (run 1)
+   token-bucket on glm-solo: passed, $0.003, 254s
+-> ini-parser on glm-solo (run 1)
+   extract-tokenize on glm-solo: passed, $0.004, 248s
+-> semver-compare on glm-solo (run 1)
+   queue-in-order on glm-solo: passed, $0.011, 771s
+-> route-match on glm-solo (run 1)

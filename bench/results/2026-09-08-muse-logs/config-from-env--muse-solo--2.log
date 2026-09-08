@@ -1,0 +1,54 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · tree(.)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · read(src/index.test.ts)
+coder · read(package.json)
+coder · bash(git status --short --branch && git log --oneline -5; bun --v…)
+coder · bash(git checkout -b work/env-config && ls -la src/)
+coder · write(import type { Config } from './config.ts'  const TRUE_VALUES…)
+coder · read(src/config.ts)
+coder · edit(/** Returns the config, or throws a TypeError naming the inv…)
+coder · read(src/config.ts)
+coder · edit(/** The defaults, with whatever the file overrides on top. *…)
+coder · read(src/config.ts)
+coder · read(src/index.ts)
+coder · write(import { type Config, DEFAULTS, merge, validate } from './co…)
+coder · write(import { expect, test } from 'bun:test' import { fromEnv } f…)
+coder · write(import { expect, test } from 'bun:test' import { DEFAULTS, v…)
+coder · read(src/index.test.ts)
+coder · write(import { expect, test } from 'bun:test' import { resolveConf…)
+coder · bash(git add src/env.ts src/env.test.ts src/config.ts src/config.…)
+coder · bash(git reset HEAD~1 && git status --short git add src/env.ts sr…)
+verified: bun run test passes on work/main
+merged work/main into the repository: c19fd01 Merge branch 'work/env-config'
+coder › Done on branch `work/env-config` (3 commits).
+
+What changed:
+- `src/env.ts` (new): `fromEnv(env, prefix='APP_'): Partial<Config>` reads `APP_PORT/APP_HOST/APP_DEBUG/APP_NAME`. Absent (`undefined`) or empty (`''`) left out; port via `Number()` (`NaN` → `TypeError("<KEY> must be a number")`); debug case-insensitive `true/1/yes` → true, `false/0/no` → false, else `TypeError("<KEY> must be a boolean")`; host/name as strings. Key names include the prefix, so a custom prefix is named too.
+- `src/config.ts`: added `validate(config): Config` returning the same object, else `TypeError` naming the field: port not an integer 1–65535, host empty, name empty.
+- `src/index.ts`: `resolveConfig(file = {}, env = process.env)` = `validate(merge(merge(DEFAULTS, file), fromEnv(env)))`, so file over defaults, env over both.
+- Tests: `src/env.test.ts` (read all four, absent/empty omitted, debug variants, custom prefix, both TypeErrors), `src/config.test.ts` (valid returns same ref, bad ports 0/-1/65536/1.5/NaN, empty host/name), extended `src/index.test.ts` (env beats file/defaults, invalid file or env throws).
+
+Decisions not in the plan: `fromEnv` accepts any numeric port (e.g. `1.5`) and leaves integer/range to `validate`; error messages are `"<VAR> must be a number/boolean"` and `"port must be an integer between 1 and 65535"`, `"host/name must not be empty"`; only exact `''` counts as empty (whitespace goes through normal parsing/validation).
+
+Checks (`bun test`, the project's only check):
+```
+bun test v1.3.14 (0d9b296a)
+12 pass
+0 fail
+31 expect() calls
+Ran 12 tests across 3 files. [10.00ms]
+```
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 136799 tokens
+
+main: done
+  bun run test passed
+  merged: c19fd01 Merge branch 'work/env-config'
+  this job: 137k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 14¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"c19fd01 Merge branch 'work/env-config'","cost":"this job: 137k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 15¢, on gpt-5 ≈ 14¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":10119,"outputTokens":11110,"cacheReadTokens":115570,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---

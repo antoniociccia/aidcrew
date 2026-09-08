@@ -1,0 +1,50 @@
++ coder on meta/muse-spark-1.3-contributor
+  coder        meta/muse-spark-1.3-contributor 0 turns, 0 tokens
+
+coder · read(src/cli.ts)
+coder · tree(.)
+coder · json(package.json)
+coder · read(src/cli.test.ts)
+coder · read(package.json)
+coder · bash(git status --short; git branch --show-current; git log --one…)
+coder · bash(git checkout -b work/json-flag && bun --version && ls src/)
+coder · write(/** Parse CSV text into rows of fields.  *  * Fields may be …)
+coder · read(src/cli.ts)
+coder · edit(/** What a run of csvtool prints, and how it exits. */ expor…)
+coder · write(import { expect, test } from 'bun:test' import { parseCsv } …)
+coder · read(src/cli.test.ts)
+coder · edit(test('anything else is usage', () => {   expect(run([], '').…)
+coder · bash(bun test 2>&1)
+coder · bash(git add src/csv.ts && git commit -m "Add src/csv.ts with par…)
+verified: bun run test passes on work/main
+merged work/main into the repository: b425939 Merge branch 'work/json-flag'
+coder › Done on branch `work/json-flag` (3 commits on top of `01e6660`).
+
+What changed:
+- `src/csv.ts` (new): exports `parseCsv(text: string): string[][]`. Splits on `\n`, strips one trailing `\r` per line (CRLF support), ignores a single trailing newline, and parses each line with a small quoted-field state machine: a field starting with `"` runs quoted, `""` inside becomes one `"`, commas inside quotes don't split.
+- `src/cli.ts`: added `--json` handling to `run()`. First parsed row is the header; data rows become objects via `Object.fromEntries` (all values stay strings), printed as `JSON.stringify(objs) + "\n"`. Empty input or header-only prints `[]\n`. A data row whose field count differs from the header returns code 1 with one line, e.g. `error: line 2: expected 2 fields but got 1\n`, and no JSON. Usage line is now `usage: csvtool --upper | --count | --json`.
+- Tests: new `src/csv.test.ts` (plain split, empty input, quoted comma, doubled quote, CRLF); extended `src/cli.test.ts` (usage mentions `--json`, basic conversion, string values, empty/header-only `[]`, quotes+CRLF through `--json`, ragged row names line 2 with code 1 and trailing newline).
+
+Decisions the task did not pin down:
+- Error wording: the spec only requires code 1 and one line naming the 1-based line number with no JSON, so I used `error: line N: expected H fields but got G\n`.
+
+Checks (`bun test`, the project's only script):
+```
+bun test v1.3.14 (0d9b296a)
+
+ 15 pass
+ 0 fail
+ 17 expect() calls
+Ran 15 tests across 2 files. [16.00ms]
+```
+No typecheck/lint configured in `package.json`.
+
+  coder        meta/muse-spark-1.3-contributor 1 turns, 102009 tokens
+
+main: done
+  bun run test passed
+  merged: b425939 Merge branch 'work/json-flag'
+  this job: 102k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 26¢, on gpt-5 ≈ 25¢
+{"jobs":[{"task":"main","failures":0,"sentBack":0,"done":true,"verified":"bun run test","merged":"b425939 Merge branch 'work/json-flag'","cost":"this job: 102k tokens on meta/muse-spark-1.3-contributor — on claude-sonnet-5 ≈ 26¢, on gpt-5 ≈ 25¢"}],"agents":[{"id":"coder","model":"meta/muse-spark-1.3-contributor","task":"main","usage":{"inputTokens":8757,"outputTokens":22904,"cacheReadTokens":70348,"unstatedTurns":1},"turns":1}],"kept":[],"exitCode":0}
+
+--- stderr ---
