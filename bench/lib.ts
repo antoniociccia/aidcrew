@@ -15,8 +15,26 @@ export type Configuration = {
   agents: { id: string; model: string }[]
 }
 
-/** The provider every configuration runs on: OpenCode Go, a flat-rate subscription. */
+/** The provider a round runs on by default: OpenCode Go, a flat-rate subscription. */
 export const PROVIDER = 'opencode-go'
+
+/**
+ * The same models under the names another provider gives them. A round on a
+ * metered provider costs real money and risks no subscription; the model ids
+ * differ, the models do not.
+ */
+export const MODEL_IDS: Record<string, Record<string, string>> = {
+  openrouter: {
+    'glm-5.3-flash': 'z-ai/glm-5.3-flash',
+    'deepseek-v4-flash': 'deepseek/deepseek-v4-flash',
+    'deepseek-v4-pro': 'deepseek/deepseek-v4-pro',
+  },
+}
+
+/** A model's id on a provider, or the id as given where the provider uses the same. */
+export function modelOn(provider: string, model: string): string {
+  return MODEL_IDS[provider]?.[model] ?? model
+}
 
 /**
  * The configurations compared, on OpenCode Go model ids.
@@ -75,18 +93,23 @@ export const CONFIGURATIONS: Configuration[] = [
   },
 ]
 
-/** The project config that puts a configuration's team on a task. */
-export function configToml(config: Configuration): string {
+/** The project config that puts a configuration's team on a task, on a provider. */
+export function configToml(config: Configuration, provider = PROVIDER): string {
   const lines = [
     '# Written by the benchmark.',
     '',
     '[defaults]',
-    `provider = "${PROVIDER}"`,
-    `model = "${config.agents[0]?.model ?? ''}"`,
+    `provider = "${provider}"`,
+    `model = "${modelOn(provider, config.agents[0]?.model ?? '')}"`,
     `leader = "${config.leader}"`,
   ]
   for (const agent of config.agents) {
-    lines.push('', `[agents.${agent.id}]`, `provider = "${PROVIDER}"`, `model = "${agent.model}"`)
+    lines.push(
+      '',
+      `[agents.${agent.id}]`,
+      `provider = "${provider}"`,
+      `model = "${modelOn(provider, agent.model)}"`,
+    )
   }
   return `${lines.join('\n')}\n`
 }
@@ -104,6 +127,9 @@ export const PRICES: Record<string, { input: number; output: number }> = {
   'glm-5.3-flash': { input: 0.075e-6, output: 0.25e-6 },
   'glm-5.3': { input: 1.4e-6, output: 4.4e-6 },
   'kimi-k3': { input: 3e-6, output: 15e-6 },
+  'z-ai/glm-5.3-flash': { input: 0.075e-6, output: 0.25e-6 },
+  'deepseek/deepseek-v4-flash': { input: 0.089e-6, output: 0.177e-6 },
+  'deepseek/deepseek-v4-pro': { input: 0.955e-6, output: 1.911e-6 },
 }
 
 /** What `aidcrew team --json` prints on its last line, as far as the benchmark reads it. */

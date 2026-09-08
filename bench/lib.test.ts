@@ -38,6 +38,16 @@ describe('the configurations compared', () => {
     expect(toml).toContain('model = "glm-5.3-flash"')
     expect(toml).toContain('[agents.coder]')
   })
+
+  test('name the same models the way another provider does', () => {
+    const team = CONFIGURATIONS.find((one) => one.name === 'cheap-team')
+    if (!team) throw new Error('no cheap-team configuration')
+    const toml = configToml(team, 'openrouter')
+
+    expect(toml).toContain('provider = "openrouter"')
+    expect(toml).toContain('model = "z-ai/glm-5.3-flash"')
+    expect(toml).toContain('model = "deepseek/deepseek-v4-flash"')
+  })
 })
 
 describe('reading a run', () => {
