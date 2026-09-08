@@ -26,6 +26,11 @@ the person using it, in the order it matters.
   planner wrote a complete plan as text and stopped, and a headless run
   ended having done nothing. Nobody watching means nobody to say "and now
   send it", so the harness says it.
+- A job is settled by the last agent to go quiet. The leader read the
+  coder's report and said the job was done while the coder was still
+  finishing its own turn; with a colleague busy the check was rightly
+  skipped, and then nothing asked again. Seventeen finished jobs in one
+  benchmark round ended with no verdict that way.
 - A report that comes home is answered by being read. A coder that sent
   its report to the leader with `agent_send` and ended its turn left a
   handoff open that the leader, who owes nobody an answer, could never

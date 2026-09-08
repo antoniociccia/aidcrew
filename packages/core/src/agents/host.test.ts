@@ -3890,6 +3890,60 @@ describe('a job is done when the harness says so', () => {
       rmSync(repo, { recursive: true, force: true })
     }
   })
+  test('settles the job when the last colleague goes quiet, if the leader had already said done', async () => {
+    // Watched on the benchmark, seventeen times in one round: the coder
+    // sends its report, the leader reads it and says "job done" while the
+    // coder is still finishing its own turn. With a colleague busy the
+    // check is skipped — rightly — but when the coder then went quiet
+    // nothing asked again, and a job that was done ended with no verdict.
+    const repo = await repository()
+    try {
+      const slow: Tool = {
+        name: 'slow',
+        description: 'takes a moment',
+        inputSchema: { type: 'object' },
+        execute: async () => {
+          await Bun.sleep(300)
+          return { content: 'took a moment' }
+        },
+      }
+      const events: TeamEvent[] = []
+      const host = new InProcessHost({
+        cwd: repo,
+        providerFor: (agent) =>
+          scripted({
+            lead: [
+              call('t1', 'agent_send', { to: 'coder', message: 'do it' }),
+              text('handed over'),
+              text('Job done.'),
+            ],
+            work: [
+              call('r1', 'agent_send', { to: 'lead', message: 'done, committed' }),
+              call('s1', 'slow', {}),
+              text('and here is my summary'),
+            ],
+          })(agent.model ?? 'default'),
+        tools: [slow],
+        limits: { maxHops: 3 },
+        isolate: true,
+        leader: 'lead',
+        check: 'exit 0',
+        onEvent: (event) => events.push(event),
+      })
+      const lead = await host.spawn(def('lead', 'lead'))
+      await host.spawn(def('coder', 'work'))
+      await committed(lead.workspace, 'new.ts', 'export const fresh = true\n')
+
+      await host.tell('lead', 'ship it')
+      await host.idle()
+
+      expect(events.find((event) => event.type === 'job_verified')).toMatchObject({ task: 'main' })
+      expect(events.find((event) => event.type === 'job_merged')).toMatchObject({ task: 'main' })
+      await host.shutdown()
+    } finally {
+      rmSync(repo, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('where an agent is told it is', () => {

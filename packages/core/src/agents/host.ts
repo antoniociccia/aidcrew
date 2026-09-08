@@ -904,7 +904,7 @@ export class InProcessHost {
    * it does not. A job whose work was never committed is sent back too: a
    * branch cannot carry what is not on it.
    */
-  async settleJob(agentId: string, ended: string): Promise<void> {
+  async settleJob(agentId: string, ended: string, quiet?: string): Promise<void> {
     if (ended !== 'end_turn' && ended !== 'stop_sequence') return
     const leader = this.#options.leader ?? [...this.#agents.keys()][0]
     if (agentId !== leader) return
@@ -915,7 +915,9 @@ export class InProcessHost {
 
     const onTask = [...this.#agents.values()].filter((one) => taskOf(one.definition) === task)
     const ids = new Set(onTask.map((one) => one.definition.id))
-    if (onTask.some((one) => one !== agent && one.busy())) return
+    // `quiet` is the colleague asking on the leader's behalf from the end of
+    // its own turn: its pump is still set, and it is not working.
+    if (onTask.some((one) => one !== agent && one.definition.id !== quiet && one.busy())) return
     if (
       this.#handoffs.some((one) => one.from !== 'user' && (ids.has(one.to) || ids.has(one.from)))
     ) {
@@ -1018,6 +1020,28 @@ export class InProcessHost {
     } finally {
       this.#verifying.delete(task)
     }
+  }
+
+  /**
+   * Tries the job again when a colleague of the leader goes quiet.
+   *
+   * The leader reads the coder's report and says the job is done while the
+   * coder is still finishing its own turn. With a colleague busy the check is
+   * rightly skipped — and then nothing asked again: watched on the benchmark,
+   * seventeen jobs that were done ended with no verdict. So the last agent
+   * to go quiet asks on the leader's behalf, when the leader is idle and its
+   * last turn ended cleanly.
+   */
+  async settleAfterColleague(agentId: string): Promise<void> {
+    const leader = this.#options.leader ?? [...this.#agents.keys()][0]
+    if (agentId === leader) return
+    const lead = leader === undefined ? undefined : this.#agents.get(leader)
+    const agent = this.#agents.get(agentId)
+    if (!lead || !agent || taskOf(lead.definition) !== taskOf(agent.definition)) return
+    if (lead.busy() || agent.snapshot().queued > 0) return
+    const ended = lead.lastEnded
+    if (ended !== 'end_turn' && ended !== 'stop_sequence') return
+    await this.settleJob(lead.definition.id, ended, agentId)
   }
 
   /** Merges the branch of the task an agent is on into the repository. */
@@ -1164,6 +1188,8 @@ class LiveAgent {
   readonly #repliedTo = new Set<string>()
   /** Who the current turn's work ultimately belongs to. */
   #origin: string | undefined
+  /** How the last turn ended: nothing before the first. */
+  #lastEnded = ''
   #status: AgentStatus = 'idle'
   /** When the turn in flight began; nothing between turns. */
   #since: number | undefined
@@ -1567,9 +1593,16 @@ class LiveAgent {
       options.onHistory?.(this.#def.id, this.#messages, this.#usage)
     }
 
+    this.#lastEnded = ended
     if (await this.#plannedToNobody(message, ended, requests)) return
     await this.#answerWhoeverAsked(message, ended, said)
     await this.#host.settleJob(this.#def.id, ended)
+    await this.#host.settleAfterColleague(this.#def.id)
+  }
+
+  /** How this agent's last turn ended, for a colleague settling the job on its behalf. */
+  get lastEnded(): string {
+    return this.#lastEnded
   }
 
   /**
