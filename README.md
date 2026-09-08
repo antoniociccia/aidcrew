@@ -98,17 +98,20 @@ recorded, with every cent of every attempt.
 
 | configuration | tasks solved | cost per solved task |
 |---|---|---|
+| **alone** — `muse-spark-1.3-contributor` | **100%** | **0.4¢** |
 | **cheap team** — `glm-5.3-flash` plans, `deepseek-v4-flash` writes | **94%** | **0.4¢** |
 | strong, alone — `deepseek-v4-pro` | 91% | 3.1¢ |
 | strong plans, cheap writes | 89% | 2.1¢ |
 | cheap, alone — `deepseek-v4-flash` | 63% | 0.3¢ |
 
-Two cheap models with distinct roles solve more than the strong model alone,
-at an eighth of the cost per solved task. The cheap model alone gives up a
-third of the time, and the harness says so instead of calling it done. In
-its first hour the benchmark found four harness bugs, fixed the same day.
-One family of models, small tasks, list prices: read it with that in mind.
-The runner, the tasks and every run's log are in [`bench/`](bench/README.md).
+The right cheap model solves every task on its own. A cheap team makes an
+unreliable one reliable: the same coder goes from 63% alone to 94% with a
+cheap planner, at an eighth of the strong model's cost per solved task, and
+when a model gives up the harness says so instead of calling it done. In two
+days the benchmark found five harness bugs, each fixed the same day. Small
+tasks, list prices, and Muse Spark's contributor tier uses requests for
+training: read it with that in mind. The runner, the tasks and every run's
+log are in [`bench/`](bench/README.md).
 
 ## The team
 

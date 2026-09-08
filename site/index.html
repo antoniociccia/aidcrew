@@ -13,7 +13,7 @@
 <meta property="og:image" content="https://aidcrew.dev/media/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2356b4e9'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='36' font-weight='700' text-anchor='middle' fill='%230e0f15'%3ED%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=bench1">
+<link rel="stylesheet" href="style.css?v=bench2">
 <script>
 try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElement.dataset.skin = s } catch (e) {}
 </script>
@@ -108,10 +108,10 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
 
 <section class="bench" id="benchmark">
   <p class="eyebrow">Measured, not claimed</p>
-  <h2>Two cheap models with roles beat the strong model alone.<br>At an eighth of the cost.</h2>
+  <h2>The right cheap model solved every task.<br>A cheap team makes an unreliable one reliable.</h2>
   <p class="lead">
     Thirty tasks — bugs, features, refactors, changes across files — each with tests the agents never
-    see. Four team shapes, every one run three times. What the harness said and what the hidden tests
+    see. Five team shapes, every one run three times. What the harness said and what the hidden tests
     said, both recorded, with every cent of every attempt.
   </p>
 
@@ -120,6 +120,11 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
       <span role="columnheader">configuration</span>
       <span role="columnheader">tasks solved</span>
       <span role="columnheader">cost per solved task</span>
+    </div>
+    <div class="row win" role="row" style="--voice:var(--yellow)">
+      <span class="who" role="cell"><strong>alone, the right one</strong><small>muse-spark-1.3-contributor</small></span>
+      <span class="bar" role="cell"><i style="--w:100%"></i><b data-count="100" data-suffix="%">0%</b></span>
+      <span class="bar cost" role="cell"><i style="--w:13%"></i><b data-count="0.4" data-suffix="¢" data-decimals="1">0¢</b></span>
     </div>
     <div class="row win" role="row" style="--voice:var(--teal)">
       <span class="who" role="cell"><strong>cheap team</strong><small>glm-5.3-flash plans · deepseek-v4-flash writes</small></span>
@@ -144,17 +149,18 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
   </div>
 
   <div class="stats">
-    <div><b data-count="360">0</b><span>runs, every pair three times</span></div>
+    <div><b data-count="565">0</b><span>runs, every pair three times</span></div>
     <div><b data-count="30">0</b><span>tasks with hidden tests and a proven solution</span></div>
-    <div><b data-count="4">0</b><span>harness bugs the first round found in its first hour — fixed the same day</span></div>
-    <div><b data-count="3" data-suffix="%">0%</b><span>runs where the harness said done and the hidden tests disagreed</span></div>
+    <div><b data-count="5">0</b><span>harness bugs the benchmark found in two days — each fixed the same day</span></div>
+    <div><b data-count="4" data-suffix="%">0%</b><span>runs where the harness said done and the hidden tests disagreed</span></div>
   </div>
 
   <p class="aside">
-    The cheap model alone gives up a third of the time, and the harness says so instead of calling it
-    done. A strong planner over the cheap coder adds nothing over a cheap one: the role is worth more
-    than the model. One family of models, small tasks, list prices — read it with that in mind. Every
-    run's log is in the repository:
+    The same cheap coder goes from 63% alone to 94% with a cheap planner: the team is what makes an
+    unreliable model reliable, and when a model gives up the harness says so instead of calling it done.
+    A strong planner adds nothing over a cheap one. Small tasks, list prices, and Muse Spark's
+    contributor tier uses requests for training — read it with that in mind. Every run's log is in the
+    repository:
     <a href="https://github.com/antoniociccia/aidcrew/tree/main/bench" rel="noopener">bench/</a>,
     with the <a href="https://github.com/antoniociccia/aidcrew/blob/main/bench/results/2026-09-07c.md" rel="noopener">full table</a>.
   </p>

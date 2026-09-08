@@ -4,7 +4,11 @@ Releases are cut from a tag (`bun run version:set`, then `git push
 --follow-tags`); the tag is what CI builds. Entries say what a release gives
 the person using it, in the order it matters.
 
-## Unreleased
+## 0.2.0 — 2026-09-08
+
+Done is a guarantee now, and the harness measures itself. If you use aidcrew
+with OpenCode Go or Zen, update: since 6 September those services refuse a
+request without a session header, and 0.1.0 does not send one.
 
 ### The interface
 

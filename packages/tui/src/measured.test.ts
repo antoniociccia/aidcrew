@@ -10,6 +10,9 @@ describe('what the benchmark measured, beside a model', () => {
     expect(measuredHint('deepseek-v4-pro')).toBe(
       'measured: 91% of 90 runs alone, 3.1¢ per solved task',
     )
+    expect(measuredHint('meta/muse-spark-1.3-contributor')).toBe(
+      'measured: 100% of 90 runs alone, 0.4¢ per solved task',
+    )
   })
 
   test('says nothing about a model the benchmark has not run', () => {

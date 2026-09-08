@@ -343,6 +343,7 @@ pre.code, .plugins pre, pre { max-width: 100%; overflow-x: auto; }
 .board .row:nth-child(3) .bar i::after { transition-delay: 0.2s; }
 .board .row:nth-child(4) .bar i::after { transition-delay: 0.35s; }
 .board .row:nth-child(5) .bar i::after { transition-delay: 0.5s; }
+.board .row:nth-child(6) .bar i::after { transition-delay: 0.65s; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin: 1.5rem 0; }
 .stats div { border-top: 3px solid var(--accent); padding-top: 0.8rem; }
 .stats b { display: block; font-family: var(--mono); font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700; color: var(--text); line-height: 1; font-variant-numeric: tabular-nums; }
