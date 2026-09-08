@@ -45,7 +45,10 @@ await Bun.write(PACKAGE, source.replace(`"version": "${pkg.version}"`, `"version
 
 await $`git add ${PACKAGE}`
 await $`git commit -q -m ${`release: ${next}`}`
-await $`git tag ${`v${next}`}`
+// Annotated, not lightweight: `git push --follow-tags` sends only annotated
+// tags, and the 0.2.0 tag made lightweight stayed on the machine while the
+// branch went up, and no release was built until it was pushed by name.
+await $`git tag -a ${`v${next}`} -m ${`aidcrew ${next}`}`
 
 console.log(`${pkg.version} → ${next}\n\nPush it with:\n  git push --follow-tags`)
 
