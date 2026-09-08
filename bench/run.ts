@@ -33,6 +33,7 @@ import {
   configToml,
   costOf,
   nextRuns,
+  PROVIDER,
   parseVerdict,
   type RunRecord,
   table,
@@ -96,13 +97,13 @@ async function git(args: string[], cwd: string): Promise<void> {
 }
 
 /** A fresh repository holding the task, with the configuration's team declared in it. */
-async function prepare(task: Task, config: Configuration): Promise<string> {
+async function prepare(task: Task, config: Configuration, provider: string): Promise<string> {
   const dir = realpathSync(
     mkdtempSync(join(tmpdir(), `aidcrew-bench-${task.name}-${config.name}-`)),
   )
   materialise(join(task.dir, 'project'), dir)
   mkdirSync(join(dir, '.aidcrew/agents'), { recursive: true })
-  writeFileSync(join(dir, '.aidcrew/config.toml'), configToml(config))
+  writeFileSync(join(dir, '.aidcrew/config.toml'), configToml(config, provider))
   for (const agent of config.agents) {
     cpSync(join(AGENTS, `${agent.id}.md`), join(dir, '.aidcrew/agents', `${agent.id}.md`))
   }
@@ -146,8 +147,9 @@ async function runOne(
   timeoutMs: number,
   logs: string,
   run: number,
+  provider: string,
 ): Promise<RunRecord> {
-  const dir = await prepare(task, config)
+  const dir = await prepare(task, config, provider)
   const home = cleanHome()
   const started = Date.now()
   const proc = Bun.spawn(['bun', BIN, 'team', '-p', task.instruction, '-C', dir, '--json'], {
@@ -226,6 +228,7 @@ async function main(): Promise<number> {
       'timeout-minutes': { type: 'string', default: '20' },
       out: { type: 'string' },
       repeat: { type: 'string', default: '1' },
+      provider: { type: 'string', default: PROVIDER },
     },
   })
   const configs = CONFIGURATIONS.filter(
@@ -279,6 +282,7 @@ async function main(): Promise<number> {
         timeoutMs,
         out.replace(/\.json$/, '-logs'),
         next.run,
+        values.provider ?? PROVIDER,
       )
       records.push(record)
       spent += record.usd
