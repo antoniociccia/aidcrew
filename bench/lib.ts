@@ -28,6 +28,7 @@ export const MODEL_IDS: Record<string, Record<string, string>> = {
     'glm-5.3-flash': 'z-ai/glm-5.3-flash',
     'deepseek-v4-flash': 'deepseek/deepseek-v4-flash',
     'deepseek-v4-pro': 'deepseek/deepseek-v4-pro',
+    'muse-spark-1.3-contributor': 'meta/muse-spark-1.3-contributor',
   },
 }
 
@@ -83,6 +84,21 @@ export const CONFIGURATIONS: Configuration[] = [
     ],
   },
   {
+    name: 'muse-solo',
+    description: 'one coder on muse-spark-1.3-contributor (requests are used for training)',
+    leader: 'coder',
+    agents: [{ id: 'coder', model: 'muse-spark-1.3-contributor' }],
+  },
+  {
+    name: 'muse-plans',
+    description: 'architect on muse-spark-1.3-contributor, coder on deepseek-v4-flash',
+    leader: 'architect',
+    agents: [
+      { id: 'architect', model: 'muse-spark-1.3-contributor' },
+      { id: 'coder', model: 'deepseek-v4-flash' },
+    ],
+  },
+  {
     name: 'strong-team',
     description: 'architect on deepseek-v4-pro, coder on deepseek-v4-flash',
     leader: 'architect',
@@ -130,6 +146,8 @@ export const PRICES: Record<string, { input: number; output: number }> = {
   'z-ai/glm-5.3-flash': { input: 0.075e-6, output: 0.25e-6 },
   'deepseek/deepseek-v4-flash': { input: 0.089e-6, output: 0.177e-6 },
   'deepseek/deepseek-v4-pro': { input: 0.955e-6, output: 1.911e-6 },
+  'muse-spark-1.3-contributor': { input: 0.1e-6, output: 0.2e-6 },
+  'meta/muse-spark-1.3-contributor': { input: 0.1e-6, output: 0.2e-6 },
 }
 
 /** What `aidcrew team --json` prints on its last line, as far as the benchmark reads it. */
