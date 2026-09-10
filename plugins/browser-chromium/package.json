@@ -1,0 +1,15 @@
+{
+  "name": "@aidcrew/browser-chromium",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aidcrew/core": "workspace:*",
+    "@aidcrew/plugin-sdk": "workspace:*",
+    "@aidcrew/mcp-bridge": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}
