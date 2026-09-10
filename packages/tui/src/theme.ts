@@ -120,9 +120,21 @@ export const CREW: Theme = {
  * The theme in force before anybody chooses, and the one a partial theme file
  * inherits from. Named once so that changing it is one edit rather than four.
  */
-export const DEFAULT_THEME: Theme = CREW
+export const STUDIO: Theme = {
+  ...CREW,
+  name: 'studio',
+  accent: '#b7f4cf',
+  text: '#e7edf3',
+  muted: '#a6b4c1',
+  faint: '#788796',
+  surface: '#11161d',
+  onVoice: '#0b0e13',
+}
+
+export const DEFAULT_THEME: Theme = STUDIO
 
 export const BUILT_IN: Theme[] = [
+  STUDIO,
   CREW,
   GRAPHITE,
   {

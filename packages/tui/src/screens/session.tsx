@@ -239,6 +239,14 @@ const PULSE_TICK = 120
 
 export function Session(props: SessionProps) {
   const theme = useTheme()
+  const [pressedKey, setPressedKey] = useState('')
+  const keyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(keyTimer.current), [])
+  const flashKey = (key: string) => {
+    clearTimeout(keyTimer.current)
+    setPressedKey(key)
+    keyTimer.current = setTimeout(() => setPressedKey(''), 850)
+  }
   const voice = useVoice()
   const window = useWindowSize()
   const rows = props.rows ?? window.rows
@@ -366,7 +374,10 @@ export function Session(props: SessionProps) {
 
   useInput(
     (input, key) => {
-      if (key.tab) return move(key.shift ? -1 : 1)
+      if (key.tab) {
+        flashKey('tab')
+        return move(key.shift ? -1 : 1)
+      }
       // With control held, the arrows move the divider beside this pane —
       // what a drag does, for a keyboard and for a recording.
       if (key.ctrl && (key.leftArrow || key.rightArrow)) {
@@ -380,8 +391,14 @@ export function Session(props: SessionProps) {
       if (key.rightArrow) return move(1)
       // Page keys work without a modifier: they are the one thing you reach
       // for while reading rather than while writing.
-      if (key.pageUp) return turn(1)
-      if (key.pageDown) return turn(-1)
+      if (key.pageUp) {
+        flashKey('pgup')
+        return turn(1)
+      }
+      if (key.pageDown) {
+        flashKey('pgup')
+        return turn(-1)
+      }
       if (key.upArrow || key.downArrow) return recall(key.upArrow ? 1 : -1)
       // Stops what the agent is doing now and leaves it standing. A model
       // looping should cost you the turn, not the agent and its work.
@@ -391,6 +408,7 @@ export function Session(props: SessionProps) {
       // could react to being refused.
       if (key.escape) {
         if (props.pending?.agentId === props.target) return
+        flashKey('esc')
         return props.onCancel?.(props.target)
       }
       if (key.ctrl) {
@@ -398,7 +416,10 @@ export function Session(props: SessionProps) {
         // nothing for the screen to report as unbound.
         if (EDITING_CHORDS.has(input)) return
         const bound = shortcuts[input]
-        if (bound) return bound()
+        if (bound) {
+          flashKey(`^${input}`)
+          return bound()
+        }
         // A control chord bound to nothing is somebody reaching for a key
         // they half-remember, which is exactly when the board is wanted. It
         // is the only form of "hold control to see what there is" a terminal
@@ -726,7 +747,9 @@ export function Session(props: SessionProps) {
           frame={frame}
           spentOn={(agentId) => {
             const cost = props.costOf?.(agentId)
-            return cost === undefined ? undefined : money(cost, props.estimated?.(agentId))
+            return cost === undefined || cost === 0
+              ? undefined
+              : money(cost, props.estimated?.(agentId))
           }}
           agents={props.agents}
           target={props.target}
@@ -762,6 +785,7 @@ export function Session(props: SessionProps) {
       {props.notice ? <NoticeBox notice={props.notice} theme={theme} width={columns} /> : null}
 
       <Tray
+        pressedKey={pressedKey}
         {...(copied ? { said: copied } : {})}
         columns={columns}
         extras={props.extras?.({ slot: 'tray' }) ?? []}
@@ -778,11 +802,11 @@ export function Session(props: SessionProps) {
         waiting={props.waitingOn?.() ?? 0}
         cost={(() => {
           const total = props.totalCost?.()
-          return total === undefined ? undefined : money(total)
+          return total === undefined || total === 0 ? undefined : money(total)
         })()}
         plan={(() => {
           const drawn = props.onPlan?.()
-          return drawn === undefined ? undefined : money(drawn)
+          return drawn === undefined || drawn === 0 ? undefined : money(drawn)
         })()}
         workspace={props.workspace}
         working={props.agents.filter((agent) => agent.status === 'working').length}
@@ -801,6 +825,7 @@ export function Session(props: SessionProps) {
  * roster gone from the top, nothing else on screen says the view is split.
  */
 function Tray({
+  pressedKey = '',
   columns,
   theme,
   split,
@@ -822,6 +847,7 @@ function Tray({
   extras,
   said,
 }: {
+  pressedKey?: string
   columns: number
   theme: Theme
   /** Something that just happened and is worth a moment, like a copy. */
@@ -881,6 +907,10 @@ function Tray({
     ['^y', 'project'],
     ['^c', 'quit'],
   ]
+
+  // The chord just used takes priority over the ordinary hints on narrow terminals.
+  const justUsed = keys.findIndex(([key]) => key === pressedKey)
+  if (justUsed > 0) keys.unshift(...keys.splice(justUsed, 1))
 
   const left: Segment[] = [
     { text: ' ' },
@@ -942,7 +972,21 @@ function Tray({
       width={columns}
       {...(theme.fill === 'hairline' ? {} : { background: theme.surface })}
       left={left}
-      right={[...badge, ...fit(keys, theme, room), { text: ' '.repeat(MARGIN) }]}
+      right={[
+        ...badge,
+        ...fit(
+          keys,
+          theme,
+          room,
+          new Set([
+            ...(thinking ? ['^r'] : []),
+            ...(selecting ? ['^p'] : []),
+            ...(split ? ['^l'] : []),
+            pressedKey,
+          ]),
+        ),
+        { text: ' '.repeat(MARGIN) },
+      ]}
     />
   )
 }
@@ -954,11 +998,21 @@ function Tray({
  * the window narrows is what was needed least. Choosing a fixed set instead
  * would mean choosing for one terminal width and being wrong at every other.
  */
-function fit(keys: [string, string][], theme: Theme, room: number): Segment[] {
+function fit(
+  keys: [string, string][],
+  theme: Theme,
+  room: number,
+  active = new Set<string>(),
+): Segment[] {
   for (let count = keys.length; count > 0; count--) {
     const shown = keys.slice(0, count).flatMap(([key, label]) => [
-      { text: ` ${key}`, color: theme.muted, bold: true },
-      { text: ` ${label} `, color: theme.faint },
+      {
+        text: ` ${key}`,
+        color: active.has(key) ? theme.onVoice : theme.muted,
+        bold: true,
+        ...(active.has(key) ? { background: theme.accent } : {}),
+      },
+      { text: ` ${label} `, color: active.has(key) ? theme.accent : theme.faint },
     ])
     if (measure(shown) <= room) return shown
   }

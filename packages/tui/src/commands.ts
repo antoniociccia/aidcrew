@@ -77,7 +77,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: 'yolo',
     args: '[agent] [off]',
-    what: 'Let an agent act without asking, for this session only.',
+    what: 'Skip tool approvals, including irreversible shell commands, for this agent.',
   },
   {
     name: 'copy',

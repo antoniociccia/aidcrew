@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { Decision } from '@aidcrew/cli'
+import type { Decision, WorkspaceConfig } from '@aidcrew/cli'
 import {
   attach,
   copyToClipboard,
@@ -44,6 +44,7 @@ import { GRAPHITE, loadThemes, themeNamed } from './theme.ts'
 import { ThemeProvider } from './theme-context.tsx'
 import type { UiState } from './ui-state.ts'
 import { EMPTY, inOrder, readUiState, writeUiState } from './ui-state.ts'
+import type { WebSession } from './web-session.ts'
 
 /**
  * Which screen is showing, and what carries between them.
@@ -70,6 +71,9 @@ export type AppProps = {
   runtime: Runtime
   home: string
   env: Record<string, string | undefined>
+  /** Optional transport over this same live session. */
+  web?: WebSession
+  webAccessFile?: string
   /** Where to start, when the command line named a directory. */
   initialCwd?: string
 }
@@ -100,7 +104,7 @@ Then ask me what the plugin should do, unless I have already said. Write a
 failing test first, then the plugin, then run bun test and bunx tsc --noEmit
 and make them pass.`
 
-export function App({ runtime, home, env, initialCwd }: AppProps) {
+export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppProps) {
   const [themeName, setThemeName] = useState(runtime.store.get('theme'))
   const [fill, setFill] = useState(runtime.store.get('theme.fill'))
   const themes = loadThemes(home)
@@ -123,6 +127,9 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
   const [order, setOrder] = useState<string[]>([])
   const [lines, setLines] = useState<Line[]>([])
   const [target, setTarget] = useState('')
+  const sessionId = useRef(crypto.randomUUID())
+  const currentWorkspace = useRef(initialCwd ?? process.cwd())
+  const switchingWorkspace = useRef(false)
   const [team, setTeam] = useState<LiveTeam | undefined>()
   /** Why the last attempt to open a project did not work, for the list. */
   const [openFailure, setOpenFailure] = useState<string | undefined>()
@@ -196,22 +203,6 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
     nextNotice.current += 1
     return nextNotice.current
   }
-  // Where this project says how its team works. Held rather than re-read,
-  // because starting a session must not depend on which function happens to
-  // have the project object in scope.
-  const [orchestration, setOrchestration] = useState<string[]>([])
-  /** Who leads this team, and therefore cannot be taken off it. */
-  const [leader, setLeader] = useState<string | undefined>()
-  /** Tool calls one turn may make, when the project says so. */
-  const [turnBound, setTurnBound] = useState<number | undefined>(undefined)
-  /** How a job is proved and brought home, when the project says. */
-  const [doneRules, setDoneRules] = useState<{
-    check?: string | undefined
-    mergeOnDone?: boolean | undefined
-  }>({})
-  const [projectPrices, setProjectPrices] = useState<
-    Record<string, { input: number; output: number }>
-  >({})
   /** Whether the team on a task keeps a note the others can read. */
   const [sharedNotes, setSharedNotes] = useState(false)
   /** Whether absolute paths are kept off the screen, for a shared screen. */
@@ -257,35 +248,35 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
    * screen of their own. What you asked and what happened belong in the same
    * column as the work, which is the only place you will look for them later.
    */
-  async function run(text: string): Promise<void> {
+  async function run(text: string, recipient = target): Promise<void> {
     const command = parseCommand(text)
     if (!command || !team) {
       // Files named with @ are read here and sent with the message, rather
       // than left for the agent to go and fetch — which is a whole turn, and
       // a request, for something you already had open.
-      const cwd = screen.at === 'session' ? screen.cwd : process.cwd()
+      const cwd = currentWorkspace.current
       const { text: whole, missing } = await attach(text, cwd)
       if (missing.length > 0) {
-        say(target, `could not read ${missing.join(', ')} — sent the message without it`)
+        say(recipient, `could not read ${missing.join(', ')} — sent the message without it`)
       }
-      await team?.tell(target, whole)
+      await team?.tell(recipient, whole)
       return
     }
 
     try {
-      await carry(command)
+      await carry(command, recipient)
     } catch (cause) {
-      say(target, cause instanceof Error ? cause.message : String(cause))
+      say(recipient, cause instanceof Error ? cause.message : String(cause))
     }
   }
 
-  async function carry(command: Command): Promise<void> {
+  async function carry(command: Command, recipient = target): Promise<void> {
     if (!team) return
 
     switch (command.at) {
       case 'help':
         for (const entry of COMMANDS) {
-          say(target, `/${entry.name} ${entry.args}`.padEnd(26) + entry.what)
+          say(recipient, `/${entry.name} ${entry.args}`.padEnd(26) + entry.what)
         }
         return
 
@@ -302,7 +293,7 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
 
       case 'kill': {
         if (!snapshots.some((agent) => agent.id === command.agent)) {
-          say(target, `no agent called "${command.agent}"`)
+          say(recipient, `no agent called "${command.agent}"`)
           return
         }
         const { workspace } = await team.kill(command.agent)
@@ -310,7 +301,7 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
         // that it is gone on top of that was a lie one line under the truth.
         if (team.snapshots().some((agent) => agent.id === command.agent)) return
         say(
-          target,
+          recipient,
           workspace === 'kept'
             ? `${command.agent} is gone. Its checkout stays: there is work in it that is nowhere else.`
             : `${command.agent} is gone, worktree and all`,
@@ -327,12 +318,12 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
         // Moved to the first of them, because starting a job is nearly always
         // followed by telling it what the job is.
         if (started[0]) setTarget(started[0])
-        else say(target, `nothing started for "${command.name}"`)
+        else say(recipient, `nothing started for "${command.name}"`)
         return
       }
 
       case 'copy': {
-        const who = command.agent ?? target
+        const who = command.agent ?? recipient
         // What is on screen is clipped to the pane; what goes on the
         // clipboard is what was actually said.
         const said = lines
@@ -341,12 +332,12 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
           .join('\n')
 
         if (said === '') {
-          say(target, `${who} has not said anything yet`)
+          say(recipient, `${who} has not said anything yet`)
           return
         }
         const done = await copyToClipboard(said)
         say(
-          target,
+          recipient,
           done
             ? `copied ${said.split('\n').length} lines from ${who}`
             : 'no clipboard command on this machine — tried pbcopy, wl-copy, xclip, xsel',
@@ -355,38 +346,38 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
       }
 
       case 'diff': {
-        const who = command.agent ?? target
+        const who = command.agent ?? recipient
         const patch = await team.diff(who)
         say(who, patch.trim() === '' ? 'nothing changed yet' : patch)
         return
       }
 
       case 'merge': {
-        const who = command.agent ?? target
+        const who = command.agent ?? recipient
         const outcome = await team.merge(who)
         say(who, mergeSaid(outcome))
         return
       }
 
       case 'stop':
-        team.cancel(command.agent ?? target)
+        team.cancel(command.agent ?? recipient)
         return
 
       case 'clear': {
-        const who = command.agent ?? target
+        const who = command.agent ?? recipient
         if (!team.forget(who)) {
-          say(target, `${who} is in the middle of a turn — "/stop ${who}" first.`)
+          say(recipient, `${who} is in the middle of a turn — "/stop ${who}" first.`)
         }
         return
       }
 
       case 'drop':
-        team.clearQueue(command.agent ?? target)
+        team.clearQueue(command.agent ?? recipient)
         return
 
       case 'yolo': {
-        const who = command.agent ?? target
-        if (!team.setYolo(who, command.on)) say(target, `no agent called "${who}"`)
+        const who = command.agent ?? recipient
+        if (!team.setYolo(who, command.on)) say(recipient, `no agent called "${who}"`)
         return
       }
 
@@ -399,14 +390,14 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
           model: command.model,
           ...(command.provider ? { provider: command.provider } : {}),
         }
-        await setAgentModel(screen.at === 'session' ? screen.cwd : '', target, to)
-        const moved = team.setModel(target, to)
+        await setAgentModel(currentWorkspace.current, recipient, to)
+        const moved = team.setModel(recipient, to)
         setSnapshots(team.snapshots())
         say(
-          target,
+          recipient,
           moved
-            ? `${target} is on ${command.model}${command.provider ? ` at ${command.provider}` : ''} from its next turn`
-            : `no agent called "${target}"`,
+            ? `${recipient} is on ${command.model}${command.provider ? ` at ${command.provider}` : ''} from its next turn`
+            : `no agent called "${recipient}"`,
         )
         return
       }
@@ -416,19 +407,19 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
         return
 
       case 'split':
-        say(target, 'press ^l to choose which agents are shown side by side')
+        say(recipient, 'press ^l to choose which agents are shown side by side')
         return
 
       case 'mcp':
         say(
-          target,
+          recipient,
           'run `aidcrew mcp` in a terminal: a server is a program, and trusting one is not something to do mid-task',
         )
         return
 
       case 'unknown':
         say(
-          target,
+          recipient,
           command.nearest
             ? `no such command ${command.typed} — did you mean /${command.nearest}?`
             : `no such command ${command.typed}. /help lists them.`,
@@ -469,6 +460,21 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
   }
 
   async function openOrThrow(cwd: string): Promise<void> {
+    if (switchingWorkspace.current) throw new Error('A workspace is already opening')
+    switchingWorkspace.current = true
+    sessionId.current = crypto.randomUUID()
+    pending?.answers.find((answer) => answer.tone === 'bad')?.take()
+    try {
+      await team?.shutdown()
+      setTeam(undefined)
+      await loadWorkspace(cwd)
+    } finally {
+      switchingWorkspace.current = false
+    }
+  }
+
+  async function loadWorkspace(cwd: string): Promise<void> {
+    currentWorkspace.current = cwd
     setScreen({ at: 'loading' })
     setOpenFailure(undefined)
 
@@ -489,11 +495,6 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
     // walks, and a suggestion that arrives after the next keystroke is one
     // nobody sees. Four milliseconds on this repository.
     void projectFiles(cwd).then(setFiles)
-    setProjectPrices(project.config.prices)
-    setOrchestration(project.config.sources.orchestration)
-    setLeader(project.config.leader)
-    setTurnBound(project.config.toolCallsPerTurn)
-    setDoneRules({ check: project.config.check, mergeOnDone: project.config.mergeOnDone })
     setSharedNotes(project.config.sharedMemory)
 
     // A project with no agents, or no key to run them, needs the wizard —
@@ -505,12 +506,14 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
       return
     }
 
-    await enterSession(cwd, project.agents)
+    await enterSession(cwd, project.agents, project.config)
   }
 
-  async function enterSession(cwd: string, members: AgentDef[]): Promise<void> {
-    await team?.shutdown()
-
+  async function enterSession(
+    cwd: string,
+    members: AgentDef[],
+    config: WorkspaceConfig,
+  ): Promise<void> {
     // Declared before it is built, because `onChange` below runs before this
     // assignment does: startTeam spawns the agents, spawning emits events, and
     // events announce. Reaching for `live` from inside the callback threw
@@ -527,19 +530,22 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
 
     let live: LiveTeam | undefined
     live = await startTeam({
-      orchestration,
-      ...(leader ? { leader } : {}),
-      ...(turnBound ? { toolCallsPerTurn: turnBound } : {}),
-      ...(doneRules.check ? { check: doneRules.check } : {}),
-      ...(doneRules.mergeOnDone === false ? { mergeOnDone: false } : {}),
+      // Read from this opening, not from React state scheduled moments ago.
+      // Otherwise first launch used defaults and switching projects used the old project's rules.
+      orchestration: config.sources.orchestration,
+      ...(config.leader ? { leader: config.leader } : {}),
+      ...(config.toolCallsPerTurn ? { toolCallsPerTurn: config.toolCallsPerTurn } : {}),
+      ...(config.check ? { check: config.check } : {}),
+      ...(config.mergeOnDone !== undefined ? { mergeOnDone: config.mergeOnDone } : {}),
       runtime,
       cwd,
       env,
       agents: members.map((member) => (loose.has(member.id) ? { ...member, yolo: true } : member)),
-      defaultProvider: defaults.provider ?? 'zen',
-      prices: projectPrices,
+      defaultProvider:
+        env.AIDCREW_PROVIDER ?? config.defaults.provider ?? defaults.provider ?? 'zen',
+      prices: config.prices,
       skills: [],
-      ...(sharedNotes ? { sharedMemory: true } : {}),
+      sharedMemory: config.sharedMemory,
       onChange: (nextLines, nextSnapshots) => {
         setLines(nextLines)
         setSnapshots(nextSnapshots)
@@ -564,31 +570,36 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
       // The agent's turn waits on this promise, so the work genuinely stops
       // until somebody answers rather than racing ahead of the question.
       onApproval: (request) =>
-        askOne(
-          () =>
-            new Promise<Decision>((resolve) => {
-              // Brought into view as well as recorded. The question is drawn in
-              // the pane of the agent that asked it, so one asking while you look
-              // at another produced a screen with no question on it — and the
-              // agent waited on an answer nobody could give.
-              if (request.agentId !== '') setTarget(request.agentId)
-              setNotices((held) => [
-                ...held,
-                askingNotice(request.agentId, request.summary, idForNotice(), Date.now()),
-              ])
-              const answer = (decision: Decision) => () => {
-                setPending(undefined)
-                resolve(decision)
-              }
+        askOne(() =>
+          switchingWorkspace.current
+            ? Promise.resolve<Decision>('no')
+            : new Promise<Decision>((resolve) => {
+                // Brought into view as well as recorded. The question is drawn in
+                // the pane of the agent that asked it, so one asking while you look
+                // at another produced a screen with no question on it — and the
+                // agent waited on an answer nobody could give.
+                if (request.agentId !== '') setTarget(request.agentId)
+                setNotices((held) => [
+                  ...held,
+                  askingNotice(request.agentId, request.summary, idForNotice(), Date.now()),
+                ])
+                let answered = false
+                const answer = (decision: Decision) => () => {
+                  if (answered) return
+                  answered = true
+                  webQuestion.current = { pending: undefined, id: '' }
+                  setPending(undefined)
+                  resolve(decision)
+                }
 
-              setPending({
-                agentId: request.agentId,
-                because: request.because,
-                summary: request.summary,
-                answers: answersFor(request.scopes, answer),
-                safe: 'n',
-              })
-            }),
+                setPending({
+                  agentId: request.agentId,
+                  because: request.because,
+                  summary: request.summary,
+                  answers: answersFor(request.scopes, answer),
+                  safe: 'n',
+                })
+              }),
         ),
 
       // One agent sending work to another that is already busy. Queuing it is
@@ -596,47 +607,53 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
       // has moved — so the choice is put where somebody can see what else is
       // running and what a second agent would cost.
       onContention: (request) =>
-        askOne(
-          () =>
-            new Promise<Contention>((resolve) => {
-              setTarget(request.to)
-              setNotices((held) => [
-                ...held,
-                askingNotice(
-                  request.to,
-                  `busy — ${request.from} is waiting`,
-                  idForNotice(),
-                  Date.now(),
-                ),
-              ])
+        askOne(() =>
+          switchingWorkspace.current
+            ? Promise.resolve<Contention>({ at: 'drop' })
+            : new Promise<Contention>((resolve) => {
+                setTarget(request.to)
+                setNotices((held) => [
+                  ...held,
+                  askingNotice(
+                    request.to,
+                    `busy — ${request.from} is waiting`,
+                    idForNotice(),
+                    Date.now(),
+                  ),
+                ])
 
-              const answer = (at: Contention['at']) => () => {
-                setPending(undefined)
-                resolve({ at } as Contention)
-              }
+                let answered = false
+                const answer = (at: Contention['at']) => () => {
+                  if (answered) return
+                  answered = true
+                  webQuestion.current = { pending: undefined, id: '' }
+                  setPending(undefined)
+                  resolve({ at } as Contention)
+                }
 
-              setPending({
-                agentId: request.to,
-                because: `is busy, and ${request.from} sent work`,
-                summary: request.text,
-                answers: [
-                  { key: 'w', label: 'wait', tone: 'ok', take: answer('queue') },
-                  {
-                    key: 's',
-                    label: `spawn a second ${request.to}`,
-                    tone: 'warn',
-                    take: answer('spawn'),
-                  },
-                  { key: 'd', label: 'drop it', tone: 'bad', take: answer('drop') },
-                ],
-                safe: 'w',
-              })
-            }),
+                setPending({
+                  agentId: request.to,
+                  because: `is busy, and ${request.from} sent work`,
+                  summary: request.text,
+                  answers: [
+                    { key: 'w', label: 'wait', tone: 'ok', take: answer('queue') },
+                    {
+                      key: 's',
+                      label: `spawn a second ${request.to}`,
+                      tone: 'warn',
+                      take: answer('spawn'),
+                    },
+                    { key: 'd', label: 'drop it', tone: 'bad', take: answer('drop') },
+                  ],
+                  safe: 'w',
+                })
+              }),
         ),
     })
 
     setTeam(live)
     setSnapshots(live.snapshots())
+    if (webAccessFile) say(live.snapshots()[0]?.id ?? 'main', `Web UI access: ${webAccessFile}`)
 
     // The job that was open, and the agents that were on it. A worktree
     // outlives the session that made it, so leaving one half-done and coming
@@ -675,18 +692,239 @@ export function App({ runtime, home, env, initialCwd }: AppProps) {
     const remembered = readUiState(cwd)
     setLayout(remembered)
     setOrder(remembered.order)
-    setProjectPrices(project.config.prices)
-    setOrchestration(project.config.sources.orchestration)
-    setLeader(project.config.leader)
-    setTurnBound(project.config.toolCallsPerTurn)
-    setDoneRules({ check: project.config.check, mergeOnDone: project.config.mergeOnDone })
     setSharedNotes(project.config.sharedMemory)
-    await enterSession(cwd, project.agents)
+    await enterSession(cwd, project.agents, project.config)
     // The team exists; now what a team is for. A first run used to end at a
     // cursor, with nothing having said what happens when two agents want the
     // same file or where the work goes.
     setScreen({ at: 'tour', cwd })
   }
+
+  const webQuestion = useRef<{ pending: Pending | undefined; id: string }>({
+    pending: undefined,
+    id: '',
+  })
+  useEffect(() => {
+    if (!web) return
+    if (webQuestion.current.pending !== pending) {
+      webQuestion.current = { pending, id: crypto.randomUUID() }
+    }
+    const cwd = currentWorkspace.current
+    return web.connect({
+      snapshot: () => {
+        const live = team?.snapshots() ?? snapshots
+        const question = webQuestion.current
+        const totalCost = team?.prices.total()
+        return {
+          cwd,
+          sessionId: sessionId.current,
+          ready: !!team && !switchingWorkspace.current,
+          target,
+          sharedMemory: sharedNotes,
+          memory: team?.sharedNotes() ?? {},
+          agents: live.map((agent) => {
+            const cost = team?.prices.costOf(agent.id)
+            return {
+              ...agent,
+              ...(cost === undefined ? {} : { cost }),
+              estimated: team?.prices.estimated(agent.id) ?? false,
+            }
+          }),
+          lines,
+          outstanding: team?.outstanding() ?? 0,
+          ...(totalCost === undefined ? {} : { total: totalCost }),
+          plugins: runtime.host.registry.plugins().map((plugin) => ({
+            name: plugin.name,
+            ...(plugin.version ? { version: plugin.version } : {}),
+            tools: plugin.tools?.map((tool) => tool.name) ?? [],
+          })),
+          themes: themes.map((item) => item.name),
+          ...(question.pending
+            ? {
+                pending: {
+                  id: question.id,
+                  agentId: question.pending.agentId,
+                  because: question.pending.because,
+                  summary: question.pending.summary,
+                  answers: question.pending.answers.map(({ key, label, tone }) => ({
+                    key,
+                    label,
+                    tone,
+                  })),
+                },
+              }
+            : {}),
+        }
+      },
+      dispatch: async (action) => {
+        if (switchingWorkspace.current && action.type !== 'answer' && action.type !== 'inspect')
+          throw new Error('The workspace is changing; wait for it to finish opening')
+        if (action.type === 'answer') {
+          const question = webQuestion.current
+          if (!question.pending || question.id !== action.request)
+            throw new Error('This request has already been answered')
+          const answer = question.pending.answers.find((answer) => answer.key === action.key)
+          if (!answer) throw new Error('Invalid answer')
+          webQuestion.current = { pending: undefined, id: '' }
+          answer.take()
+          return
+        }
+        if (action.type === 'open') {
+          await openOrThrow(action.cwd)
+          return
+        }
+        if (action.type === 'theme') {
+          if (!themes.some((theme) => theme.name === action.name)) throw new Error('Unknown theme')
+          runtime.store.set('theme', action.name)
+          setThemeName(action.name)
+          return
+        }
+        if (action.type === 'credentials') {
+          await saveKey(action.scope, action.key)
+          return
+        }
+        if (action.type === 'forgetCredential') {
+          runtime.store.forgetSecret(action.scope)
+          setKnown(runtime.store.knownSecrets())
+          return
+        }
+        if (action.type === 'default') {
+          runtime.store.set(`default.${action.setting}`, action.value)
+          setDefaults((current) => ({ ...current, [action.setting]: action.value }))
+          return
+        }
+        if (action.type === 'appearance') {
+          if (action.fill) {
+            runtime.store.set('theme.fill', action.fill)
+            setFill(action.fill)
+          }
+          if (action.hidePaths !== undefined) {
+            runtime.store.set('hide.paths', action.hidePaths ? 'yes' : 'no')
+            setHidden(action.hidePaths)
+          }
+          return
+        }
+        if (action.type === 'sources') {
+          await setSourcePathsInConfig(cwd, action.kind, action.paths)
+          setSourcePaths((current) =>
+            current.map((source) =>
+              source.label === action.kind ? { ...source, paths: action.paths } : source,
+            ),
+          )
+          return
+        }
+        if (action.type === 'agentDefinition') {
+          await writeAgent(cwd, {
+            id: action.id,
+            description: action.description,
+            systemPrompt: action.systemPrompt,
+            reason: '',
+            ...(action.tools ? { tools: action.tools } : {}),
+          })
+          const alongside = agents.find((agent) => agent.id === target) ?? agents[0]
+          const provider = action.provider ?? alongside?.provider
+          const model = action.model ?? alongside?.model
+          await setAgentModel(cwd, action.id, {
+            ...(provider ? { provider } : {}),
+            ...(model ? { model } : {}),
+          })
+          const project = await readProject(runtime, cwd, home, env)
+          setAgents(project.agents)
+          const added = project.agents.find((agent) => agent.id === action.id)
+          if (added && team && !team.snapshots().some((agent) => agent.id === added.id))
+            await team.join(added)
+          if (!team && project.blocked.length === 0) await openOrThrow(cwd)
+          return
+        }
+        if (action.type === 'removeDefinition') {
+          if (team?.snapshots().some((agent) => agent.role === action.id))
+            throw new Error('Remove running agents of this role first')
+          await removeAgent(cwd, action.id)
+          const project = await readProject(runtime, cwd, home, env)
+          setAgents(project.agents)
+          return
+        }
+        if (action.type === 'inspect')
+          return {
+            tasks: await readTasks(cwd, runGit(cwd)),
+            memory: team?.sharedNotes() ?? {},
+            definitions: agents.map(toTemplate),
+            sources: sourcePaths,
+            credentials: known,
+            defaults,
+            fill: theme.fill,
+            hidePaths: hidden,
+            workspaces: runtime.store.workspaces(),
+            providers: runtime.providers,
+          }
+
+        if (!team || switchingWorkspace.current)
+          throw new Error('Open a project in the terminal first')
+        if ('agent' in action && !team.snapshots().some((agent) => agent.id === action.agent))
+          throw new Error('Agent is no longer on this team')
+        switch (action.type) {
+          case 'send': {
+            const attached = await attach(action.text, cwd)
+            if (attached.missing.length)
+              throw new Error(`Could not read: ${attached.missing.join(', ')}`)
+            await team.tell(action.agent, attached.text)
+            return
+          }
+          case 'command':
+            await run(action.text, action.agent)
+            return
+          case 'cancel':
+            team.cancel(action.agent)
+            return
+          case 'clearQueue':
+            team.clearQueue(action.agent)
+            return
+          case 'forget':
+            if (!team.forget(action.agent))
+              throw new Error('Stop this agent before resetting its history')
+            return
+          case 'kill':
+            return team.kill(action.agent)
+          case 'diff':
+            return team.diff(action.agent)
+          case 'merge':
+            return team.merge(action.agent)
+          case 'spawn':
+            return team.spawn(action.role, {
+              ...(action.model ? { model: action.model } : {}),
+              ...(action.provider ? { provider: action.provider } : {}),
+            })
+          case 'task':
+            return team.startTask(action.name, action.roles)
+          case 'yolo':
+            return team.setYolo(action.agent, action.on)
+          case 'model': {
+            const to = {
+              model: action.model,
+              ...(action.provider ? { provider: action.provider } : {}),
+            }
+            if (!team.setModel(action.agent, to))
+              throw new Error('Could not change model; check provider credentials')
+            await setAgentModel(cwd, action.agent, to)
+            setSnapshots(team.snapshots())
+            return
+          }
+          case 'memory':
+            await setSharedMemory(cwd, action.on)
+            team.setSharedMemory(action.on)
+            setSharedNotes(action.on)
+            return
+          case 'models': {
+            const provider = runtime.host.registry.provider(action.provider)
+            const key = await keyFor(action.provider)
+            if (!provider?.endpoint || !key) return []
+            const listing = await listModels(env.AIDCREW_BASE_URL ?? provider.endpoint, key)
+            return listing.kind === 'listed' ? listing.models : []
+          }
+        }
+      },
+    })
+  })
 
   /** The key a provider would use, for asking it what models it has. */
   async function keyFor(providerId: string): Promise<string | undefined> {
