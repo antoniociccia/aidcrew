@@ -4266,10 +4266,16 @@ describe('a plan handed to nobody', () => {
   })
 })
 
-test('a plugin-reported stall closes the turn without automatic continuation', async () => {
+test('an autonomous stalled attempt gets one bounded recovery, never a turn-limit continuation', async () => {
   const events: TeamEvent[] = []
   let executions = 0
-  const scripts = { m: [call('stuck', 'browser_step', {}), text('must not run')] }
+  const scripts = {
+    m: [
+      call('stuck', 'browser_step', {}),
+      call('stuck2', 'browser_step', {}),
+      text('must not run'),
+    ],
+  }
   const host = new InProcessHost({
     cwd: process.cwd(),
     isolate: false,
@@ -4296,7 +4302,7 @@ test('a plugin-reported stall closes the turn without automatic continuation', a
   host.setYolo('coder', true)
   await host.tell('coder', 'build')
   await host.idle()
-  expect(executions).toBe(1)
+  expect(executions).toBe(2)
   expect(events.some((e) => e.type === 'agent_continued')).toBe(false)
   expect(
     events.some((e) => e.type === 'agent_blocked' && e.reason.includes('without progress')),
@@ -4367,5 +4373,144 @@ test('a stalled delegated tool reports its blocker back to the owner', async () 
   await host.idle()
   expect(JSON.stringify(events)).toContain('delegated attempt stopped without completion')
   expect(host.list().every((agent) => agent.status === 'idle')).toBe(true)
+  await host.shutdown()
+})
+
+test('cancelling a stalled turn prevents recovery from restarting it', async () => {
+  let executions = 0
+  const events: TeamEvent[] = []
+  const scripts = { m: [call('one', 'step', {}), call('two', 'step', {})] }
+  const host = new InProcessHost({
+    cwd: process.cwd(),
+    isolate: false,
+    limits: { maxHops: 3 },
+    providerFor: () => scripted(scripts)('m'),
+    tools: [
+      {
+        name: 'step',
+        description: 'step',
+        inputSchema: {},
+        execute: async () => {
+          executions++
+          return { content: 'blocked', stalled: 'blocked repeatedly' }
+        },
+      },
+    ],
+    onEvent: (event) => {
+      events.push(event)
+      if (event.type === 'agent_blocked') host.cancel('coder')
+    },
+  })
+  await host.spawn(def('coder', 'm'))
+  host.setYolo('coder', true)
+  await host.tell('coder', 'build')
+  await host.idle()
+  expect(executions).toBe(1)
+  expect(events.some((e) => e.type === 'agent_recovering')).toBe(false)
+  await host.shutdown()
+})
+
+test('a recovery can finish with a different tool action', async () => {
+  const events: TeamEvent[] = []
+  const scripts = {
+    m: [
+      call('blocked', 'step', { approach: 'old' }),
+      call('different', 'step', { approach: 'new' }),
+      text('verified'),
+    ],
+  }
+  const attempts: unknown[] = []
+  const host = new InProcessHost({
+    cwd: process.cwd(),
+    isolate: false,
+    limits: { maxHops: 3 },
+    providerFor: () => scripted(scripts)('m'),
+    tools: [
+      {
+        name: 'step',
+        description: 'step',
+        inputSchema: {},
+        execute: async (input) => {
+          attempts.push(input)
+          return attempts.length === 1
+            ? { content: 'blocked', stalled: 'target rejected' }
+            : { content: 'acceptance check passed' }
+        },
+      },
+    ],
+    onEvent: (event) => events.push(event),
+  })
+  await host.spawn(def('coder', 'm'))
+  host.setYolo('coder', true)
+  await host.tell('coder', 'build')
+  await host.idle()
+  expect(attempts).toEqual([{ approach: 'old' }, { approach: 'new' }])
+  expect(events.filter((e) => e.type === 'agent_recovering')).toHaveLength(1)
+  expect(host.list().every((agent) => agent.status === 'idle')).toBe(true)
+  await host.shutdown()
+})
+
+test('a recovery cannot spend beyond the existing turn budget', async () => {
+  let executions = 0
+  const scripts = { m: [call('one', 'step', {}), call('two', 'step', {})] }
+  const host = new InProcessHost({
+    cwd: process.cwd(),
+    isolate: false,
+    limits: { maxHops: 3, maxTurnsPerAgent: 1 },
+    providerFor: () => scripted(scripts)('m'),
+    tools: [
+      {
+        name: 'step',
+        description: 'step',
+        inputSchema: {},
+        execute: async () => {
+          executions++
+          return { content: 'blocked', stalled: 'target rejected' }
+        },
+      },
+    ],
+    onEvent: () => {},
+  })
+  await host.spawn(def('coder', 'm'))
+  host.setYolo('coder', true)
+  await host.tell('coder', 'build')
+  await host.idle()
+  expect(executions).toBe(1)
+  await host.shutdown()
+})
+
+test('notes written while compaction waits survive and share one summarizer request', async () => {
+  let finish: (text: string) => void = () => {}
+  let calls = 0
+  const host = new InProcessHost({
+    cwd: process.cwd(),
+    isolate: false,
+    limits: { maxHops: 3 },
+    tools: [],
+    providerFor: () => scripted({ m: [] })('m'),
+    onEvent: () => {},
+    summariseNotes: async () => {
+      calls++
+      return await new Promise<string>((resolve) => {
+        finish = resolve
+      })
+    },
+  })
+  const notes = Array.from({ length: 25 }, (_, i) => ({
+    from: 'coder',
+    text: `finding ${i}`,
+    at: i,
+  }))
+  host.internals.shared.write('main', { notes })
+  const first = host.internals.shortenNotes('main')
+  host.internals.shared.write('main', {
+    notes: [...notes, { from: 'reviewer', text: 'new evidence during compaction', at: 26 }],
+  })
+  const second = host.internals.shortenNotes('main')
+  expect(calls).toBe(1)
+  finish('earlier findings')
+  await Promise.all([first, second])
+  expect(host.sharedMemory('main').notes.at(-1)?.text).toBe('new evidence during compaction')
+  expect(host.sharedMemory('main').summary).toBe('earlier findings')
   await host.shutdown()
 })

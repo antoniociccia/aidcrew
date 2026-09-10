@@ -182,6 +182,15 @@ export function createTeamRenderer({ write, color }: RendererOptions) {
         }
         return
       }
+      if (event.type === 'agent_recovering') {
+        write(
+          paint(
+            event.id,
+            'stopped an unproductive attempt; one changed-strategy recovery within the existing budget\n',
+          ),
+        )
+        return
+      }
       if (event.type === 'agent_nudged') {
         write(
           paint(

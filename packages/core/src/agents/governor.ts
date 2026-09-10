@@ -31,6 +31,8 @@ export type AgentMessage = {
    * with this, after its turn reached the limit. Absent for a first turn.
    */
   continued?: number
+  /** One changed-strategy recovery per instruction; never a new unbounded run. */
+  recovered?: boolean
   /** Sent back once to hand over a plan it had written to nobody; never twice. */
   nudged?: boolean
 }

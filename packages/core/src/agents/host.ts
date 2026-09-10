@@ -124,6 +124,7 @@ export type TeamEvent =
   | { type: 'agent_continued'; id: string; round: number; of: number }
   /** A leader ended its turn with a plan handed to nobody and nothing changed; sent back once to hand it over. */
   | { type: 'agent_nudged'; id: string }
+  | { type: 'agent_recovering'; id: string; reason: string }
   /**
    * A turn going round in circles: one exact tool call has returned one exact
    * result this many times this turn. Said to the model at three; at six the
@@ -382,6 +383,7 @@ export class InProcessHost {
   readonly #verifying = new Set<string>()
   /** What everyone on a task knows, by task. */
   readonly #shared = new Map<string, SharedMemory>()
+  readonly #compactingNotes = new Map<string, Promise<void>>()
   /** Checkouts picked up from an earlier session that have been announced. */
   readonly #resumedTold = new Set<string>()
 
@@ -1069,7 +1071,15 @@ export class InProcessHost {
    * shared note than a summarised one and a better one than a note nobody can
    * afford to carry.
    */
-  async #shortenNotes(task: string): Promise<void> {
+  #shortenNotes(task: string): Promise<void> {
+    const pending = this.#compactingNotes.get(task)
+    if (pending) return pending
+    const job = this.#compactNotes(task).finally(() => this.#compactingNotes.delete(task))
+    this.#compactingNotes.set(task, job)
+    return job
+  }
+
+  async #compactNotes(task: string): Promise<void> {
     const memory = this.#shared.get(task) ?? EMPTY_MEMORY
     const older = olderThanKept(memory)
     if (older.length === 0) return
@@ -1078,7 +1088,15 @@ export class InProcessHost {
       ? await this.#options.summariseNotes(task, older).catch(() => '')
       : ''
 
+    const current = this.#shared.get(task) ?? EMPTY_MEMORY
+    // A reset or replacement must not be resurrected by a slow summarizer.
+    if (
+      current.summary !== memory.summary ||
+      !memory.notes.every((note, i) => current.notes[i] === note)
+    )
+      return
     const shortened = shorten(memory, summary)
+    shortened.notes.push(...current.notes.slice(memory.notes.length))
     this.#shared.set(task, shortened)
     this.#options.onShared?.(task, shortened)
   }
@@ -1203,6 +1221,7 @@ class LiveAgent {
   #pump: Promise<void> | undefined
   /** The turn in flight, so it can be stopped without stopping the agent. */
   #running: AbortController | undefined
+  #cancelled = false
   /** Typed while the turn was running, waiting for the next step of the loop. */
   readonly #interjections: string[] = []
   /** Commits behind the repository, as of the last sweep. */
@@ -1275,6 +1294,7 @@ class LiveAgent {
   }
 
   stop(): void {
+    this.#cancelled = true
     this.#status = 'stopped'
     this.#mailbox.length = 0
   }
@@ -1286,6 +1306,7 @@ class LiveAgent {
 
   /** Stops the turn in flight and drops what was queued behind it. */
   cancel(): boolean {
+    this.#cancelled = true
     const running = this.#running !== undefined
     this.#running?.abort()
     this.#mailbox.length = 0
@@ -1388,7 +1409,10 @@ class LiveAgent {
       const message = this.#mailbox.shift()
       if (!message) break
 
-      const verdict = governor.allowTurn(this.#def.id, message.from === 'user' ? 'user' : 'agent')
+      const verdict = governor.allowTurn(
+        this.#def.id,
+        message.from === 'user' && !message.recovered ? 'user' : 'agent',
+      )
       if (!verdict.ok) {
         options.onEvent({ type: 'agent_blocked', id: this.#def.id, reason: verdict.reason })
         // Draining the rest would report the same refusal once per message.
@@ -1445,6 +1469,7 @@ class LiveAgent {
   }
 
   async #runTurn(message: AgentMessage): Promise<void> {
+    this.#cancelled = false
     const { options, governor } = this.#host.internals
     this.#setStatus('working')
     governor.beginTurn(this.#def.id)
@@ -1624,13 +1649,17 @@ class LiveAgent {
       options.onHistory?.(this.#def.id, this.#messages, this.#usage)
     }
 
+    if (stalled && this.#recover(message, stalled)) {
+      this.#lastEnded = 'stalled'
+      return
+    }
     if (stalled && message.from !== 'user' && message.reply !== true) {
       const owner = message.origin ?? message.from
       if (owner !== this.#def.id) {
         const sent = await this.#host.internals.relay({
           from: this.#def.id,
           to: owner,
-          text: `This is the harness: the delegated attempt stopped without completion. ${stalled}`,
+          text: `This is the harness: the delegated attempt stopped without completion. ${stalled.slice(0, 1200)}\nLast reported evidence: ${(said.lastWords ?? 'No final explanation was produced.').slice(-1200)}\nAssign a different approach with an observable acceptance check; do not resend the same failed attempt.`,
           hops: message.hops,
           reply: true,
           ...(message.origin ? { origin: message.origin } : {}),
@@ -1708,6 +1737,29 @@ class LiveAgent {
     const said = this.#interjections.splice(0).join('\n')
     const origin = this.#host.internals.options.leader ?? this.#def.id
     this.#mailbox.unshift({ from: 'user', to: this.#def.id, text: said, hops: 0, origin })
+  }
+
+  /** One changed-strategy recovery; cancellation and new guidance always win. */
+  #recover(message: AgentMessage, reason: string): boolean {
+    if (
+      !this.#yolo ||
+      this.#cancelled ||
+      this.stopped() ||
+      !this.#host.internals.governor.allowTurn(this.#def.id, 'agent').ok ||
+      message.recovered ||
+      message.reply ||
+      this.#mailbox.length ||
+      this.#interjections.length
+    )
+      return false
+    this.#mailbox.unshift({
+      ...message,
+      recovered: true,
+      text: `This is the harness: one recovery attempt for the current instruction. ${reason.slice(0, 1200)}
+Inspect the evidence already in this conversation. State what failed, choose a materially different approach, then verify the current instruction and its acceptance criteria. Do not repeat the rejected action. If no alternative is available, report the blocker to the coordinating agent. Existing budgets and permissions still apply.`,
+    })
+    this.#host.internals.options.onEvent({ type: 'agent_recovering', id: this.#def.id, reason })
+    return true
   }
 
   /**
@@ -1884,7 +1936,11 @@ class LiveAgent {
           refusedSaid.add(key)
           onEvent({ type: 'agent_looping', id, tool: call.name, times, refused: true })
         }
-        return { content: refusedOnRepeat(call.name, times), isError: true }
+        return {
+          content: refusedOnRepeat(call.name, times),
+          isError: true,
+          ...(call.name === 'agent_send' ? {} : { stalled: refusedOnRepeat(call.name, times) }),
+        }
       },
       async postToolCall(call: ToolCallInfo, output: ToolOutput): Promise<ToolOutput | undefined> {
         const times = repeats.record(call.name, call.input, output.content)
@@ -2436,14 +2492,15 @@ export const ORCHESTRATION_FILE = 'ORCHESTRATE.md'
  * visible enough that the ones that want to, can.
  */
 export const ORCHESTRATION = `
-Nobody is watching this run. Whoever started it has gone, so a turn that ends by asking
-permission ends the work. When the next step is clear, take it. When it belongs to somebody
-else, send it to them with agent_send and say what you expect back.
+Nobody is watching this run. Take clear next steps within the configured permissions.
+Delegate with agent_send when work belongs to a colleague; say what you expect back.
 
 Read the least that lets you act, then act; verify by running, not by reading. Do not do
 somebody else's half: if you plan, the plan going out is your turn finished.
 
-A handoff is not a summary: say what you did, what is left, and the check that proves it.
+A handoff names the milestone, acceptance check and the commit to review. Keep one outstanding
+request per milestone; wait for its reply instead of polling or repeating the assignment.
+Review the named snapshot after the coder finishes, and report evidence with the verdict.
 A colleague on your task already has your files; one on another task gets them as a diff.
 
 Finished means checked, not written. If this project has tests, they pass before you hand
