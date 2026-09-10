@@ -1,0 +1,12 @@
+{
+  "name": "aidcrew-blocks",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run server.ts"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "three": "^0.169.0"
+  }
+}

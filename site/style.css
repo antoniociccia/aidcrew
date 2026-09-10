@@ -341,3 +341,8 @@ pre.code, .plugins pre, pre { max-width: 100%; overflow-x: auto; }
 .case-method p { color: var(--muted); font-size: .9rem; }
 @media(max-width:860px) { .case-card, .case-method { grid-template-columns: 1fr; } .case-art { min-height: 220px; padding: 2rem; } .case-content { padding: 1.4rem; } }
 .case-facts dd { overflow-wrap: anywhere; }
+
+.case-preview { display: grid; align-content: center; background: #080e12; min-width: 0; }
+.case-preview video, .case-film { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #080e12; }
+.case-film { border: 1px solid var(--line); border-radius: 12px; margin: 2rem 0 1rem; }
+.built-with .actions { flex-wrap: wrap; }

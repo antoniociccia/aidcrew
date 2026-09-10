@@ -1,0 +1,9 @@
+.aidcrew/
+node_modules/
+dist/
+data/
+*.sqlite*
+*.db*
+.env*
+node_modules/
+data/

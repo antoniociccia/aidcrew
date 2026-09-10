@@ -1,0 +1,109 @@
+html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; background: #0d3b3b; }
+#scene-holder, #scene { position: fixed; inset: 0; width: 100%; height: 100%; }
+.hidden { display: none !important; }
+
+#crosshair {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  color: #fff; font-size: 20px; text-shadow: 0 0 4px rgba(0,0,0,.6); pointer-events: none;
+}
+
+#hotbar {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+  display: flex; gap: 8px; padding: 8px; background: rgba(10, 30, 40, .7);
+  border-radius: 12px;
+}
+.slot {
+  width: 44px; height: 44px; border-radius: 8px; border: 2px solid rgba(255,255,255,.25);
+  display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff;
+  background: #666;
+}
+.slot.active { border-color: #fff; transform: scale(1.08); }
+
+#overlay {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(6, 26, 34, .55); backdrop-filter: blur(4px); transition: opacity .3s;
+}
+#overlay.gone { opacity: 0; pointer-events: none; }
+#panel {
+  background: rgba(12, 40, 52, .9); padding: 28px 36px; border-radius: 16px; text-align: center;
+  color: #eafff5; box-shadow: 0 12px 40px rgba(0,0,0,.4);
+}
+#panel h1 { margin: 0 0 8px; font-size: 26px; letter-spacing: .5px; }
+#panel p { margin: 0 0 16px; color: #a8d8cc; }
+#join-form input {
+  padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.1); color: #fff; font-size: 15px; outline: none;
+}
+#join-form button {
+  margin-left: 8px; padding: 10px 18px; border: 0; border-radius: 8px; cursor: pointer;
+  background: #2ec4b6; color: #04302b; font-weight: 600; font-size: 15px;
+}
+#join-form button:hover { background: #3fe0d0; }
+
+#reject-reason {
+  position: fixed; left: 50%; top: calc(50% + 24px); transform: translateX(-50%);
+  color: #ffb0b0; font-size: 13px; text-shadow: 0 1px 3px rgba(0,0,0,.6); pointer-events: none;
+}
+#build-assist {
+  position: fixed; left: 14px; top: 14px; z-index: 6;
+  background: rgba(10, 30, 40, .82); color: #c9f2e9; padding: 10px 14px; border-radius: 10px;
+  font: 12px/1.6 ui-monospace, monospace; pointer-events: none; white-space: pre;
+}
+#build-assist .ok { color: #9dffb0; }
+#build-assist .bad { color: #ffb0b0; }
+#toast {
+  position: fixed; left: 50%; top: 64px; transform: translateX(-50%);
+  background: rgba(30, 12, 12, .82); color: #ffd9d9; padding: 8px 16px; border-radius: 8px;
+  font-size: 14px; pointer-events: none; transition: opacity .2s;
+}
+#toast.hidden { display: block !important; opacity: 0; }
+#hint {
+  position: fixed; left: 50%; top: 20%; transform: translateX(-50%);
+  background: rgba(10, 30, 40, .78); color: #dffcf4; padding: 10px 18px; border-radius: 10px;
+  font-size: 14px; pointer-events: none; text-align: center;
+}
+#hint.hidden { display: block !important; opacity: 0; transition: opacity .4s; }
+#mute-btn {
+  position: fixed; top: 14px; right: 14px; font-size: 20px; background: rgba(10,30,40,.7);
+  border: 0; border-radius: 10px; padding: 8px 10px; cursor: pointer; color: #fff;
+}
+/* --- M5: QR panel + recovery modal --- */
+#recover-row { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+#recover-row input { padding: 8px; border-radius: 6px; border: 1px solid #889; background: #223; color: #eef; font-family: monospace; font-size: 12px; }
+.fine { font-size: 11px; opacity: .75; margin: 4px 0 0; text-align: center; }
+#public-qr-btn { margin-top: 10px; background: #223; color: #cde; border: 1px solid #556; }
+#qr-modal { position: fixed; inset: 0; background: rgba(10,14,20,.82); display: flex; align-items: center; justify-content: center; z-index: 50; }
+#qr-modal.hidden { display: none; }
+#qr-card { background: #1a2030; color: #eef; padding: 18px 22px; border-radius: 12px; text-align: center; max-width: 340px; box-shadow: 0 8px 40px rgba(0,0,0,.6); }
+#qr-card h2 { font-size: 16px; margin: 0 0 10px; }
+#qr-canvas { background: #fff; border-radius: 8px; padding: 8px; image-rendering: pixelated; }
+#qr-actions { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+#qr-actions button { font-size: 12px; padding: 6px 10px; }
+#qr-msg { min-height: 14px; color: #ffd27d; }
+/* --- M6: touch controls + leave --- */
+#leave-btn {
+  position: fixed; top: 14px; left: 14px; z-index: 20;
+  background: rgba(60, 20, 20, .75); color: #ffd9d9; border: 1px solid #a55;
+  border-radius: 10px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+}
+#touch-stick {
+  position: fixed; left: 22px; bottom: 90px; width: 116px; height: 116px;
+  border-radius: 50%; background: rgba(10,30,40,.45); border: 2px solid rgba(255,255,255,.3);
+  z-index: 20; touch-action: none;
+}
+#touch-knob {
+  position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px;
+  border-radius: 50%; background: rgba(255,255,255,.55); pointer-events: none;
+}
+#touch-btns {
+  position: fixed; right: 18px; bottom: 84px; z-index: 20;
+  display: grid; grid-template-columns: repeat(2, 64px); gap: 10px; touch-action: none;
+}
+#touch-btns button {
+  width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35);
+  background: rgba(10,30,40,.55); color: #fff; font-size: 24px; touch-action: none;
+}
+#touch-jump { grid-column: 1 / -1; justify-self: center; }
+@media (hover: none) and (pointer: coarse) {
+  #hotbar .slot { width: 52px; height: 52px; }
+}
