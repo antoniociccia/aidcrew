@@ -49,5 +49,17 @@ export function providerOptions(
 ): Record<string, unknown> {
   const prompted = env.AIDCREW_PROMPTED_TOOLS ?? store?.get(`provider.${providerId}.promptedTools`)
 
-  return prompted ? { promptedTools: true } : {}
+  const options: Record<string, unknown> = prompted ? { promptedTools: true } : {}
+  const reasoning = env.AIDCREW_OPENROUTER_REASONING
+  if (providerId === 'openrouter' && reasoning !== undefined) {
+    try {
+      options.reasoningByModel = JSON.parse(reasoning)
+    } catch {
+      throw new ConfigError('AIDCREW_OPENROUTER_REASONING must be valid JSON')
+    }
+    // These controls use OpenRouter's chat dialect. Do not silently fall back
+    // to a different API that drops the configured reasoning policy.
+    options.dialect = 'chat'
+  }
+  return options
 }

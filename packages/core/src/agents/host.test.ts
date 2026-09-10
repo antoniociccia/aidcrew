@@ -3556,6 +3556,83 @@ describe('an instruction given the moment an agent goes idle', () => {
  * error was on the screen; the notice contradicted it.
  */
 describe('a turn that ends in an error', () => {
+  test('wakes the delegator after failure and lets it recover the handoff', async () => {
+    let attempts = 0
+    const reviewer: Provider = {
+      id: 'flaky',
+      async *send() {
+        if (++attempts === 1) throw new Error('upstream unavailable')
+        yield* text('PASS: verified the milestone')
+      },
+    }
+    const { host, events } = makeHost(
+      {
+        plan: [
+          call('first', 'agent_send', { to: 'reviewer', message: 'verify M1' }),
+          text('waiting'),
+          call('retry', 'agent_send', { to: 'reviewer', message: 'retry M1 once' }),
+          text('retrying'),
+          text('continue to M2'),
+        ],
+      },
+      { providerFor: { reviewer } },
+    )
+    await host.spawn(def('architect', 'plan'))
+    await host.spawn(def('reviewer', 'review'))
+    await host.tell('architect', 'build')
+    await host.idle()
+    expect(attempts).toBe(2)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'agent_message',
+        from: 'reviewer',
+        to: 'architect',
+        text: expect.stringContaining('upstream unavailable'),
+      }),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'agent_message',
+        from: 'reviewer',
+        to: 'architect',
+        text: 'PASS: verified the milestone',
+      }),
+    )
+    expect(host.outstanding()).toEqual([])
+    await host.shutdown()
+  })
+
+  test('does not bounce failures when the owner fails reading the report', async () => {
+    const broken: Provider = {
+      id: 'broken',
+      // biome-ignore lint/correctness/useYield: a provider that only fails
+      async *send() {
+        throw new Error('provider unavailable')
+      },
+    }
+    let requests = 0
+    const architect: Provider = {
+      id: 'lead',
+      async *send() {
+        requests++
+        if (requests === 1)
+          yield* call('delegate', 'agent_send', { to: 'reviewer', message: 'verify' })
+        else if (requests === 2) yield* text('waiting')
+        else throw new Error('owner unavailable')
+      },
+    }
+    const { host, events } = makeHost({}, { providerFor: { architect, reviewer: broken } })
+    await host.spawn(def('architect', 'plan'))
+    await host.spawn(def('reviewer', 'review'))
+    await host.tell('architect', 'go')
+    await host.idle()
+    expect(requests).toBe(3)
+    expect(events.filter((e) => e.type === 'agent_failed')).toHaveLength(2)
+    expect(events.filter((e) => e.type === 'agent_message')).toHaveLength(2)
+    expect(host.list().every((agent) => agent.status === 'idle')).toBe(true)
+    await host.shutdown()
+  })
+
   test('is marked in the ledger as having failed, not as never having happened', async () => {
     const broken: Provider = {
       id: 'broken',

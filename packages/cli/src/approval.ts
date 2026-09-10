@@ -72,9 +72,8 @@ export type ApprovalPolicy = {
    * Agents that may act without being asked first.
    *
    * Per agent, because trust is a property of the agent the way its model is.
-   * This covers the routine — running a command, writing a file — and nothing
-   * else: the guard plugin still stops what cannot be written at all and still
-   * asks about the handful of commands that cannot be taken back.
+   * Explicit yolo skips tool approval prompts, including irreversible shell
+   * commands in the guard plugin. Protected-path refusals still apply.
    */
   trusted?: (agentId: string) => boolean
 }

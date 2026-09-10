@@ -183,11 +183,10 @@ describe('the guard in front of a tool call', () => {
     expect(result?.isError).toBe(true)
   })
 
-  test('asks about an irreversible command even in yolo', async () => {
-    // Trusting an agent to work unattended is a statement about routine work.
+  test('asks about an irreversible command in ask mode', async () => {
     const asked: string[] = []
     const guard = createGuard({
-      trust: () => 'yolo',
+      trust: () => 'ask',
       ask: async (request) => {
         asked.push(request.summary)
         return false
@@ -208,13 +207,49 @@ describe('the guard in front of a tool call', () => {
     ).toBeUndefined()
   })
 
-  test('refuses when there is nobody to ask', async () => {
+  test('refuses in ask mode when there is nobody to ask', async () => {
     // Headless: fail closed, because the alternative is running it anyway.
-    const guard = createGuard({ trust: () => 'yolo' })
+    const guard = createGuard({ trust: () => 'ask' })
 
     const result = await guard.preToolCall?.(call('bash', { command: 'sudo rm -rf /' }), context())
 
     expect(result?.isError).toBe(true)
+  })
+
+  test('yolo skips the irreversible-command prompt, including headless', async () => {
+    for (const ask of [
+      undefined,
+      async () => {
+        throw new Error('yolo must not ask')
+      },
+    ]) {
+      const guard = createGuard({ trust: () => 'yolo', ...(ask ? { ask } : {}) })
+      const result = await guard.preToolCall?.(
+        call('bash', { command: 'rm -rf /tmp/aidcrew-fresh-test' }),
+        context(),
+      )
+      expect(result).toBeUndefined()
+    }
+  })
+
+  test('trust is checked per agent and turning yolo off restores the prompt', async () => {
+    const trusted = new Set(['coder'])
+    const asked: string[] = []
+    const guard = createGuard({
+      trust: (id) => (trusted.has(id) ? 'yolo' : 'ask'),
+      ask: async (request) => {
+        asked.push(request.agentId)
+        return false
+      },
+    })
+    const cleanup = call('bash', { command: 'rm -rf scratch' })
+    expect(await guard.preToolCall?.(cleanup, context())).toBeUndefined()
+    expect(
+      (await guard.preToolCall?.(cleanup, { ...context(), agentId: 'reviewer' }))?.isError,
+    ).toBe(true)
+    trusted.delete('coder')
+    expect((await guard.preToolCall?.(cleanup, context()))?.isError).toBe(true)
+    expect(asked).toEqual(['reviewer', 'coder'])
   })
 })
 

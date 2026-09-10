@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { main } from './main.ts'
@@ -144,6 +152,25 @@ afterEach(() => {
 })
 
 describe('a team of three, on three models', () => {
+  for (const yolo of [false, true]) {
+    test(`headless cleanup honors explicitly trusted yolo=${yolo}`, async () => {
+      mkdirSync(join(home, '.aidcrew'), { recursive: true })
+      writeFileSync(join(home, '.aidcrew/config.toml'), `[agents.architect]\nyolo = ${yolo}\n`)
+      const baseUrl = serveByModel({
+        'planner-model': [
+          useTool('bash', {
+            command: 'mkdir -p scratch && rm -rf scratch && printf done > cleaned.txt',
+          }),
+          say('cleanup attempted'),
+        ],
+      })
+      await runTeam(baseUrl)
+      const result = join(repo, '.aidcrew/wt/main/cleaned.txt')
+      expect(existsSync(result)).toBe(yolo)
+      if (yolo) expect(readFileSync(result, 'utf8')).toBe('done')
+    })
+  }
+
   test('spawns every agent on the model its config names', async () => {
     const { out, code } = await runTeam(serveByModel({}))
 

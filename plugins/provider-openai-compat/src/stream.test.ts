@@ -414,6 +414,19 @@ describe('parseOpenAiStream', () => {
     expect(failing).rejects.toThrow(/rate limit exceeded/)
   })
 
+  test('recognizes numeric gateway error codes without an error type', async () => {
+    for (const code of [429, '503', 401, 402, 400]) {
+      let failure: unknown
+      try {
+        await deltas([{ error: { message: 'Provider returned error', code } }])
+      } catch (cause) {
+        failure = cause
+      }
+      expect(failure).toBeInstanceOf(ProviderResponseError)
+      expect((failure as ProviderResponseError).retryable).toBe(code === 429 || code === '503')
+    }
+  })
+
   test('names the provider when a chunk is not valid json', async () => {
     expect(deltas(['{not json'])).rejects.toThrow(/test/)
   })

@@ -179,7 +179,18 @@ export async function* runAgentLoop(options: LoopOptions): AsyncGenerator<LoopEv
     // replayed into the accumulator. One turn of deltas is small; a shared
     // iterator would have to be teed, which is more machinery than it saves.
     const deltas: StreamDelta[] = []
-    for await (const delta of options.provider.send(buildRequest(options, messages), signal)) {
+    const request = buildRequest(options, messages)
+    request.system = yield* applyInstructions(request.system, hooks, {
+      agentId: context.agentId,
+      model: options.model,
+      lastUsage: lastTurn,
+      turn: turns,
+      signal,
+      tools: options.tools.map((tool) => tool.name),
+      cwd: context.cwd,
+    })
+    if (signal.aborted) return finish('aborted')
+    for await (const delta of options.provider.send(request, signal)) {
       deltas.push(delta)
       yield { type: 'delta', delta }
     }
@@ -198,6 +209,30 @@ export async function* runAgentLoop(options: LoopOptions): AsyncGenerator<LoopEv
       content: yield* executeCalls(calls, byName, context, hooks, options.hookNames ?? []),
     })
   }
+}
+
+/** Request-scoped plugin guidance, never copied into the persisted conversation. */
+async function* applyInstructions(
+  system: string,
+  hooks: Hooks[],
+  context: TurnContext & { tools: readonly string[]; cwd: string },
+): AsyncGenerator<LoopEvent, string> {
+  const guidance = new Set<string>()
+  for (const hook of hooks) {
+    if (!hook.instructions) continue
+    try {
+      const text = await untilAborted(Promise.resolve(hook.instructions(context)), context.signal)
+      if (text === ABORTED) return system
+      if (text?.trim()) guidance.add(text.trim())
+    } catch (cause) {
+      yield {
+        type: 'hook_error',
+        hook: 'instructions',
+        message: cause instanceof Error ? cause.message : String(cause),
+      }
+    }
+  }
+  return guidance.size ? `${system}\n\n${[...guidance].join('\n\n')}` : system
 }
 
 function buildRequest(options: LoopOptions, messages: Message[]): CanonicalRequest {
@@ -423,12 +458,16 @@ const ABORTED = Symbol('aborted')
  */
 async function untilAborted<T>(work: Promise<T>, signal: AbortSignal): Promise<T | typeof ABORTED> {
   if (signal.aborted) return ABORTED
-  return await Promise.race([
-    work,
-    new Promise<typeof ABORTED>((resolve) => {
-      signal.addEventListener('abort', () => resolve(ABORTED), { once: true })
-    }),
-  ])
+  let onAbort = () => {}
+  const cancelled = new Promise<typeof ABORTED>((resolve) => {
+    onAbort = () => resolve(ABORTED)
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
+  try {
+    return await Promise.race([work, cancelled])
+  } finally {
+    signal.removeEventListener('abort', onAbort)
+  }
 }
 
 async function* applyPostHooks(

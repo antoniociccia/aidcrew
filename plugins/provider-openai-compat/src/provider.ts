@@ -38,6 +38,11 @@ export type OpenAiCompatConfig = {
   dialect?: Dialect
   /** How long a service may go without sending a byte before it is given up on. */
   timeouts?: Partial<StallTimeouts>
+  /** OpenRouter chat controls keyed by exact model ID. Never sent to other providers. */
+  reasoningByModel?: Record<
+    string,
+    { enabled: boolean } | { effort: string } | { max_tokens: number }
+  >
 }
 
 /** Statuses where sending the very same request again can succeed. */
@@ -67,6 +72,9 @@ export function createOpenAiCompatProvider(config: OpenAiCompatConfig): Provider
   const base = config.baseUrl.replace(/\/+$/, '')
   const doFetch = config.fetchImpl ?? ((url, init) => fetch(url, init))
   const dialect = config.dialect ?? 'auto'
+  if (config.reasoningByModel !== undefined && (config.id !== 'openrouter' || dialect !== 'chat')) {
+    throw new Error('reasoningByModel requires the openrouter provider with dialect chat')
+  }
 
   const headers = {
     'Content-Type': 'application/json',
@@ -120,7 +128,7 @@ export function createOpenAiCompatProvider(config: OpenAiCompatConfig): Provider
     watch.release()
     const complaint = explain(text)
     const message = complaint
-      ? `${config.id}: ${complaint}`
+      ? `${config.id} (HTTP ${response.status}): ${complaint}`
       : `${config.id} returned ${response.status} ${response.statusText}: ${truncate(text)}`
     const retryable = RETRYABLE_STATUSES.has(response.status) && !isOutOfCredit(text)
     const wait = retryAfterMs(response.headers)
@@ -296,7 +304,12 @@ export function createOpenAiCompatProvider(config: OpenAiCompatConfig): Provider
       if (!preferResponses) {
         const chat = await post(
           '/chat/completions',
-          buildRequestBody(request),
+          {
+            ...buildRequestBody(request),
+            ...(config.reasoningByModel?.[request.model] === undefined
+              ? {}
+              : { reasoning: config.reasoningByModel[request.model] }),
+          },
           request.model,
           signal,
         )

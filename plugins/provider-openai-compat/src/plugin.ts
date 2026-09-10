@@ -43,6 +43,18 @@ const baseConfig = z.object({
    */
   firstByteTimeoutMs: z.number().positive().optional(),
   idleTimeoutMs: z.number().positive().optional(),
+  reasoningByModel: z
+    .record(
+      z.string(),
+      z.union([
+        z.object({ enabled: z.boolean() }).strict(),
+        z
+          .object({ effort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']) })
+          .strict(),
+        z.object({ max_tokens: z.number().int().positive() }).strict(),
+      ]),
+    )
+    .optional(),
 })
 
 /** The two limits as the provider takes them, only the ones that were set. */
@@ -86,6 +98,7 @@ function build(id: string, baseUrl: string, config: z.infer<typeof baseConfig>) 
     dialect: config.dialect,
     timeouts: timeoutsIn(config),
     headers: headersFor(baseUrl, config.headers),
+    ...(config.reasoningByModel === undefined ? {} : { reasoningByModel: config.reasoningByModel }),
   })
   return config.promptedTools ? withPromptedTools(provider) : provider
 }

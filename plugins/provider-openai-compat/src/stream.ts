@@ -55,7 +55,7 @@ type Chunk = {
     /** The same figure under the name DeepSeek gave it before the field above existed. */
     prompt_cache_hit_tokens?: number
   } | null
-  error?: { message?: string; type?: string } | null
+  error?: { message?: string; type?: string; code?: number | string } | null
 }
 
 const FINISH_REASONS: Record<string, StopReason> = {
@@ -132,7 +132,8 @@ function raiseReportedError(chunk: Chunk, providerId: string): void {
   throw new ProviderResponseError(
     chunk.error.message ?? 'the provider reported an error',
     providerId,
-    RETRYABLE_ERROR_TYPES.has(chunk.error.type ?? ''),
+    RETRYABLE_ERROR_TYPES.has(chunk.error.type ?? '') ||
+      [408, 429, 500, 502, 503, 504].includes(Number(chunk.error.code)),
   )
 }
 

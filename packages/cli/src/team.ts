@@ -17,6 +17,7 @@ import type { TeamCredentials } from './credentials.ts'
 import type { History } from './history.ts'
 import type { Host } from './host.ts'
 import { createProvider } from './host.ts'
+import type { Journal } from './journal.ts'
 import type { AgentOverride } from './workspace.ts'
 
 /**
@@ -101,7 +102,9 @@ export type TeamOptions = {
   /** Which plugin each set came from, so a hook that throws names somebody. */
   hookNames?: string[]
   /** Where an agent's conversation is kept, so a session can be resumed. */
-  history?: History
+  history?: History & Partial<Pick<Journal, 'sharedOfTask' | 'rememberShared'>>
+  sharedMemory?: boolean
+  summariseNotes?: import('@aidcrew/core').HostOptions['summariseNotes']
   /** Asked when work is sent to an agent that is already busy. */
   onContention?(request: ContentionRequest): Promise<Contention>
   /** What ORCHESTRATE.md says about how this project's team works. */
@@ -133,6 +136,8 @@ export function createTeamHost(options: TeamOptions): InProcessHost {
     limits: options.limits,
     isolate: options.isolate,
     onEvent: options.onEvent,
+    ...(options.sharedMemory !== undefined ? { sharedMemory: options.sharedMemory } : {}),
+    ...(options.summariseNotes ? { summariseNotes: options.summariseNotes } : {}),
     ...(options.onContention ? { onContention: options.onContention } : {}),
     ...(options.orchestration ? { orchestration: options.orchestration } : {}),
     ...(options.leader ? { leader: options.leader } : {}),
@@ -150,6 +155,8 @@ export function createTeamHost(options: TeamOptions): InProcessHost {
           usageFor: (agentId: string) => options.history?.usageOf(agentId),
           onHistory: (agentId: string, messages: Message[], usage: Usage) =>
             options.history?.remember(agentId, messages, usage),
+          sharedFor: (task: string) => options.history?.sharedOfTask?.(task),
+          onShared: (task, memory) => options.history?.rememberShared?.(task, memory),
         }
       : {}),
     providerFor: (agent, cwd) => {

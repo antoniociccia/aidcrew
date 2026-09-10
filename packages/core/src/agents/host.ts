@@ -400,6 +400,10 @@ export class InProcessHost {
       ? await this.#workspaces.create(taskOf(def))
       : { taskId: taskOf(def), path: this.#options.cwd, isolated: false }
 
+    const taskId = taskOf(def)
+    if (!this.#shared.has(taskId)) {
+      this.#shared.set(taskId, structuredClone(this.#options.sharedFor?.(taskId) ?? EMPTY_MEMORY))
+    }
     const agent = new LiveAgent(def, workspace.path, workspace.isolated, this)
     this.#agents.set(def.id, agent)
     this.#options.onEvent({ type: 'agent_spawned', id: def.id, model: def.model ?? 'default' })
@@ -1408,6 +1412,27 @@ class LiveAgent {
         // had taken one and lost it to a provider error — contradicting the
         // error sitting on the screen right above it.
         this.#host.turnEnded(this.#def.id, 'failed', false)
+        // An error in a colleague's pane is invisible to the delegating
+        // model. Return a failure report through the same bounded mailbox
+        // as a successful answer, so the owner can decide how to recover.
+        // Replies never answer replies, including when the owner also fails.
+        const owner = message.origin ?? message.from
+        if (message.from !== 'user' && message.reply !== true && owner !== this.#def.id) {
+          await this.#host.internals.relay({
+            from: this.#def.id,
+            to: owner,
+            text:
+              `This is the harness: ${this.#def.id} failed while handling your delegation. ` +
+              `No successful result is available. Error: ${clipped(this.#explain(cause))}\n` +
+              'Review the failure and choose a bounded recovery: retry a transient error, ' +
+              'correct an invalid request, or use an available teammate within the agreed scope. ' +
+              'Do not repeat an identical failed delegation indefinitely. If recovery is not ' +
+              'possible, report the concrete blocker instead of waiting for a reply that will not arrive.',
+            hops: message.hops,
+            reply: true,
+            ...(message.origin ? { origin: message.origin } : {}),
+          })
+        }
       } finally {
         // However the turn ended. Promoted only when the turn had succeeded,
         // what was typed during one that failed stayed held: the agent went
@@ -1848,11 +1873,12 @@ class LiveAgent {
 
   #sharedHook(): Hooks {
     const shared = this.#host.internals.shared
+    const options = this.#host.internals.options
     const task = taskOf(this.#def)
 
     return {
       async preTurn(messages: Message[]): Promise<Message[] | undefined> {
-        const carried = asMessage(shared.read(task), task)
+        const carried = asMessage(options.sharedMemory ? shared.read(task) : EMPTY_MEMORY, task)
         const { without, removed } = withoutShared(messages, task)
         if (carried === undefined) return removed ? without : undefined
 

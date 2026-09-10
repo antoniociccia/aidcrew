@@ -1,9 +1,8 @@
 /**
  * Shell commands that cannot be taken back.
  *
- * These always ask, even for an agent running unattended, and approving one
- * never approves the next. That is the whole point: "stop asking me" is a
- * statement about routine work, and none of these are routine.
+ * These ask in ask mode, and approving one never approves the next. An agent
+ * explicitly in yolo skips these prompts; the guard owns that trust decision.
  *
  * This is a heuristic and it is described as one. Over an arbitrary shell no
  * pattern list is a boundary — `rm` can be spelled a dozen ways, and anything

@@ -11,7 +11,14 @@ import {
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { Message } from '@aidcrew/core'
-import { importDatabase, journalPath, openJournal, orphanedRecords, slugOf } from './journal.ts'
+import {
+  compactJournal,
+  importDatabase,
+  journalPath,
+  openJournal,
+  orphanedRecords,
+  slugOf,
+} from './journal.ts'
 
 let home: string
 let repo: string
@@ -28,6 +35,40 @@ afterEach(() => {
 
 const said = (text: string): Message => ({ role: 'assistant', content: [{ type: 'text', text }] })
 const asked = (text: string): Message => ({ role: 'user', content: [{ type: 'text', text }] })
+
+describe('persistent shared task notes', () => {
+  test('keeps notes and summary across reopen and agent cleanup without aliasing', () => {
+    const journal = openJournal(repo, home)
+    const memory = { summary: 'Use SQLite', notes: [{ from: 'coder', text: 'Port 8787', at: 1 }] }
+    journal.rememberShared('main', memory)
+    journal.rememberShared('main', memory)
+    memory.notes[0]!.text = 'mutated'
+    journal.forget('coder')
+    journal.close()
+    compactJournal(journal.path, () => false)
+    const reopened = openJournal(repo, home)
+    expect(reopened.sharedOfTask('main')).toEqual({
+      summary: 'Use SQLite',
+      notes: [{ from: 'coder', text: 'Port 8787', at: 1 }],
+    })
+    reopened.sharedOfTask('main')!.notes.length = 0
+    expect(reopened.sharedOfTask('main')?.notes).toHaveLength(1)
+    expect(reopened.sharedOfTask('other')).toBeUndefined()
+    expect(readFileSync(journal.path, 'utf8').trim().split('\n')).toHaveLength(1)
+    reopened.close()
+  })
+
+  test('ignores an invalid or truncated memory record and keeps the last valid state', () => {
+    const journal = openJournal(repo, home)
+    journal.rememberShared('main', { notes: [], summary: 'known state' })
+    journal.close()
+    appendFileSync(
+      journal.path,
+      '{"type":"task-memory","taskId":"main","memory":{"notes":null}}\n{"type":"task-memory"',
+    )
+    expect(openJournal(repo, home).sharedOfTask('main')?.summary).toBe('known state')
+  })
+})
 
 describe('where the record lives', () => {
   test('under the home directory, not in the project', () => {
