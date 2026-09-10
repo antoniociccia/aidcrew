@@ -25,6 +25,8 @@ export type ToolContext = {
 }
 
 export type ToolOutput = {
+  /** A plugin detected a bounded non-progress condition; stop at the tool boundary. */
+  stalled?: string
   content: string
   isError?: boolean
 }

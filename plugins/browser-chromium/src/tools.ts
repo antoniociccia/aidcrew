@@ -2,6 +2,7 @@ import type { Tool } from '@aidcrew/core'
 import { type McpToolResult, renderResult } from '@aidcrew/mcp-bridge'
 import { defineTool } from '@aidcrew/plugin-sdk'
 import { z } from 'zod'
+import { BrowserProgress } from './progress.ts'
 
 export type BrowserCall = (
   name: string,
@@ -57,9 +58,17 @@ function required(value: string | undefined, field: string): string {
 }
 
 export function createBrowserTools(call: BrowserCall): Tool[] {
+  const progress = new BrowserProgress()
   async function output(name: string, args: Record<string, unknown>, signal: AbortSignal) {
     const result = await call(name, args, signal)
-    return { content: renderResult(result), ...(result.isError ? { isError: true } : {}) }
+    const content = renderResult(result)
+    const stalled =
+      name === 'evaluate_script' ? progress.record(signal, args.pageId, content) : undefined
+    return {
+      content,
+      ...(result.isError ? { isError: true } : {}),
+      ...(stalled ? { stalled } : {}),
+    }
   }
   return [
     defineTool({

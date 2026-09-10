@@ -1504,6 +1504,7 @@ class LiveAgent {
     const spentThisTurn: Usage = { inputTokens: 0, outputTokens: 0 }
     /** How the turn ended, which decides whether it has an answer to give. */
     let ended = ''
+    let stalled: string | undefined
     /** How many requests the turn took: more than one means it used a tool. */
     let requests = 0
     // What this turn said, for the answer it owes. Read off the responses as
@@ -1542,7 +1543,7 @@ class LiveAgent {
           // A turn that stopped is not a turn that finished, and until now
           // this was the place that forgot the difference. `aborted` is left
           // out: somebody pressed the key, so they already know.
-          const stopped = step.value.stopReason
+          const stopped = stalled ? 'stalled' : step.value.stopReason
           ended = stopped
           requests = step.value.turns
           // Sent back to work rather than reported as stopped, when nobody is
@@ -1563,6 +1564,11 @@ class LiveAgent {
           }
           break
         }
+        if (step.value.type === 'tool_end' && step.value.output.stalled) {
+          stalled = step.value.output.stalled
+          running.abort()
+          options.onEvent({ type: 'agent_blocked', id: this.#def.id, reason: stalled })
+        }
         if (step.value.type === 'assistant_turn') {
           accumulateUsage(spentThisTurn, step.value.turn.usage)
           said.closing = textOf(step.value.turn.content)
@@ -1578,7 +1584,7 @@ class LiveAgent {
       // threw under its own abort ends the way one that noticed the signal
       // in time ends: quietly, with nothing to answer.
       if (!running.signal.aborted) throw cause
-      ended = 'aborted'
+      ended = stalled ? 'stalled' : 'aborted'
       this.#host.turnEnded(this.#def.id, ended, answered())
     } finally {
       // Cleared here rather than after the loop, because a turn that throws
@@ -1618,6 +1624,20 @@ class LiveAgent {
       options.onHistory?.(this.#def.id, this.#messages, this.#usage)
     }
 
+    if (stalled && message.from !== 'user' && message.reply !== true) {
+      const owner = message.origin ?? message.from
+      if (owner !== this.#def.id) {
+        const sent = await this.#host.internals.relay({
+          from: this.#def.id,
+          to: owner,
+          text: `This is the harness: the delegated attempt stopped without completion. ${stalled}`,
+          hops: message.hops,
+          reply: true,
+          ...(message.origin ? { origin: message.origin } : {}),
+        })
+        if (sent.delivered) this.#host.turnEnded(this.#def.id, 'stalled', true)
+      }
+    }
     this.#lastEnded = ended
     if (await this.#plannedToNobody(message, ended, requests)) return
     await this.#answerWhoeverAsked(message, ended, said)
@@ -1701,7 +1721,13 @@ class LiveAgent {
    */
   #carriesOn(message: AgentMessage): boolean {
     const round = (message.continued ?? 0) + 1
-    if (!this.#yolo || round > MAX_CONTINUATIONS) return false
+    if (
+      !this.#yolo ||
+      round > MAX_CONTINUATIONS ||
+      this.#mailbox.length > 0 ||
+      this.#interjections.length > 0
+    )
+      return false
 
     const { options } = this.#host.internals
     this.#mailbox.unshift({

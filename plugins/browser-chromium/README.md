@@ -91,3 +91,16 @@ The watcher is independent of the generated application and is installed with
 the plugin. It is stopped with `runtime.py chromium stop`; preview shutdown
 leaves it waiting for the next server start. It does not implement live reload
 for source edits while the server stays online.
+
+### Repeated blocked actions
+
+When an evaluation returns structured `after` feedback with an explicit rejected
+`status`, the plugin compares that action outcome per page and running turn.
+Six unchanged rejected outcomes stop the attempt, even if unrelated telemetry
+changes elsewhere in the response. Successful feedback or a changed outcome
+resets the streak. Ordinary camera observations without rejected action feedback
+are not classified as stalls. The harness reports a stopped delegation to its
+owner and lets queued guidance run before any automatic continuation.
+
+This is a bounded detector for reported outcomes, not visual understanding or a
+general proof that a browser task made progress.

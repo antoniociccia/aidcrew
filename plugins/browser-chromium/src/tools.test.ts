@@ -75,3 +75,26 @@ test('reload bypasses cache and screenshot help does not pretend to be vision', 
   expect(h.calls[0]?.args).toEqual({ pageId: 2, type: 'reload', ignoreCache: true, timeout: 10000 })
   expect((await h.run('browser_help', {})).content).toContain('not image vision')
 })
+
+test('evaluate exposes a bounded stall signal for unchanged rejected action feedback', async () => {
+  let yaw = 0
+  const h = harness(async () => ({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          yaw: yaw++,
+          after: { target: 'same target', status: 'rejected' },
+        }),
+      },
+    ],
+  }))
+  for (let i = 0; i < 5; i++) {
+    expect(
+      (await h.run('browser_evaluate', { pageId: 1, function: '() => feedback()' })).stalled,
+    ).toBeUndefined()
+  }
+  expect(
+    (await h.run('browser_evaluate', { pageId: 1, function: '() => feedback()' })).stalled,
+  ).toContain('without progress')
+})
