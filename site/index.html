@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>aidcrew — a team of coding agents, each on its own model, in one terminal</title>
+<title>aidcrew — a team of coding agents, each on its own model, in one shared session</title>
 <meta name="description" content="aidcrew runs a team of coding agents in your terminal, each on its own model and provider. Every job in its own git worktree; the harness runs the tests and merges. Everything is a plugin. Single binary for macOS, Linux and Windows. MIT.">
 <link rel="canonical" href="https://aidcrew.dev/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="aidcrew — a team of coding agents, each on its own model">
-<meta property="og:description" content="Plan on a strong model, write on a cheap one, review on a free tier. Every job in its own git worktree; the harness runs the tests and merges. MIT, single binary.">
+<meta property="og:description" content="Choose a model for each role. Follow the work and its cost in one session. Every job in its own git worktree; the harness runs the tests and merges. MIT, single binary.">
 <meta property="og:url" content="https://aidcrew.dev/">
 <meta property="og:image" content="https://aidcrew.dev/media/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2356b4e9'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='36' font-weight='700' text-anchor='middle' fill='%230e0f15'%3ED%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=bench2">
+<link rel="stylesheet" href="style.css?v=projects2">
 <script>
 try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElement.dataset.skin = s } catch (e) {}
 </script>
@@ -25,7 +25,7 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
     <span class="ai">A I</span><span class="d">D</span><span class="crew">C R E W</span>
   </a>
   <nav>
-    <a href="#benchmark">Benchmark</a>
+    <a href="#built-with">Built with AIDCrew</a>
     <a href="#how">How it works</a>
     <a href="#plugins">Plugins</a>
     <a href="#guards">Guards</a>
@@ -49,10 +49,10 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
 <main>
 
 <section class="hero">
-  <h1>A team of coding agents,<br>each on its own model,<br>in one terminal.</h1>
+  <h1>A team of coding agents,<br>each on its own model,<br>in one shared session.</h1>
   <p class="lead">
-    The architect plans on a strong model. The coder writes on a cheap one. The reviewer runs on a
-    free tier. Each with its own key, on its own service, in its own git worktree — and when the
+    An architect plans, a coder implements and a reviewer checks the result. Choose a model and
+    budget for each role. Follow the same session in the terminal and browser. Each with its own key, on its own service, in its own git worktree — and when the
     leader says a job is done, the harness runs the tests and merges. It does not take the model's
     word for it.
   </p>
@@ -77,12 +77,11 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
 
 <section class="three" id="why">
   <article style="--voice:var(--sky)">
-    <h2>One model for everything is the expensive way.</h2>
+    <h2>Choose a model for each role.</h2>
     <p>
-      Mixed models are the base case here, not an extension: two agents hold two credentials on
-      two services in one session. When a job comes home the pane says what it cost, on which
-      models — and what the same tokens would have cost on <code>claude-sonnet-5</code> and
-      <code>gpt-5</code>. That line is the argument for running a team at all.
+      Mix models and providers in one session. Use the model that suits each job: planning,
+      implementation or review. Follow usage per agent and inspect the cost of the completed
+      session alongside its result.
     </p>
   </article>
   <article style="--voice:var(--teal)">
@@ -106,64 +105,37 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
   </article>
 </section>
 
-<section class="bench" id="benchmark">
-  <p class="eyebrow">Measured, not claimed</p>
-  <h2>The right cheap model solved every task.<br>A cheap team makes an unreliable one reliable.</h2>
-  <p class="lead">
-    Thirty tasks — bugs, features, refactors, changes across files — each with tests the agents never
-    see. Five team shapes, every one run three times. What the harness said and what the hidden tests
-    said, both recorded, with every cent of every attempt.
-  </p>
-
-  <div class="board" role="table" aria-label="Benchmark results, September 2026">
-    <div class="row head" role="row">
-      <span role="columnheader">configuration</span>
-      <span role="columnheader">tasks solved</span>
-      <span role="columnheader">cost per solved task</span>
+<section class="built-with" id="built-with">
+  <p class="eyebrow">Built with AIDCrew</p>
+  <h2>See AIDCrew at work.</h2>
+  <p class="lead">Real examples of the harness in action. Explore the models, working modes,
+    coordination strategies and API costs behind each project, with results and source you can inspect.</p>
+  <article class="case-card">
+    <div class="case-preview"><video controls muted loop playsinline preload="none" poster="media/skyforge-poster.jpg" aria-label="AIDCrew supervised build and world preview"><source src="media/skyforge-demo.mp4" type="video/mp4"></video></div>
+    <div class="case-content">
+      <span class="case-status">Supervised prototype · session closed</span>
+      <h3>A multiplayer world, built in the browser.</h3>
+      <p>Floating islands, shared construction and a persistent world. Follow the build
+        from the initial brief to the resulting prototype, with the agents and game side by side.</p>
+      <dl class="case-facts">
+        <div><dt>Architect</dt><dd>Muse Spark 1.3</dd></div>
+        <div><dt>Coder</dt><dd>GLM 5.3 Flash</dd></div>
+        <div><dt>Reviewer</dt><dd>DeepSeek V4.1 Flash</dd></div>
+      </dl>
+      <dl class="case-facts">
+        <div><dt>Mode</dt><dd>Supervised session · TUI + Web UI</dd></div>
+        <div><dt>Strategy</dt><dd>Shared memory, one coder, milestone reviews</dd></div>
+        <div><dt>Agent API cost</dt><dd>$4.95 · agent API calls</dd></div>
+      </dl>
+      <p class="aside">Sync and restart persistence passed isolated checks. The house milestone remains unfinished. Source, costs and limitations are included in the case study.</p>
+      <a class="button" href="cases/skyforge-islands/">Watch the demo and inspect the case →</a>
     </div>
-    <div class="row win" role="row" style="--voice:var(--yellow)">
-      <span class="who" role="cell"><strong>alone, the right one</strong><small>muse-spark-1.3-contributor</small></span>
-      <span class="bar" role="cell"><i style="--w:100%"></i><b data-count="100" data-suffix="%">0%</b></span>
-      <span class="bar cost" role="cell"><i style="--w:13%"></i><b data-count="0.4" data-suffix="¢" data-decimals="1">0¢</b></span>
-    </div>
-    <div class="row win" role="row" style="--voice:var(--teal)">
-      <span class="who" role="cell"><strong>cheap team</strong><small>glm-5.3-flash plans · deepseek-v4-flash writes</small></span>
-      <span class="bar" role="cell"><i style="--w:94%"></i><b data-count="94" data-suffix="%">0%</b></span>
-      <span class="bar cost" role="cell"><i style="--w:13%"></i><b data-count="0.4" data-suffix="¢" data-decimals="1">0¢</b></span>
-    </div>
-    <div class="row" role="row" style="--voice:var(--sky)">
-      <span class="who" role="cell"><strong>strong, alone</strong><small>deepseek-v4-pro</small></span>
-      <span class="bar" role="cell"><i style="--w:91%"></i><b data-count="91" data-suffix="%">0%</b></span>
-      <span class="bar cost" role="cell"><i style="--w:100%"></i><b data-count="3.1" data-suffix="¢" data-decimals="1">0¢</b></span>
-    </div>
-    <div class="row" role="row" style="--voice:var(--purple)">
-      <span class="who" role="cell"><strong>strong plans, cheap writes</strong><small>deepseek-v4-pro · deepseek-v4-flash</small></span>
-      <span class="bar" role="cell"><i style="--w:89%"></i><b data-count="89" data-suffix="%">0%</b></span>
-      <span class="bar cost" role="cell"><i style="--w:68%"></i><b data-count="2.1" data-suffix="¢" data-decimals="1">0¢</b></span>
-    </div>
-    <div class="row" role="row" style="--voice:var(--coral)">
-      <span class="who" role="cell"><strong>cheap, alone</strong><small>deepseek-v4-flash</small></span>
-      <span class="bar" role="cell"><i style="--w:63%"></i><b data-count="63" data-suffix="%">0%</b></span>
-      <span class="bar cost" role="cell"><i style="--w:10%"></i><b data-count="0.3" data-suffix="¢" data-decimals="1">0¢</b></span>
-    </div>
+  </article>
+  <div class="case-method">
+    <div><b>Examples</b><p>Watch AIDCrew build, inspect the outcome and follow the brief and source links.</p></div>
+    <div><b>Costs and results</b><p>See API spend by role, session time, verified requirements and remaining limits.</p></div>
+    <div><b>Modes and strategies</b><p>Inspect the team configuration, shared context, review workflow and additional instructions used during the session.</p></div>
   </div>
-
-  <div class="stats">
-    <div><b data-count="565">0</b><span>runs, every pair three times</span></div>
-    <div><b data-count="30">0</b><span>tasks with hidden tests and a proven solution</span></div>
-    <div><b data-count="5">0</b><span>harness bugs the benchmark found in two days — each fixed the same day</span></div>
-    <div><b data-count="4" data-suffix="%">0%</b><span>runs where the harness said done and the hidden tests disagreed</span></div>
-  </div>
-
-  <p class="aside">
-    The same cheap coder goes from 63% alone to 94% with a cheap planner: the team is what makes an
-    unreliable model reliable, and when a model gives up the harness says so instead of calling it done.
-    A strong planner adds nothing over a cheap one. Small tasks, list prices, and Muse Spark's
-    contributor tier uses requests for training — read it with that in mind. Every run's log is in the
-    repository:
-    <a href="https://github.com/antoniociccia/aidcrew/tree/main/bench" rel="noopener">bench/</a>,
-    with the <a href="https://github.com/antoniociccia/aidcrew/blob/main/bench/results/2026-09-07c.md" rel="noopener">full table</a>.
-  </p>
 </section>
 
 <section class="how" id="how">
@@ -171,7 +143,7 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
     <h2>How a job goes home</h2>
     <ol>
       <li><strong>You ask the leader.</strong> One instruction, to one agent. Everything that follows reports back to it.</li>
-      <li><strong>It hands the work on.</strong> A plan goes to the coder with <code>agent_send</code>: the files to touch, what each should do, and the check that proves it. Nobody stops to ask permission — nobody is watching.</li>
+      <li><strong>It hands the work on.</strong> A plan goes to the coder with <code>agent_send</code>: the files to touch, what each should do, and the check that proves it. The configured permissions determine which actions can proceed automatically.</li>
       <li><strong>The coder commits as it goes,</strong> on <code>work/&lt;job&gt;</code>, made for it when the checkout was. A commit is safe from the moment it exists; the shell cannot even <code>cd</code> out of the checkout.</li>
       <li><strong>The harness brings it home.</strong> When the leader says done, the check runs on the branch, the branch merges, and the pane says what it cost — or the leader is sent back, twice at most.</li>
     </ol>
@@ -339,37 +311,6 @@ aidcrew demo</code></pre>
   }
 })()
 </script>
-<script>
-(() => {
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
-  const format = (el, value) => {
-    const decimals = Number(el.dataset.decimals || 0)
-    el.textContent = value.toFixed(decimals) + (el.dataset.suffix || '')
-  }
-  const count = (el) => {
-    const target = Number(el.dataset.count)
-    if (reduced) return format(el, target)
-    const start = performance.now()
-    const tick = (now) => {
-      const t = Math.min(1, (now - start) / 1400)
-      const eased = 1 - Math.pow(1 - t, 3)
-      format(el, target * eased)
-      if (t < 1) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  }
-  const section = document.querySelector('.bench')
-  if (!section) return
-  const reveal = () => {
-    section.classList.add('in')
-    section.querySelectorAll('[data-count]').forEach(count)
-  }
-  if (!('IntersectionObserver' in window) || reduced) return reveal()
-  const seen = new IntersectionObserver((entries) => {
-    if (entries.some((e) => e.isIntersecting)) { reveal(); seen.disconnect() }
-  }, { threshold: 0.25 })
-  seen.observe(section)
-})()
-</script>
+
 </body>
 </html>

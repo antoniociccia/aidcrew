@@ -79,6 +79,15 @@ export type ToolCallInfo = {
  */
 export type Hooks = {
   /**
+   * Contributes capability guidance to this request's system prompt. Called
+   * with the agent's actual tool list, after filtering. The returned text is
+   * ephemeral: it is not written into conversation history or accumulated.
+   */
+  instructions?(
+    context: TurnContext & { tools: readonly string[]; cwd: string },
+  ): string | undefined | Promise<string | undefined>
+
+  /**
    * Runs before each request. Returning messages replaces the ones sent.
    *
    * This is where a conversation gets shortened when it no longer fits. The

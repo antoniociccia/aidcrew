@@ -10,7 +10,7 @@ import {
 } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import type { Message, Usage } from '@aidcrew/core'
+import type { Message, SharedMemory, Usage } from '@aidcrew/core'
 
 /**
  * The session record, as a file you can read.
@@ -43,6 +43,7 @@ type Entry =
   | { type: 'usage'; agentId: string; usage: Usage; at: number }
   /** What a whole job has cost, which is the figure anybody actually asks for. */
   | { type: 'task-usage'; taskId: string; usage: Usage; at: number }
+  | { type: 'task-memory'; taskId: string; memory: SharedMemory; at: number }
   /**
    * The conversation from here, in full.
    *
@@ -70,6 +71,8 @@ export type Journal = {
   usageOfTask(taskId: string): Usage | undefined
   /** Records what a task has spent so far. */
   rememberTask(taskId: string, usage: Usage): void
+  sharedOfTask(taskId: string): SharedMemory | undefined
+  rememberShared(taskId: string, memory: SharedMemory): void
   /**
    * Records where an agent's conversation now stands.
    *
@@ -159,8 +162,9 @@ export function openJournal(cwd: string, home = homedir()): Journal {
   const held = new Map<string, Message[]>()
   const spent = new Map<string, Usage>()
   const byTask = new Map<string, Usage>()
+  const shared = new Map<string, SharedMemory>()
   const lines: Line[] = []
-  replay(entries, { held, spent, byTask, lines })
+  replay(entries, { held, spent, byTask, shared, lines })
 
   function write(entry: Entry): void {
     if (closed) return
@@ -182,6 +186,18 @@ export function openJournal(cwd: string, home = homedir()): Journal {
     usageOf: (agentId) => spent.get(agentId),
 
     usageOfTask: (taskId) => byTask.get(taskId),
+
+    sharedOfTask: (taskId) => {
+      const memory = shared.get(taskId)
+      return memory === undefined ? undefined : structuredClone(memory)
+    },
+
+    rememberShared(taskId, memory) {
+      if (closed || JSON.stringify(shared.get(taskId)) === JSON.stringify(memory)) return
+      const copy = structuredClone(memory)
+      write({ type: 'task-memory', taskId, memory: copy, at: Date.now() })
+      shared.set(taskId, copy)
+    },
 
     rememberTask(taskId, usage) {
       // Only when it moved. This is asked on every redraw of the tasks
@@ -270,10 +286,17 @@ function replay(
     held: Map<string, Message[]>
     spent: Map<string, Usage>
     byTask: Map<string, Usage>
+    shared: Map<string, SharedMemory>
     lines: Line[]
   },
 ): void {
   for (const entry of entries) {
+    if (entry.type === 'task-memory') {
+      if (typeof entry.taskId === 'string' && validMemory(entry.memory)) {
+        into.shared.set(entry.taskId, entry.memory)
+      }
+      continue
+    }
     if (entry.type === 'line') {
       into.lines.push({ agentId: entry.agentId, kind: entry.kind, text: entry.text })
       continue
@@ -319,10 +342,29 @@ function replay(
 export function compactJournal(path: string, keep: (agentId: string) => boolean): void {
   // A task's total is nobody's agent, and outlives every agent that produced
   // it: what a piece of work cost stays true after the agents are gone.
-  const kept = read(path).filter((entry) => entry.type === 'task-usage' || keep(entry.agentId))
+  const kept = read(path).filter(
+    (entry) => entry.type === 'task-usage' || entry.type === 'task-memory' || keep(entry.agentId),
+  )
   const temporary = `${path}.rewriting`
   writeFileSync(temporary, kept.map((entry) => `${JSON.stringify(entry)}\n`).join(''))
   renameSync(temporary, path)
+}
+
+function validMemory(value: unknown): value is SharedMemory {
+  if (!value || typeof value !== 'object') return false
+  const memory = value as SharedMemory
+  return (
+    (memory.summary === undefined || typeof memory.summary === 'string') &&
+    Array.isArray(memory.notes) &&
+    memory.notes.every(
+      (note) =>
+        note &&
+        typeof note.from === 'string' &&
+        typeof note.text === 'string' &&
+        typeof note.at === 'number' &&
+        Number.isFinite(note.at),
+    )
+  )
 }
 
 /**

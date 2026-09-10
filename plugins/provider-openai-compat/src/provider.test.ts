@@ -764,3 +764,43 @@ describe('a trace of what went over the wire', () => {
     }
   })
 })
+
+describe('OpenRouter reasoning controls', () => {
+  test('sends the exact per-model policy without reducing the answer budget', async () => {
+    for (const reasoning of [{ enabled: false }, { effort: 'low' }, { max_tokens: 512 }]) {
+      const { calls, fetchImpl } = respondWith(okStream)
+      const provider = createOpenAiCompatProvider({
+        id: 'openrouter',
+        baseUrl: 'https://example.test/v1',
+        apiKey: 'k',
+        dialect: 'chat',
+        reasoningByModel: { 'test-model': reasoning },
+        fetchImpl,
+      })
+      await drain(provider.send(request, new AbortController().signal))
+      const body = JSON.parse(String(calls[0]?.init.body))
+      expect(body.reasoning).toEqual(reasoning)
+      expect(body.max_tokens).toBe(request.maxTokens)
+      await drain(
+        provider.send({ ...request, model: 'another-model' }, new AbortController().signal),
+      )
+      expect(JSON.parse(String(calls[1]?.init.body)).reasoning).toBeUndefined()
+    }
+  })
+
+  test('refuses controls on other providers or an API fallback that could drop them', () => {
+    for (const variant of [
+      { id: 'zen', dialect: 'chat' as const },
+      { id: 'openrouter', dialect: 'auto' as const },
+    ]) {
+      expect(() =>
+        createOpenAiCompatProvider({
+          ...variant,
+          baseUrl: 'https://example.test/v1',
+          apiKey: 'k',
+          reasoningByModel: { 'test-model': { enabled: false } },
+        }),
+      ).toThrow('requires the openrouter provider with dialect chat')
+    }
+  })
+})

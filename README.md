@@ -88,6 +88,18 @@ aidcrew -p "make the failing test pass"
 aidcrew                               # the interface: the whole team, one screen
 ```
 
+## Terminal + Web
+
+Starting `aidcrew` opens a terminal interface and a browser interface over the
+**same live session**. Inspect agents, send messages, review changes, manage models
+and approve tool calls from either surface. The bundled `web-ui` plugin runs
+locally; remote access works through an authenticated SSH tunnel. The new Studio
+palette coordinates both interfaces, and active keyboard shortcuts are highlighted.
+
+See [Web UI setup and remote access](plugins/web-ui/README.md). Use
+`AIDCREW_WEB_OPEN=0` to keep the browser closed while the web server runs, or
+`AIDCREW_WEB=0` for a terminal-only session.
+
 ## Measured, not claimed
 
 Thirty tasks — bugs, features, refactors, changes across files — each with
@@ -235,6 +247,12 @@ the bound with the work unfinished, a few times, before the stop is real. A proj
 config, with `[defaults] toolCallsPerTurn`. Nobody watching means nobody to say "go on", so the harness says
 it. An agent that is asking first stops and waits for you.
 
+`/yolo` skips all built-in tool approval prompts for that agent, including
+irreversible shell commands such as recursive deletion and force pushes.
+`/yolo off` restores asking. Protected file-tool paths, undo snapshots and
+plugin/MCP trust still apply. A headless team uses the same behavior when its
+agent has an explicitly trusted `yolo = true` setting.
+
 ### Replaying a run
 
 `AIDCREW_TRACE_DIR=.aidcrew/traces aidcrew team -p "…"` writes every request
@@ -329,8 +347,9 @@ aidcrew plugin trust my-plugin     # a plugin that arrived with a clone runs onl
 |---|---|
 | **Providers** | Anthropic; Gemini; anything OpenAI-compatible (Zen, OpenRouter, DeepSeek, GLM, Ollama, vLLM), in both dialects, choosing between them by trying |
 | **Tools** | `read`, `write`, `edit`, `grep`, `glob`, `wc`, `awk`, `lsof`, `bash`, `skill`, and `agent_send` between agents. Everything that only reads is a tool of its own rather than a shell command, so looking something up does not need approving |
+| **Browser (optional)** | [browser-chromium](plugins/browser-chromium/README.md): six plugin tools for a shared visible Chromium, runtime diagnostics and human-review screenshots, backed by Chrome DevTools MCP |
 | **MCP** | Any MCP server, over stdio or HTTP, declared in the `.mcp.json` a project already has. Its tools arrive as ordinary tools and the agent loop never learns the difference. A server is a program, so one a project declares does not start until `aidcrew mcp trust <server>` says it may |
-| **Guards** | A never-write list, an always-ask list, and a snapshot of every file before it changes. On every path, because they are registered with the host rather than by each caller — and headless has nobody to ask, so what would have been a question there is a refusal |
+| **Guards** | Protected file-tool paths, snapshots before edits, and approval for irreversible commands in ask mode. Explicit yolo skips tool approval prompts. Headless teams honor trusted per-agent yolo; otherwise an irreversible command is refused |
 | **Context** | Conversations shortened when they no longer fit, summarised by a cheaper model when the project names one |
 | **Cost** | Per agent, per job and per session, from the provider's own price list, from the project's stated prices, or from the remaining balance on the key. When a job comes home the pane says what it cost, on which models, and what the same tokens would have cost on the models people default to |
 | **Images** | Pasted into the prompt and sent to models that accept them |

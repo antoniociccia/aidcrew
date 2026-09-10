@@ -36,9 +36,8 @@ export type AgentOverride = {
    *
    * Per agent, because trust is a property of the agent the way its model is:
    * a reviewer that only reads can be left alone, while the one rewriting your
-   * auth code probably should not be. It never covers the handful of commands
-   * that cannot be taken back — those are asked about however trusting the
-   * setting, since "stop asking me" is a statement about routine work.
+   * auth code probably should not be. This includes irreversible shell
+   * commands. Project-supplied yolo still requires explicit project trust.
    */
   yolo?: boolean
   /**

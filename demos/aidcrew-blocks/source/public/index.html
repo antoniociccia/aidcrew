@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.svg">
+<title>Skyforge Islands</title>
+<link rel="stylesheet" href="/style.css">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js","../shared/":"/shared/"}}</script>
+</head>
+<body>
+<div id="scene-holder"><canvas id="scene"></canvas></div>
+<div id="crosshair" class="hidden">+</div>
+<div id="reject-reason"></div>
+<div id="build-assist" class="hidden">
+  <div id="ba-joined">joined: —</div>
+  <div id="ba-target">target: —</div>
+  <div id="ba-cell">place cell: —</div>
+  <div id="ba-material">material: —</div>
+  <div id="ba-status">status: —</div>
+</div>
+<div id="toast" class="hidden"></div>
+<div id="hint" class="hidden">WASD move · Space jump · Mouse look · L-click break · R-click place · 1-4 blocks · Arrow keys look · B place · N break · V wave · M mute</div>
+<button id="mute-btn" class="hidden" title="Toggle sound (M)">🔊</button>
+<div id="hotbar" class="hidden"></div>
+<div id="overlay">
+  <div id="panel">
+    <h1>Skyforge Islands</h1>
+    <p id="state">Loading world…</p>
+    <form id="join-form" class="hidden">
+      <input id="nickname" maxlength="24" placeholder="Your nickname" autocomplete="off">
+      <button type="submit">Join as guest</button>
+    </form>
+    <div id="recover-row" class="hidden">
+      <input id="credential" placeholder="Paste recovery credential">
+      <button id="recover-btn" type="button">Recover player</button>
+      <p class="fine">Recovery credential grants full access to that player. Get it from that player's QR panel.</p>
+    </div>
+    <button id="public-qr-btn" class="hidden" type="button">Show join QR</button>
+  </div>
+</div>
+<div id="qr-modal" class="hidden">
+  <div id="qr-card">
+    <h2 id="qr-title">Your recovery QR</h2>
+    <canvas id="qr-canvas"></canvas>
+    <p id="qr-warn" class="fine">⚠ Anyone with this image can play as you. Don't share it.</p>
+    <div id="qr-actions">
+      <button id="qr-download" type="button">Download PNG</button>
+      <button id="qr-revoke" type="button">Revoke &amp; regenerate</button>
+      <button id="qr-close" type="button">Close</button>
+    </div>
+    <p id="qr-msg" class="fine"></p>
+  </div>
+</div>
+<script type="module" src="/main.js"></script>
+<script src="/vendor/qrcode.bundle.js"></script>
+</body>
+</html>

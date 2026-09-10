@@ -1,4 +1,7 @@
+import { chmodSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { startWebUI } from '@aidcrew/web-ui'
 import { render } from 'ink'
 import { App } from './app.tsx'
 import { leaveOnSignal } from './hangup.ts'
@@ -6,6 +9,7 @@ import { fixedKeyboard } from './keyboard.ts'
 import { paintOver } from './paint-over.ts'
 import { openRuntime } from './runtime.ts'
 import { claimScreen } from './screen.ts'
+import { webSession } from './web-session.ts'
 
 /**
  * Opens the interface.
@@ -40,6 +44,53 @@ export async function startInterface(options: {
   // wall of half-drawn frames behind it when the session ends. Claimed before
   // the first frame, given back however the process ends — a terminal left on
   // the alternate screen looks broken to its owner.
+  const connection = webSession()
+  let web: ReturnType<typeof startWebUI> | undefined
+  let accessFile: string | undefined
+  if (options.env.AIDCREW_WEB !== '0') {
+    try {
+      const wanted = Number(options.env.AIDCREW_WEB_PORT ?? 4318)
+      if (!Number.isInteger(wanted) || wanted < 0 || wanted > 65535)
+        throw new Error('Invalid AIDCREW_WEB_PORT')
+      try {
+        web = startWebUI(connection, { port: wanted })
+      } catch (error) {
+        if (options.env.AIDCREW_WEB_PORT || (error as NodeJS.ErrnoException).code !== 'EADDRINUSE')
+          throw error
+        web = startWebUI(connection, { port: 0 })
+      }
+      const directory = join(home, '.aidcrew', 'web')
+      mkdirSync(directory, { recursive: true, mode: 0o700 })
+      chmodSync(directory, 0o700)
+      accessFile = join(directory, `${process.pid}.json`)
+      writeFileSync(
+        accessFile,
+        JSON.stringify({ pid: process.pid, address: web.address, url: web.url }, null, 2),
+        { mode: 0o600, flag: 'wx' },
+      )
+      runtime.host.registry.register(web.plugin)
+      process.stderr.write(`Web UI: ${web.address} · private access link: ${accessFile}\n`)
+      if (options.env.AIDCREW_WEB_OPEN !== '0') {
+        const command =
+          process.platform === 'darwin'
+            ? ['open', web.url]
+            : process.platform === 'win32'
+              ? ['rundll32.exe', 'url.dll,FileProtocolHandler', web.url]
+              : ['xdg-open', web.url]
+        try {
+          Bun.spawn(command, { stdout: 'ignore', stderr: 'ignore' }).unref()
+        } catch {
+          /* The private access file remains available on hosts without a desktop. */
+        }
+      }
+    } catch (error) {
+      web?.close()
+      web = undefined
+      process.stderr.write(
+        `Web UI could not start: ${error instanceof Error ? error.message : String(error)}\n`,
+      )
+    }
+  }
   const screen = claimScreen()
 
   const app = render(
@@ -47,6 +98,8 @@ export async function startInterface(options: {
       runtime={runtime}
       home={home}
       env={options.env}
+      web={connection}
+      {...(accessFile ? { webAccessFile: accessFile } : {})}
       {...(options.cwd ? { initialCwd: options.cwd } : {})}
     />,
     // Keys some terminals will not send, put back before Ink reads them —
@@ -66,6 +119,12 @@ export async function startInterface(options: {
   // closed — so the store is closed from both places, and closing twice is
   // harmless.
   const close = () => {
+    web?.close()
+    if (accessFile) {
+      try {
+        unlinkSync(accessFile)
+      } catch {}
+    }
     runtime.close()
     screen.release()
   }

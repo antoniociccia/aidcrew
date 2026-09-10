@@ -400,6 +400,10 @@ export class InProcessHost {
       ? await this.#workspaces.create(taskOf(def))
       : { taskId: taskOf(def), path: this.#options.cwd, isolated: false }
 
+    const taskId = taskOf(def)
+    if (!this.#shared.has(taskId)) {
+      this.#shared.set(taskId, structuredClone(this.#options.sharedFor?.(taskId) ?? EMPTY_MEMORY))
+    }
     const agent = new LiveAgent(def, workspace.path, workspace.isolated, this)
     this.#agents.set(def.id, agent)
     this.#options.onEvent({ type: 'agent_spawned', id: def.id, model: def.model ?? 'default' })
@@ -1408,6 +1412,27 @@ class LiveAgent {
         // had taken one and lost it to a provider error — contradicting the
         // error sitting on the screen right above it.
         this.#host.turnEnded(this.#def.id, 'failed', false)
+        // An error in a colleague's pane is invisible to the delegating
+        // model. Return a failure report through the same bounded mailbox
+        // as a successful answer, so the owner can decide how to recover.
+        // Replies never answer replies, including when the owner also fails.
+        const owner = message.origin ?? message.from
+        if (message.from !== 'user' && message.reply !== true && owner !== this.#def.id) {
+          await this.#host.internals.relay({
+            from: this.#def.id,
+            to: owner,
+            text:
+              `This is the harness: ${this.#def.id} failed while handling your delegation. ` +
+              `No successful result is available. Error: ${clipped(this.#explain(cause))}\n` +
+              'Review the failure and choose a bounded recovery: retry a transient error, ' +
+              'correct an invalid request, or use an available teammate within the agreed scope. ' +
+              'Do not repeat an identical failed delegation indefinitely. If recovery is not ' +
+              'possible, report the concrete blocker instead of waiting for a reply that will not arrive.',
+            hops: message.hops,
+            reply: true,
+            ...(message.origin ? { origin: message.origin } : {}),
+          })
+        }
       } finally {
         // However the turn ended. Promoted only when the turn had succeeded,
         // what was typed during one that failed stayed held: the agent went
@@ -1479,6 +1504,7 @@ class LiveAgent {
     const spentThisTurn: Usage = { inputTokens: 0, outputTokens: 0 }
     /** How the turn ended, which decides whether it has an answer to give. */
     let ended = ''
+    let stalled: string | undefined
     /** How many requests the turn took: more than one means it used a tool. */
     let requests = 0
     // What this turn said, for the answer it owes. Read off the responses as
@@ -1517,7 +1543,7 @@ class LiveAgent {
           // A turn that stopped is not a turn that finished, and until now
           // this was the place that forgot the difference. `aborted` is left
           // out: somebody pressed the key, so they already know.
-          const stopped = step.value.stopReason
+          const stopped = stalled ? 'stalled' : step.value.stopReason
           ended = stopped
           requests = step.value.turns
           // Sent back to work rather than reported as stopped, when nobody is
@@ -1538,6 +1564,11 @@ class LiveAgent {
           }
           break
         }
+        if (step.value.type === 'tool_end' && step.value.output.stalled) {
+          stalled = step.value.output.stalled
+          running.abort()
+          options.onEvent({ type: 'agent_blocked', id: this.#def.id, reason: stalled })
+        }
         if (step.value.type === 'assistant_turn') {
           accumulateUsage(spentThisTurn, step.value.turn.usage)
           said.closing = textOf(step.value.turn.content)
@@ -1553,7 +1584,7 @@ class LiveAgent {
       // threw under its own abort ends the way one that noticed the signal
       // in time ends: quietly, with nothing to answer.
       if (!running.signal.aborted) throw cause
-      ended = 'aborted'
+      ended = stalled ? 'stalled' : 'aborted'
       this.#host.turnEnded(this.#def.id, ended, answered())
     } finally {
       // Cleared here rather than after the loop, because a turn that throws
@@ -1593,6 +1624,20 @@ class LiveAgent {
       options.onHistory?.(this.#def.id, this.#messages, this.#usage)
     }
 
+    if (stalled && message.from !== 'user' && message.reply !== true) {
+      const owner = message.origin ?? message.from
+      if (owner !== this.#def.id) {
+        const sent = await this.#host.internals.relay({
+          from: this.#def.id,
+          to: owner,
+          text: `This is the harness: the delegated attempt stopped without completion. ${stalled}`,
+          hops: message.hops,
+          reply: true,
+          ...(message.origin ? { origin: message.origin } : {}),
+        })
+        if (sent.delivered) this.#host.turnEnded(this.#def.id, 'stalled', true)
+      }
+    }
     this.#lastEnded = ended
     if (await this.#plannedToNobody(message, ended, requests)) return
     await this.#answerWhoeverAsked(message, ended, said)
@@ -1676,7 +1721,13 @@ class LiveAgent {
    */
   #carriesOn(message: AgentMessage): boolean {
     const round = (message.continued ?? 0) + 1
-    if (!this.#yolo || round > MAX_CONTINUATIONS) return false
+    if (
+      !this.#yolo ||
+      round > MAX_CONTINUATIONS ||
+      this.#mailbox.length > 0 ||
+      this.#interjections.length > 0
+    )
+      return false
 
     const { options } = this.#host.internals
     this.#mailbox.unshift({
@@ -1848,11 +1899,12 @@ class LiveAgent {
 
   #sharedHook(): Hooks {
     const shared = this.#host.internals.shared
+    const options = this.#host.internals.options
     const task = taskOf(this.#def)
 
     return {
       async preTurn(messages: Message[]): Promise<Message[] | undefined> {
-        const carried = asMessage(shared.read(task), task)
+        const carried = asMessage(options.sharedMemory ? shared.read(task) : EMPTY_MEMORY, task)
         const { without, removed } = withoutShared(messages, task)
         if (carried === undefined) return removed ? without : undefined
 

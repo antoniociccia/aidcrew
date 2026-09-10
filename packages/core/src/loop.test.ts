@@ -467,3 +467,74 @@ describe('a call whose arguments were not valid JSON', () => {
     expect(result.turns).toBe(2)
   })
 })
+
+describe('request-scoped plugin instructions', () => {
+  test('composes and deduplicates guidance without changing the original system prompt', async () => {
+    const systems: string[] = []
+    const provider = {
+      id: 'test',
+      async *send(request: { system: string }) {
+        systems.push(request.system)
+        yield* endTurn('done')
+      },
+    }
+    await drain(
+      run({
+        provider,
+        hooks: [
+          { instructions: () => 'First' },
+          { instructions: () => 'First' },
+          { instructions: () => 'Second' },
+        ],
+      }),
+    )
+    expect(systems).toEqual(['You are a test.\n\nFirst\n\nSecond'])
+  })
+
+  test('reports broken instruction hooks and preserves the user request', async () => {
+    const { events, result } = await drain(
+      run({
+        hooks: [
+          {
+            instructions: () => {
+              throw new Error('bad guidance')
+            },
+          },
+        ],
+      }),
+    )
+    expect(events).toContainEqual({
+      type: 'hook_error',
+      hook: 'instructions',
+      message: 'bad guidance',
+    })
+    expect(result.stopReason).toBe('end_turn')
+  })
+
+  test('cancels a stalled instruction hook without calling the provider', async () => {
+    const abort = new AbortController()
+    let sent = false
+    const provider = {
+      id: 'test',
+      async *send() {
+        sent = true
+        yield* endTurn('wrong')
+      },
+    }
+    const task = drain(
+      run({
+        provider,
+        signal: abort.signal,
+        hooks: [
+          {
+            instructions: () => new Promise(() => {}),
+          },
+        ],
+      }),
+    )
+    setTimeout(() => abort.abort(), 10)
+    const { result } = await task
+    expect(result.stopReason).toBe('aborted')
+    expect(sent).toBe(false)
+  })
+})

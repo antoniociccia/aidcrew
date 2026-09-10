@@ -20,7 +20,7 @@ import type {
  * do to somebody learning it, and it is the reason these exist.
  */
 
-const HOOK_NAMES = ['preTurn', 'preToolCall', 'postToolCall'] as const
+const HOOK_NAMES = ['instructions', 'preTurn', 'preToolCall', 'postToolCall'] as const
 
 /**
  * Declares hooks, refusing a name that is not one.

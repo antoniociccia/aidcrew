@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { ConfigError, loadConfig } from './config.ts'
+import { ConfigError, loadConfig, providerOptions } from './config.ts'
 import type { SettingsStore } from './store.ts'
 import { openStore } from './store.ts'
 
@@ -67,5 +67,23 @@ describe('loadConfig', () => {
 
     // Keys are resolved per agent, so a team can span providers and plans.
     expect(Object.keys(loadConfig({}, store))).toEqual(['providerId', 'model'])
+  })
+})
+
+describe('reasoning settings for the OpenRouter demo', () => {
+  test('passes model-specific settings only to OpenRouter and selects chat', () => {
+    const env = { AIDCREW_OPENROUTER_REASONING: '{"deepseek/test":{"enabled":false}}' }
+    expect(providerOptions('openrouter', env)).toEqual({
+      dialect: 'chat',
+      reasoningByModel: { 'deepseek/test': { enabled: false } },
+    })
+    expect(providerOptions('zen', env)).toEqual({})
+    expect(providerOptions('openrouter', {})).toEqual({})
+  })
+
+  test('rejects malformed JSON without echoing its contents', () => {
+    expect(() =>
+      providerOptions('openrouter', { AIDCREW_OPENROUTER_REASONING: 'private-value' }),
+    ).toThrow('AIDCREW_OPENROUTER_REASONING must be valid JSON')
   })
 })

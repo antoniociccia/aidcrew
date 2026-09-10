@@ -1,0 +1,67 @@
+{
+  "status": "closed as prototype; house milestone cancelled",
+  "final_commit": "aba6e5274ae8fe9178c25f43190c7e491c7b5ab9",
+  "agent_api_cost_usd": 4.951697555,
+  "cost_scope": "AIDCrew session agent API accounting only; excludes external supervision, setup and video production. Not a complete acceptance pass.",
+  "agents": [
+    {
+      "id": "architect",
+      "status": "idle",
+      "queued": 0,
+      "cost": 3.03719415,
+      "turns": 78
+    },
+    {
+      "id": "coder",
+      "status": "idle",
+      "queued": 0,
+      "cost": 1.2924901249999998,
+      "turns": 63
+    },
+    {
+      "id": "reviewer",
+      "status": "idle",
+      "queued": 0,
+      "cost": 0.62201328,
+      "turns": 29
+    }
+  ],
+  "house_phase": {
+    "baseline_usd": 4.093213475,
+    "baseline_utc": "2026-09-10T10:19:12.221Z",
+    "increment_through_closure_usd": 0.8584840800000002,
+    "scope": "Construction attempts, input fixes, coordination, review and closing tour. Observational phase delta, not model-only waste or a counterfactual saving."
+  },
+  "supervision": {
+    "additional_messages": 21,
+    "architect_messages": 16,
+    "coder_messages": 5,
+    "interruption_episodes": 4,
+    "cancel_requests": 6,
+    "note": "Includes final user-requested cancellation and preview-tour prompts. Initial brief excluded; counts overlap and must not be added together."
+  },
+  "recording_seconds": 9253.6,
+  "sampled_activity": {
+    "from_utc": "2026-09-10T09:27:50.157Z",
+    "to_utc": "2026-09-10T11:20:01.091Z",
+    "active_seconds_estimate": 6575.353000164032,
+    "full_run_time_estimate": null,
+    "limitation": "Monitor begins 42 minutes after run start. Do not present this partial interval as full active build time."
+  },
+  "verified": [
+    "Earlier reviewed snapshot: 6 tests passed",
+    "Isolated two-client synchronization probe",
+    "Same-DB restart persistence probe",
+    "Final normal-controls preview tour reported; panoramic view captured"
+  ],
+  "incomplete": [
+    "House materials/roof",
+    "Spawn selection can land on player grass structures",
+    "README gaps",
+    "Final aba6e52 not independently fully reviewed",
+    "Mobile on real device unverified"
+  ],
+  "deferred_fix": "Detect repetitive browser actions with unchanged target/rejection, stop automatic turn continuation, require a changed plan or handoff.",
+  "follow_up_release": "0.3.0",
+  "narration": "Synthetic English narration added after the session; excluded from agent API cost."
+}

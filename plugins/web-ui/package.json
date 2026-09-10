@@ -1,0 +1,14 @@
+{
+  "name": "@aidcrew/web-ui",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aidcrew/plugin-sdk": "workspace:*",
+    "@aidcrew/core": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

@@ -9,9 +9,9 @@ import { commit, discard, type Snapshot, snapshot } from './undo.ts'
  *
  * Three of them, and they answer three different questions. What is never
  * allowed at all — a short list of files whose loss is unrecoverable or a
- * security incident. What always has to be asked about — a handful of shell
- * commands that cannot be taken back, which stay asked about however trusting
- * the mode. And what can simply be undone — every write and edit, because a
+ * security incident. What has to be asked about in ask mode — shell commands
+ * that cannot be taken back. Explicit yolo trust skips those prompts too.
+ * And what can simply be undone — every write and edit, because a
  * change you can reverse does not need to be prevented.
  *
  * All of it is a plugin. None of it is in the core, and removing this plugin
@@ -37,7 +37,7 @@ export type GuardRequest = {
   tool: string
   summary: string
   because: string
-  /** True when no amount of trust skips this one. */
+  /** True when ask mode requires a decision for this call rather than a remembered approval. */
   always: boolean
 }
 
@@ -81,13 +81,16 @@ export function createGuard(options: GuardOptions): Hooks {
 
       if (call.name !== 'bash') return undefined
 
+      // Yolo is explicit permission to run tools without confirmation. A
+      // second prompt here used to strand unattended cleanup in /tmp even
+      // though the agent was already marked unleashed.
+      if (options.trust(context.agentId) === 'yolo') return undefined
+
       const command = typeof input.command === 'string' ? input.command : ''
       const danger = irreversible(command)
       if (!danger) return undefined
 
-      // Asked about even in yolo, and approving one never approves the next:
-      // "stop asking me" is a statement about routine work, and none of these
-      // are routine.
+      // In ask mode, approving one irreversible command never approves the next.
       const allowed = await options.ask?.({
         agentId: context.agentId,
         tool: 'bash',

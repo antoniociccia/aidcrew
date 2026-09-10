@@ -358,6 +358,7 @@ export type Prices = {
 }
 
 export type LiveTeam = {
+  sharedNotes(): Record<string, unknown>
   snapshots(): AgentSnapshot[]
   tell(agentId: string, text: string): Promise<void>
   /** Stops what an agent is doing now, leaving the agent standing. */
@@ -383,8 +384,8 @@ export type LiveTeam = {
    * For this session only, and never written to the config: trust given in the
    * middle of a task is trust given for that task, and a session that quietly
    * turned an agent loose for good is a session that surprises you tomorrow.
-   * The hard guards are unaffected — what can never be written stays
-   * unwritable, and a command that cannot be taken back is still asked about.
+   * Shell commands, including irreversible ones, run without approval in
+   * yolo. Protected-path refusals and undo snapshots still apply.
    */
   setYolo(agentId: string, on: boolean): boolean
   /**
@@ -633,9 +634,9 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     ask: options.onApproval ?? (async () => 'no'),
   })
 
-  // The guards that no amount of trust switches off: what can never be written
-  // at all, what always has to be asked about, and a copy of everything before
-  // it changes so any of it can be taken back.
+  // Guards use this live per-agent trust too, so irreversible shell commands
+  // follow /yolo just like ordinary approvals. Protected writes and snapshots
+  // are independent of whether a command needs asking about.
   // Told to the host's guards rather than registered again: registering a
   // second set would mean two of everything, and the headless one refusing
   // what this one is about to ask about.
@@ -1060,6 +1061,13 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
       // single figure answers neither question it raises.
       split: () => splitOf(host.list().map((agent) => agent.usage)),
     },
+    sharedNotes: () =>
+      Object.fromEntries(
+        [...new Set(host.list().map((a) => a.task))].map((task) => [
+          task,
+          history.sharedOfTask(task) ?? {},
+        ]),
+      ),
     snapshots: () => host.list(),
     /** Handed over and not answered, however long ago and whoever is busy. */
     outstanding: () => host.outstanding().length,

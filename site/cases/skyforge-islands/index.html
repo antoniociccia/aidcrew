@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Skyforge Islands — Built with AIDCrew</title><meta name="description" content="A supervised AIDCrew build: three models, a browser multiplayer prototype, $4.95 in agent API spend, source and measured limitations."><meta property="og:image" content="https://aidcrew.dev/media/skyforge-poster.jpg"><link rel="stylesheet" href="../../style.css?v=cases3"></head>
+<body>
+<header class="top"><a class="mark" href="../../"><span class="ai">A I</span><span class="d">D</span><span class="crew">C R E W</span></a><nav><a href="../../#built-with">Built with AIDCrew</a><a href="https://github.com/antoniociccia/aidcrew">Harness source</a></nav></header>
+<main><section class="built-with">
+<p class="eyebrow">Built with AIDCrew · 01 · supervised session</p>
+<h1>From a brief to a shared world.</h1>
+<p class="lead">Skyforge Islands is the browser prototype used to exercise AIDCrew's agent coordination, shared memory, Chromium plugin and synchronized terminal/web interfaces.</p>
+<video class="case-film" controls playsinline preload="metadata" poster="../../media/skyforge-poster.jpg" aria-label="Watch the 90-second AIDCrew build and world preview"><source src="../../media/skyforge-demo.mp4" type="video/mp4"><a href="../../media/skyforge-demo.mp4">Download the video</a></video>
+<p class="aside">90 seconds of selected footage with synthetic English narration added after the session. Build excerpts run at 20× speed; the final panorama includes a labelled build replay. The HTTP command overlay reproduces an actual submitted request with credentials omitted.</p>
+<div class="actions"><a class="button primary" href="https://github.com/antoniociccia/aidcrew/tree/main/demos/aidcrew-blocks/source">Run the source →</a><a class="button" href="brief.md">Original brief</a><a class="button" href="session-report.json">Session report · JSON</a></div>
+<h2>The team and the cost.</h2>
+<dl class="case-facts"><div><dt>Architect</dt><dd>meta/muse-spark-1.3<br>$3.0372</dd></div><div><dt>Coder</dt><dd>z-ai/glm-5.3-flash<br>$1.2925</dd></div><div><dt>Reviewer</dt><dd>deepseek/deepseek-v4.1-flash<br>$0.6220</dd></div></dl>
+<p><strong>$4.95 in recorded agent API spend.</strong> All three models ran through OpenRouter. Shared memory was enabled, with one coder and milestone reviews. The TUI and Web UI displayed the same session.</p>
+<p class="aside">Cost covers AIDCrew agent API calls, including unsuccessful attempts. Setup, outside supervision and video/audio production are excluded. This is one observed session, not a guaranteed budget or a model ranking.</p>
+<h2>What the evidence supports.</h2>
+<div class="case-method"><div><b>Verified checks</b><p>Six automated tests passed on reviewed snapshots. Isolated two-client probes confirmed edit synchronization; same-database restarts preserved edits. A final normal-controls preview tour was recorded.</p></div><div><b>Unfinished acceptance</b><p>The house was left unfinished: incorrect materials, missing walls and no roof. Spawn selection and documentation also had gaps. The user cancelled construction and closed the session on the available prototype.</p></div><div><b>Verification limits</b><p>The final agent commit is <code>aba6e52</code>; earlier review evidence is not a full independent review of that commit. Real-device touch controls remain unverified. Movement is client-authoritative.</p></div></div>
+<h2>Where the extra effort went.</h2>
+<p>At the first sampled checkpoint for the house phase, the session had spent $4.09. It closed at $4.95: an increase of about <strong>$0.86</strong>, including construction attempts, input fixes, coordination, review and the closing tour. The house was already in the brief. This phase total cannot be attributed solely to model errors.</p>
+<p>The coder repeatedly rotated the camera while attempting a placement rejected as overlapping the player. Changing camera values hid the repeated outcome from exact-result checks. The review caught the difference between the coder's claim and the saved world. AIDCrew 0.3.0 adds a bounded stop for repeated page-reported rejection outcomes and gives queued guidance priority over automatic continuations. These fixes follow the recorded run; the footage does not claim to demonstrate them.</p>
+<h2>Supervision and reproducibility.</h2>
+<p>This session included 21 additional messages: 16 to the architect and 5 to the coder. Four interruption episodes included six cancel requests. These counts overlap and should not be added together. Instructions covered clarification, corrections, unblocking and the final cancellation/tour.</p>
+<p>The recording spans about 2 hours 34 minutes, including idle periods. A full active-harness-time estimate is not asserted: the monitor began after the run started. The edited video's duration is not a development-time claim.</p>
+<p>The source export starts a fresh world. It excludes session databases, private recovery QR codes, credentials, traces and raw recordings. Packaging adds license notices and corrects documentation; the game implementation remains the recorded agent snapshot.</p>
+<pre><code>git clone https://github.com/antoniociccia/aidcrew
+cd aidcrew/demos/aidcrew-blocks/source
+bun install
+bun run dev</code></pre>
+<p class="aside">Open localhost:8787. For deployment beyond a local demonstration, review the documented authentication, movement and input limitations first.</p>
+</section></main>
+<footer><a href="../../#built-with">← More Built with AIDCrew</a><span>Source and third-party notices included</span></footer>
+</body></html>

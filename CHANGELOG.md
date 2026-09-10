@@ -4,6 +4,30 @@ Releases are cut from a tag (`bun run version:set`, then `git push
 --follow-tags`); the tag is what CI builds. Entries say what a release gives
 the person using it, in the order it matters.
 
+## 0.3.0 — 2026-09-10
+
+- Stop browser attempts after six identical page-reported rejection outcomes,
+  even when unrelated camera telemetry changes; report the blocker to the owner.
+- Give queued instructions priority over automatic turn-limit continuations.
+- Publish the first Built with AIDCrew case with a source snapshot, edited demo,
+  model costs and explicit incomplete acceptance criteria.
+
+- Add a bundled Web UI sharing agents, messages, controls and task state with
+  the terminal. Bind remote actions to the displayed workspace session.
+- Add an optional Chromium plugin with browser inspection, interaction and
+  preview recovery through a pinned Chrome DevTools MCP dependency.
+- Allow plugins to supply tool-specific guidance automatically.
+- Persist shared task notes across restarts and apply project settings when
+  opening a session.
+- Report failed handoffs to their owner and retry transient provider stream
+  errors within the configured retry policy.
+- Support per-model OpenRouter reasoning configuration.
+- Apply trusted per-agent YOLO settings consistently in terminal and headless
+  execution. Ask mode retains approval checks; protected paths and plugin
+  trust remain enforced.
+- Improve terminal shortcut feedback and give Web UI conversations more space,
+  with consistent branding across both interfaces.
+
 ## 0.2.0 — 2026-09-08
 
 Done is a guarantee now, and the harness measures itself. If you use aidcrew

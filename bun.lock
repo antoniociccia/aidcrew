@@ -22,9 +22,9 @@
     },
     "packages/cli": {
       "name": "@aidcrew/cli",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
-        "aidcrew": "./src/main.ts",
+        "aidcrew": "./src/bin.ts",
       },
       "dependencies": {
         "@aidcrew/core": "workspace:*",
@@ -83,8 +83,19 @@
         "@aidcrew/loader-claude": "workspace:*",
         "@aidcrew/prices": "workspace:*",
         "@aidcrew/tool-skills": "workspace:*",
+        "@aidcrew/web-ui": "workspace:*",
         "ink": "^7.1.1",
         "react": "^19.2.8",
+      },
+    },
+    "plugins/browser-chromium": {
+      "name": "@aidcrew/browser-chromium",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aidcrew/core": "workspace:*",
+        "@aidcrew/mcp-bridge": "workspace:*",
+        "@aidcrew/plugin-sdk": "workspace:*",
+        "zod": "^4.4.3",
       },
     },
     "plugins/hooks-compact": {
@@ -264,8 +275,19 @@
         "zod": "^4.4.3",
       },
     },
+    "plugins/web-ui": {
+      "name": "@aidcrew/web-ui",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aidcrew/core": "workspace:*",
+        "@aidcrew/plugin-sdk": "workspace:*",
+        "zod": "^4.4.3",
+      },
+    },
   },
   "packages": {
+    "@aidcrew/browser-chromium": ["@aidcrew/browser-chromium@workspace:plugins/browser-chromium"],
+
     "@aidcrew/cli": ["@aidcrew/cli@workspace:packages/cli"],
 
     "@aidcrew/core": ["@aidcrew/core@workspace:packages/core"],
@@ -313,6 +335,8 @@
     "@aidcrew/tool-unix": ["@aidcrew/tool-unix@workspace:plugins/tool-unix"],
 
     "@aidcrew/tui": ["@aidcrew/tui@workspace:packages/tui"],
+
+    "@aidcrew/web-ui": ["@aidcrew/web-ui@workspace:plugins/web-ui"],
 
     "@alcalzone/ansi-tokenize": ["@alcalzone/ansi-tokenize@0.3.0", "", { "dependencies": { "ansi-styles": "^6.2.1", "is-fullwidth-code-point": "^5.0.0" } }, "sha512-p+CMKJ93HFmLkjXKlXiVGlMQEuRb6H0MokBSwUsX+S6BRX8eV5naFZpQJFfJHjRZY0Hmnqy1/r6UWl3x+19zYA=="],
 

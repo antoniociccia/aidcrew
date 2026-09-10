@@ -1,0 +1,9 @@
+{
+  "name": "aidcrew-chromium-mcp-runtime",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pinned external MCP dependency for the AIDCrew Chromium plugin",
+  "dependencies": {
+    "chrome-devtools-mcp": "1.9.0"
+  }
+}

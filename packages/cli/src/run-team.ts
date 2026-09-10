@@ -1,6 +1,7 @@
 import { homedir } from 'node:os'
 import type { AgentDef, AgentSnapshot, TeamEvent } from '@aidcrew/core'
 import { DEFAULT_LIMITS } from '@aidcrew/core'
+import { createGuardPlugin } from '@aidcrew/hooks-guard'
 import { bundledPriceOf, fromConfig, priceOf } from '@aidcrew/prices'
 import type { CliArgs } from './args.ts'
 import type { Config } from './config.ts'
@@ -99,6 +100,17 @@ export async function runTeam(
     throw new MissingCredentialError(credentials.missing)
   }
 
+  // The team has now resolved trusted configuration and agent definitions.
+  // Headless runs use the same guards as the interface, with no prompt to
+  // wait on: ask mode refuses, explicit yolo permits the command.
+  const trusted = new Set(team.filter((agent) => agent.yolo).map((agent) => agent.id))
+  session.host.registry.forget('hooks-guard')
+  session.host.registry.register(
+    createGuardPlugin({
+      trust: (id) => (trusted.has(id) ? 'yolo' : 'ask'),
+    }),
+  )
+
   const renderer = createTeamRenderer({ write: io.write, color: io.color })
   /** Everything that happened, read back at the end into one verdict per job. */
   const seen: TeamEvent[] = []
@@ -132,6 +144,7 @@ export async function runTeam(
     host: session.host,
     credentials,
     tools: session.host.registry.tools(),
+    hooks: session.host.registry.installedHooks().map(({ hooks }) => hooks),
     limits: DEFAULT_LIMITS,
     // Without git there is nothing to isolate with; the agents share the
     // directory and the summary says so rather than implying otherwise.

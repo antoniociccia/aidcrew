@@ -370,27 +370,44 @@ describe('what a tab says about an agent', () => {
 
 describe('an agent acting without being asked', () => {
   test('takes over its whole tab, and is counted in the tray', async () => {
-    // The small bolt this replaced was correct and easy to miss, and the one
-    // thing you must not miss is which agent is running unsupervised — you
-    // find out otherwise from what it did.
-    const ui = await mount({ loose: 'coder' })
-    await waitFor(() => ui.frame().includes('UNLEASHED'), 'the tab to say so')
+    // This assertion examines true-color escape codes, so specify the terminal
+    // capability instead of inheriting the test runner's color environment.
+    const previousColor = process.env.FORCE_COLOR
+    const previousNoColor = process.env.NO_COLOR
+    const previousColorTerm = process.env.COLORTERM
+    delete process.env.NO_COLOR
+    process.env.COLORTERM = 'truecolor'
+    process.env.FORCE_COLOR = '3'
+    try {
+      // The small bolt this replaced was correct and easy to miss, and the one
+      // thing you must not miss is which agent is running unsupervised — you
+      // find out otherwise from what it did.
+      const ui = await mount({ loose: 'coder' })
+      await waitFor(() => ui.frame().includes('UNLEASHED'), 'the tab to say so')
 
-    const loud = ui.frame()
-    expect(loud).toContain('1 unleashed')
-    // The word is a stamp set against the tab, not more of the tab's own
-    // writing: it carries a ground of its own, which the cell must not paint
-    // over. It did, and the word was invisible as anything but text.
-    const stamp = loud.slice(loud.indexOf('UNLEASHED') - 40, loud.indexOf('UNLEASHED'))
-    expect(stamp).toContain('48;2;30;30;35')
-    ui.unmount()
+      const loud = ui.frame()
+      expect(loud).toContain('1 unleashed')
+      // The word is a stamp set against the tab, not more of the tab's own
+      // writing: it carries a ground of its own, which the cell must not paint
+      // over. It did, and the word was invisible as anything but text.
+      const stamp = loud.slice(loud.indexOf('UNLEASHED') - 40, loud.indexOf('UNLEASHED'))
+      expect(stamp).toContain('48;2;30;30;35')
+      ui.unmount()
 
-    // Still its own colour — whose work this is has to stay readable — but a
-    // different shade of it, so the column reads as changed at a glance.
-    const quiet = await mount()
-    await waitFor(() => quiet.frame().includes('coder'), 'the tabs to draw')
-    expect(grounds(loud)).not.toEqual(grounds(quiet.frame()))
-    quiet.unmount()
+      // Still its own colour — whose work this is has to stay readable — but a
+      // different shade of it, so the column reads as changed at a glance.
+      const quiet = await mount()
+      await waitFor(() => quiet.frame().includes('coder'), 'the tabs to draw')
+      expect(grounds(loud)).not.toEqual(grounds(quiet.frame()))
+      quiet.unmount()
+    } finally {
+      if (previousNoColor === undefined) delete process.env.NO_COLOR
+      else process.env.NO_COLOR = previousNoColor
+      if (previousColorTerm === undefined) delete process.env.COLORTERM
+      else process.env.COLORTERM = previousColorTerm
+      if (previousColor === undefined) delete process.env.FORCE_COLOR
+      else process.env.FORCE_COLOR = previousColor
+    }
   })
 
   test('says nothing at all when every agent is supervised', async () => {
@@ -1019,4 +1036,34 @@ describe('typing more than fits on one row', () => {
     expect(printable(ui.frame())).toContain('word199')
     ui.unmount()
   })
+})
+
+test('a used shortcut is promoted and highlighted even when ordinary hints do not fit', async () => {
+  const previous = {
+    FORCE_COLOR: process.env.FORCE_COLOR,
+    NO_COLOR: process.env.NO_COLOR,
+    COLORTERM: process.env.COLORTERM,
+  }
+  delete process.env.NO_COLOR
+  process.env.FORCE_COLOR = '3'
+  process.env.COLORTERM = 'truecolor'
+  const ui = await mount()
+  try {
+    await waitFor(() => ui.frame().includes('coder'), 'initial frame')
+    const before = ui.frames.length
+    await ui.send('\u0012')
+    await waitFor(
+      () => ui.frames.slice(before).join('').includes('^r'),
+      'reasoning shortcut feedback',
+    )
+    const changed = ui.frames.slice(before).join('')
+    expect(changed).toContain('^r')
+    expect(grounds(changed)).toContain('167;139;250')
+  } finally {
+    ui.unmount()
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  }
 })

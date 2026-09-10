@@ -50,15 +50,16 @@ path has them:
 
 - **A never-write list.** `.git`, `.env`, `.ssh`, `.aws`, `.npmrc`, private
   keys, the session database. Never written, in any mode.
-- **An always-ask list.** Shell commands that cannot be taken back: `rm -rf`,
-  `git push --force`, `git reset --hard`, `dd`, `curl … | sh`. Asked about even
-  for an agent you have told to act without asking, and approving one never
-  approves the next.
+- **Approval for irreversible commands in ask mode.** Commands such as `rm -rf`,
+  `git push --force`, `git reset --hard`, `dd`, and `curl … | sh` require a
+  decision for each call. Explicit `/yolo` or trusted `yolo = true` skips these
+  prompts too: that agent can execute destructive shell commands unattended.
 - **A copy of every file before it changes**, which is what `aidcrew undo`
   takes back.
 
-Under `aidcrew -p` there is nobody to ask, so anything that would have been a
-question is a refusal.
+With nobody to ask, an untrusted irreversible command is refused. A headless
+team honors each agent's trusted `yolo` setting. Yolo does not trust plugins
+or MCP servers and does not disable the protected file-tool paths or snapshots.
 
 ## What these are not
 

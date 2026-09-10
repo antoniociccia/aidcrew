@@ -3556,6 +3556,83 @@ describe('an instruction given the moment an agent goes idle', () => {
  * error was on the screen; the notice contradicted it.
  */
 describe('a turn that ends in an error', () => {
+  test('wakes the delegator after failure and lets it recover the handoff', async () => {
+    let attempts = 0
+    const reviewer: Provider = {
+      id: 'flaky',
+      async *send() {
+        if (++attempts === 1) throw new Error('upstream unavailable')
+        yield* text('PASS: verified the milestone')
+      },
+    }
+    const { host, events } = makeHost(
+      {
+        plan: [
+          call('first', 'agent_send', { to: 'reviewer', message: 'verify M1' }),
+          text('waiting'),
+          call('retry', 'agent_send', { to: 'reviewer', message: 'retry M1 once' }),
+          text('retrying'),
+          text('continue to M2'),
+        ],
+      },
+      { providerFor: { reviewer } },
+    )
+    await host.spawn(def('architect', 'plan'))
+    await host.spawn(def('reviewer', 'review'))
+    await host.tell('architect', 'build')
+    await host.idle()
+    expect(attempts).toBe(2)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'agent_message',
+        from: 'reviewer',
+        to: 'architect',
+        text: expect.stringContaining('upstream unavailable'),
+      }),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'agent_message',
+        from: 'reviewer',
+        to: 'architect',
+        text: 'PASS: verified the milestone',
+      }),
+    )
+    expect(host.outstanding()).toEqual([])
+    await host.shutdown()
+  })
+
+  test('does not bounce failures when the owner fails reading the report', async () => {
+    const broken: Provider = {
+      id: 'broken',
+      // biome-ignore lint/correctness/useYield: a provider that only fails
+      async *send() {
+        throw new Error('provider unavailable')
+      },
+    }
+    let requests = 0
+    const architect: Provider = {
+      id: 'lead',
+      async *send() {
+        requests++
+        if (requests === 1)
+          yield* call('delegate', 'agent_send', { to: 'reviewer', message: 'verify' })
+        else if (requests === 2) yield* text('waiting')
+        else throw new Error('owner unavailable')
+      },
+    }
+    const { host, events } = makeHost({}, { providerFor: { architect, reviewer: broken } })
+    await host.spawn(def('architect', 'plan'))
+    await host.spawn(def('reviewer', 'review'))
+    await host.tell('architect', 'go')
+    await host.idle()
+    expect(requests).toBe(3)
+    expect(events.filter((e) => e.type === 'agent_failed')).toHaveLength(2)
+    expect(events.filter((e) => e.type === 'agent_message')).toHaveLength(2)
+    expect(host.list().every((agent) => agent.status === 'idle')).toBe(true)
+    await host.shutdown()
+  })
+
   test('is marked in the ledger as having failed, not as never having happened', async () => {
     const broken: Provider = {
       id: 'broken',
@@ -4187,4 +4264,108 @@ describe('a plan handed to nobody', () => {
     expect(host.list().find((agent) => agent.id === 'lead')?.turns).toBe(2)
     await host.shutdown()
   })
+})
+
+test('a plugin-reported stall closes the turn without automatic continuation', async () => {
+  const events: TeamEvent[] = []
+  let executions = 0
+  const scripts = { m: [call('stuck', 'browser_step', {}), text('must not run')] }
+  const host = new InProcessHost({
+    cwd: process.cwd(),
+    isolate: false,
+    limits: { maxHops: 3 },
+    maxTurnsPerInstruction: 1,
+    providerFor: () => scripted(scripts)('m'),
+    tools: [
+      {
+        name: 'browser_step',
+        description: 'step',
+        inputSchema: {},
+        execute: async () => {
+          executions++
+          return {
+            content: 'same rejected target',
+            stalled: 'Repeated blocked outcome without progress',
+          }
+        },
+      },
+    ],
+    onEvent: (event) => events.push(event),
+  })
+  await host.spawn(def('coder', 'm'))
+  host.setYolo('coder', true)
+  await host.tell('coder', 'build')
+  await host.idle()
+  expect(executions).toBe(1)
+  expect(events.some((e) => e.type === 'agent_continued')).toBe(false)
+  expect(
+    events.some((e) => e.type === 'agent_blocked' && e.reason.includes('without progress')),
+  ).toBe(true)
+  await host.shutdown()
+})
+
+test('queued colleague guidance takes priority over a turn-limit continuation', async () => {
+  const events: TeamEvent[] = []
+  const scripts = { m: [call('step', 'step', {}), text('applied new guidance')] }
+  const host = new InProcessHost({
+    cwd: process.cwd(),
+    isolate: false,
+    limits: { maxHops: 3 },
+    maxTurnsPerInstruction: 1,
+    providerFor: () => scripted(scripts)('m'),
+    tools: [
+      {
+        name: 'step',
+        description: 'step',
+        inputSchema: {},
+        execute: async () => {
+          await host.relay({
+            from: 'architect',
+            to: 'coder',
+            text: 'stop building; preview only',
+            hops: 1,
+          })
+          return { content: 'step completed' }
+        },
+      },
+    ],
+    onEvent: (event) => events.push(event),
+  })
+  await host.spawn(def('architect', 'm'))
+  await host.spawn(def('coder', 'm'))
+  host.setYolo('coder', true)
+  await host.tell('coder', 'build')
+  await host.idle()
+  expect(events.some((e) => e.type === 'agent_continued')).toBe(false)
+  await host.shutdown()
+})
+
+test('a stalled delegated tool reports its blocker back to the owner', async () => {
+  const events: TeamEvent[] = []
+  const scripts = { a: [text('received')], m: [call('step', 'step', {})] }
+  const host = new InProcessHost({
+    cwd: process.cwd(),
+    isolate: false,
+    limits: { maxHops: 3 },
+    providerFor: (agent) => scripted(scripts)(agent.model ?? 'm'),
+    tools: [
+      {
+        name: 'step',
+        description: 'step',
+        inputSchema: {},
+        execute: async () => ({
+          content: 'blocked',
+          stalled: 'same rejected action without progress',
+        }),
+      },
+    ],
+    onEvent: (event) => events.push(event),
+  })
+  await host.spawn(def('architect', 'a'))
+  await host.spawn(def('coder', 'm'))
+  await host.relay({ from: 'architect', to: 'coder', text: 'build', hops: 1 })
+  await host.idle()
+  expect(JSON.stringify(events)).toContain('delegated attempt stopped without completion')
+  expect(host.list().every((agent) => agent.status === 'idle')).toBe(true)
+  await host.shutdown()
 })

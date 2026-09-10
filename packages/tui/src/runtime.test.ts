@@ -9,6 +9,91 @@ import type { Line } from './screens/session.tsx'
 
 const usage = { inputTokens: 1, outputTokens: 1 }
 
+test('shared notes survive a full TUI restart and reach a different agent only when enabled', async () => {
+  const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-shared-restart-')))
+  const seen: string[] = []
+  let requests = 0
+  const model = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const body = (await request.json()) as {
+        messages: unknown[]
+        tools: { function: { name: string } }[]
+      }
+      seen.push(JSON.stringify(body.messages))
+      const writing = requests++ === 0
+      if (writing) expect(body.tools.some((tool) => tool.function.name === 'task_note')).toBe(true)
+      const delta = writing
+        ? {
+            tool_calls: [
+              {
+                index: 0,
+                id: 'note-1',
+                type: 'function',
+                function: {
+                  name: 'task_note',
+                  arguments: JSON.stringify({ text: 'Recovery tokens must be revocable.' }),
+                },
+              },
+            ],
+          }
+        : { content: 'noted' }
+      const chunks = [
+        { choices: [{ index: 0, delta }] },
+        {
+          choices: [{ index: 0, delta: {}, finish_reason: writing ? 'tool_calls' : 'stop' }],
+          usage: { prompt_tokens: 10, completion_tokens: 2 },
+        },
+      ]
+      return new Response(
+        chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join('') + 'data: [DONE]\n\n',
+        { headers: { 'Content-Type': 'text/event-stream' } },
+      )
+    },
+  })
+  const env = { AIDCREW_API_KEY: 'test', AIDCREW_BASE_URL: `${model.url.origin}/v1` }
+  async function open(id: string, sharedMemory: boolean) {
+    return startTeam({
+      runtime: await openRuntime(cwd, cwd),
+      cwd,
+      env,
+      agents: [agent(id)],
+      skills: [],
+      defaultProvider: 'openai-compat',
+      sharedMemory,
+      onChange: () => {},
+    })
+  }
+  let active: Awaited<ReturnType<typeof open>> | undefined
+  try {
+    active = await open('coder', true)
+    await active.tell('coder', 'Record the recovery constraint')
+    await active.idle()
+    // Saved immediately, even before graceful shutdown.
+    const disk = openJournal(cwd, cwd)
+    expect(disk.sharedOfTask('main')?.notes[0]?.text).toBe('Recovery tokens must be revocable.')
+    disk.close()
+    await active.shutdown()
+    active = await open('reviewer', true)
+    await active.tell('reviewer', 'Review the current constraints')
+    await active.idle()
+    expect(seen.at(-1)).toContain('Recovery tokens must be revocable.')
+    await active.shutdown()
+    active = await open('observer', false)
+    await active.tell('observer', 'Check')
+    await active.idle()
+    expect(seen.at(-1)).not.toContain('Recovery tokens must be revocable.')
+    active.setSharedMemory(true)
+    await active.tell('observer', 'Check again')
+    await active.idle()
+    expect(seen.at(-1)).toContain('Recovery tokens must be revocable.')
+  } finally {
+    await active?.shutdown()
+    model.stop(true)
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 describe('toLines', () => {
   test('shows what the agent said', () => {
     // The bug this covers: tool calls appeared and the answer never did,
@@ -1505,6 +1590,49 @@ describe('a line about something that is not an agent', () => {
  * `unleashed` three times; the tab already says it, for as long as it is true.
  */
 describe('a note that says what the one before it said', () => {
+  test('the live guard follows per-agent yolo and switches back to asking', async () => {
+    const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-yolo-')))
+    const runtime = await openRuntime(cwd, cwd)
+    const asked: string[] = []
+    const team = await startTeam({
+      runtime,
+      cwd,
+      env: { AIDCREW_API_KEY: 'test' },
+      agents: [agent('coder'), agent('reviewer')],
+      skills: [],
+      defaultProvider: 'none',
+      onChange: () => {},
+      onApproval: async (request) => {
+        asked.push(request.agentId)
+        return 'no'
+      },
+    })
+    try {
+      const guard = runtime.host.registry
+        .installedHooks()
+        .find((entry) => entry.plugin === 'hooks-guard')?.hooks
+      expect(guard).toBeDefined()
+      const call = {
+        id: 'cleanup',
+        name: 'bash',
+        input: { command: 'rm -rf /tmp/aidcrew-fresh-test' },
+      }
+      const ctx = { cwd, signal: new AbortController().signal, agentId: 'coder' }
+      team.setYolo('coder', true)
+      expect(await guard?.preToolCall?.(call, ctx)).toBeUndefined()
+      expect((await guard?.preToolCall?.(call, { ...ctx, agentId: 'reviewer' }))?.isError).toBe(
+        true,
+      )
+      team.setYolo('coder', false)
+      expect((await guard?.preToolCall?.(call, ctx))?.isError).toBe(true)
+      expect(asked).toEqual(['reviewer', 'coder'])
+    } finally {
+      await team.shutdown()
+      runtime.close()
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
   test('is written once', async () => {
     const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-dupe-')))
     try {
