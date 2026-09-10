@@ -323,27 +323,18 @@ function renderRoster() {
   const signature = JSON.stringify([state.agents, selected])
   if (signature === lastRoster) return
   lastRoster = signature
-  $('roster').replaceChildren()
   $('cards').replaceChildren()
-  $('agent-count').textContent = state.agents.length
   for (const a of state.agents) {
-    const busy = !['idle', 'stopped', 'failed'].includes(a.status)
-    const row = button('', () => choose(a.id), `roster-item${selected === a.id ? ' selected' : ''}`)
-    const label = node('span')
-    label.append(node('b', a.id), node('small', a.status))
-    row.append(avatar(a.id), label, node('i', undefined, `status-dot${busy ? ' busy' : ''}`))
-    $('roster').append(row)
     const card = button('', () => choose(a.id), `agent-card${selected === a.id ? ' selected' : ''}`)
     card.style.setProperty('--voice', voice(a.id))
-    card.setAttribute('aria-pressed', String(selected === a.id))
+    card.setAttribute('role', 'tab')
+    card.setAttribute('aria-selected', String(selected === a.id))
+    card.setAttribute('aria-controls', 'workspace')
+    card.tabIndex = selected === a.id ? 0 : -1
+    card.title = `${a.model} · ${a.turns} turns · ${a.queued} queued · ${money(a.cost)}`
     const top = node('div', undefined, 'card-top')
     top.append(avatar(a.id), node('b', a.id), node('span', a.status, 'card-status'))
-    const bottom = node('div', undefined, 'card-bottom')
-    bottom.append(
-      node('span', `${a.turns} turns · ${a.queued} queued`),
-      node('b', `${a.estimated && a.cost !== undefined ? '≈ ' : ''}${money(a.cost)}`),
-    )
-    card.append(top, node('div', a.model, 'model'), bottom)
+    card.append(top, node('div', a.model, 'model'))
     $('cards').append(card)
   }
 }
@@ -863,3 +854,23 @@ async function poll() {
   }
 }
 void poll()
+
+// Workspace details are optional; keep the conversation visible by default.
+$('sidebar-toggle').onclick = () => {
+  const open = $('sidebar').hidden
+  $('sidebar').hidden = !open
+  $('sidebar-toggle').setAttribute('aria-expanded', String(open))
+  $('sidebar-toggle').setAttribute('aria-label', `${open ? 'Close' : 'Open'} workspace sidebar`)
+  document.querySelector('.shell').classList.toggle('sidebar-open', open)
+}
+$('cards').addEventListener('keydown', (event) => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  const agents = state?.agents || []
+  if (!agents.length) return
+  event.preventDefault()
+  const current = agents.findIndex((agent) => agent.id === selected)
+  const index = event.key === 'Home' ? 0 : event.key === 'End' ? agents.length - 1
+    : (current + (event.key === 'ArrowRight' ? 1 : agents.length - 1)) % agents.length
+  choose(agents[index].id)
+  $('cards').querySelector('[aria-selected="true"]')?.focus()
+})

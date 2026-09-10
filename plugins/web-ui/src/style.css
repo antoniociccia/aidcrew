@@ -999,3 +999,42 @@ dialog::backdrop {
   .feed { height: 60dvh; }
   .entry-content, .entry.say .entry-content { font-size: 14px; }
 }
+
+/* One agent tab strip; workspace details open only when requested. */
+.shell { grid-template-columns: 48px minmax(0, 1fr); }
+.sidebar[hidden] { display: none; }
+.sidebar:not([hidden]) {
+  display: flex; position: fixed; z-index: 20; left: 48px; top: 48px;
+  bottom: 0; width: min(280px, calc(100vw - 48px));
+  height: auto; background: var(--panel, #10171f);
+  box-shadow: 16px 0 40px #0008; padding: 24px;
+}
+.topbar { justify-content: flex-start; gap: 12px; }
+.top-actions { margin-left: auto; }
+#sidebar-toggle { font-size: 20px; padding: 4px 8px; }
+.cards {
+  display: flex; gap: 4px; overflow-x: auto; flex-shrink: 0;
+  max-height: none; margin: 0; padding: 0; border-bottom: 1px solid var(--line);
+}
+.cards .agent-card {
+  flex: 1 0 160px; min-width: 0; max-width: 320px; padding: 10px 14px;
+  border: 0; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0;
+  background: transparent; text-align: left;
+}
+.cards .agent-card.selected { background: #1b2928; border-bottom-color: var(--voice); }
+.cards .agent-card.selected:before { display: none; }
+.cards .card-status { display: inline; margin-left: auto; font-size: 10px; }
+.cards .model { margin: 5px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.cards .card-top { gap: 8px; }
+.cards .avatar { width: 20px; height: 20px; font-size: 9px; }
+.agent-card:focus-visible, #sidebar-toggle:focus-visible { outline: 2px solid var(--mint); outline-offset: -2px; }
+@media (max-width: 740px) {
+  .cards .agent-card { flex: 1 0 145px; padding: 8px 10px; }
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  overflow: visible;
+}
+.cards .agent-card { width: 100%; max-width: none; }
+.cards .card-top b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

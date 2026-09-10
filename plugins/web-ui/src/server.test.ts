@@ -141,3 +141,12 @@ test('web wordmark uses the terminal spelling and filled D instead of an unrelat
   expect(mark).toContain('class="wordmark-d"')
   expect(html).not.toContain('A<span>↗</span>')
 })
+
+test('offers a single agent selector and a collapsed, explicitly controlled workspace sidebar', async () => {
+  const server = start()
+  const html = await (await fetch(server.address)).text()
+  expect(html).not.toContain('id="roster"')
+  expect(html).toContain('aria-label="Select agent"')
+  expect(html).toContain('id="sidebar" hidden')
+  expect(html).toContain('aria-controls="sidebar" aria-expanded="false"')
+})
