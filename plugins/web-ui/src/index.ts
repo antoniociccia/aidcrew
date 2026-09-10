@@ -7,7 +7,25 @@ import css from './style.css' with { type: 'text' }
 
 export type { SessionBridge, WebAction, WebState } from './protocol.ts'
 
-export function startWebUI(bridge: SessionBridge, options: { port?: number; token?: string } = {}) {
+export function startWebUI(
+  bridge: SessionBridge,
+  options: { port?: number; token?: string; remoteOrigin?: string | undefined } = {},
+) {
+  const remote = options.remoteOrigin ? new URL(options.remoteOrigin) : undefined
+  if (
+    remote &&
+    (remote.protocol !== 'https:' ||
+      remote.username ||
+      remote.password ||
+      remote.pathname !== '/' ||
+      remote.search ||
+      remote.hash ||
+      remote.hostname.includes('*'))
+  ) {
+    throw new Error(
+      'Remote origin must be an exact HTTPS origin without credentials, path, query or fragment',
+    )
+  }
   const token = options.token ?? crypto.randomUUID() + crypto.randomUUID()
   if (token.length < 32) throw new Error('Web access token must contain at least 32 characters')
   const matches = (given: string) => {
@@ -29,12 +47,34 @@ export function startWebUI(bridge: SessionBridge, options: { port?: number; toke
     maxRequestBodySize: 120_000,
     async fetch(request) {
       const url = new URL(request.url)
-      // Host validation also prevents DNS rebinding to this control endpoint.
-      if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
-        return json({ error: 'Invalid host' }, 403)
+      // Only a configured proxy host is trusted; forwarded headers cannot opt in.
+      const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)
+      if (!local && url.host !== remote?.host) return json({ error: 'Invalid host' }, 403)
       const origin = request.headers.get('Origin')
-      if (origin && origin !== url.origin) return json({ error: 'Invalid origin' }, 403)
+      if (origin && origin !== remote?.origin && (!local || origin !== url.origin))
+        return json({ error: 'Invalid origin' }, 403)
       const path = url.pathname
+      if (request.method === 'GET' && path === '/manifest.webmanifest') {
+        return new Response(
+          JSON.stringify({
+            name: 'AIDCrew',
+            short_name: 'AIDCrew',
+            start_url: '/',
+            scope: '/',
+            display: 'standalone',
+            background_color: '#0b1115',
+            theme_color: '#0b1115',
+            icons: [{ src: '/app-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+          }),
+          { headers: { ...headers, 'Content-Type': 'application/manifest+json' } },
+        )
+      }
+      if (request.method === 'GET' && path === '/app-icon.svg') {
+        return new Response(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#0b1115"/><rect x="35" y="35" width="122" height="122" rx="12" fill="#b7f4cf"/><path d="M69 62h24c29 0 40 15 40 34s-11 34-40 34H69Zm18 16v36h6c15 0 22-6 22-18s-7-18-22-18Z" fill="#0b1115"/></svg>',
+          { headers: { ...headers, 'Content-Type': 'image/svg+xml' } },
+        )
+      }
       if (request.method === 'GET' && ['/', '/style.css', '/client.js'].includes(path)) {
         const [body, type] =
           path === '/'
@@ -80,6 +120,7 @@ export function startWebUI(bridge: SessionBridge, options: { port?: number; toke
   const address = `http://127.0.0.1:${server.port}`
   return {
     address,
+    remoteUrl: remote ? `${remote.origin}/#${token}` : undefined,
     url: `${address}/#${token}`,
     plugin: definePlugin({
       name: 'web-ui',

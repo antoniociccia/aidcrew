@@ -47,6 +47,52 @@ Tokens live in sessionStorage, isolated to that browser tab's session. No wildca
 CORS or unauthenticated control endpoints are provided. The token grants control
 of the local harness, including the tools its agents may run.
 
+## Private bridge and phone companion
+
+The Web UI supports one explicitly configured HTTPS origin. It still binds only
+127.0.0.1 and still requires its per-process bearer token. This lets a private
+reverse proxy connect the existing session without creating another agent runtime.
+Forwarded-host headers alone never authorize an origin.
+
+For a private Tailscale bridge:
+
+1. Install Tailscale on the harness computer and the phone/remote computer, sign
+   into your tailnet and restrict access using its device/access policies.
+2. Find the harness computer's full `*.ts.net` DNS name in Tailscale.
+3. Start a new harness session with its exact HTTPS origin and a fixed free port:
+
+   ```sh
+   AIDCREW_WEB_ORIGIN=https://your-machine.your-tailnet.ts.net AIDCREW_WEB_PORT=4318 aidcrew
+   ```
+
+4. In another terminal on the same computer, start **private Serve**:
+
+   ```sh
+   tailscale serve --bg --https=443 http://127.0.0.1:4318
+   ```
+
+   Follow Tailscale's HTTPS setup if prompted. This uses Serve, not public Funnel.
+   Check `tailscale serve status` and `tailscale funnel status` before sharing any
+   session: existing Tailscale configuration is outside AIDCrew's control. Do not
+   overwrite a port already used for another service.
+5. From a device in the tailnet, open the `remoteUrl` in the private access file
+   `~/.aidcrew/web/<pid>.json`. Transfer that link privately: it grants control of
+   the harness. The token is removed from the address bar on loading.
+6. Use the browser's Add to Home Screen / install-site action for an app-like
+   window. The manifest launches the same Web UI; it does not start another team.
+   Some browsers may require pasting the session token in the new window.
+7. Stop sharing with `tailscale serve --https=443 off`. Stop the harness to revoke
+   its token. Device revocation and remote identity belong to Tailscale.
+
+This first bridge uses the user's existing Tailscale account; AIDCrew runs no
+hosted relay or account service. The host must stay awake, connected, and running.
+The companion requires connectivity; session contents and credentials are not
+cached by an offline service worker. Its assets require no model calls. Model
+provider keys stay in the local credential store and are not returned in snapshots.
+
+References: [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve),
+[Serve CLI](https://tailscale.com/docs/reference/tailscale-cli/serve).
+
 ## Controls and synchronization
 
 The mission view shows real agent state, cost and conversation. Activity combines
