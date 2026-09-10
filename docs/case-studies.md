@@ -20,6 +20,33 @@ credentials and private recovery codes. Include dependency and asset licenses.
 Videos may be edited for length; identify acceleration and keep the sequence of
 build milestones faithful to the recorded session.
 
+## Collection and project pages
+
+The collection should lead with the finished product: a real screenshot or short
+demo, a one-sentence outcome, the model team and the observed API spend. Show an
+explicit result status alongside these facts. Link each card to its case study;
+do not label a partially verified project as completed.
+
+Each project page should answer these questions in order:
+
+1. What can I try or watch?
+2. What did the brief require, and which requirements passed?
+3. Which models did each role use, and what did this session cost?
+4. What needed correction or operator help?
+5. Where are the source, original brief and reproduction instructions?
+
+Keep project identity separate from session identity. A project can have several
+attempts with different teams or budgets; each attempt retains its own report.
+Only compare attempts against the same brief revision and acceptance checks.
+Publish a downloadable report next to the readable page so others can inspect
+the measurements without extracting numbers from a video.
+
+Start with one fully documented project. Add community submissions through pull
+requests containing a brief, source revision, session report, demo and license
+information. Review their evidence before inclusion and identify who submitted
+and verified each case. Add filters when the collection is large enough to need
+them; avoid empty categories and unverified aggregate savings claims.
+
 ## Measuring a session
 
 Use the provider's reported usage where available. Mark estimates and identify
