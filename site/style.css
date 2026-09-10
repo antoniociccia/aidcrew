@@ -382,3 +382,8 @@ pre.code, .plugins pre, pre { max-width: 100%; overflow-x: auto; }
   .case-hero .case-facts dd { font-size: .74rem; }
   .case-hero .button { font-size: .88rem; }
 }
+
+.case-details { margin: 32px 0; border-top: 1px solid var(--line, #333); border-bottom: 1px solid var(--line, #333); padding: 20px 0; }
+.case-details summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+.case-details summary:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.case-details[open] summary { margin-bottom: 24px; }
