@@ -340,3 +340,4 @@ pre.code, .plugins pre, pre { max-width: 100%; overflow-x: auto; }
 .case-method b { color: var(--text); }
 .case-method p { color: var(--muted); font-size: .9rem; }
 @media(max-width:860px) { .case-card, .case-method { grid-template-columns: 1fr; } .case-art { min-height: 220px; padding: 2rem; } .case-content { padding: 1.4rem; } }
+.case-facts dd { overflow-wrap: anywhere; }
