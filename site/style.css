@@ -409,3 +409,8 @@ pre.code, .plugins pre, pre { max-width: 100%; overflow-x: auto; }
 @media (prefers-reduced-motion: reduce) {
   .doodle-island, .doodle-satellite, .doodle-block { animation: none; }
 }
+
+.top nav .nav-built { display: inline-flex; align-items: center; gap: .35rem; }
+.nav-doodle { width: 28px; height: 28px; flex: none; transition: transform .2s ease; }
+.nav-built:hover .nav-doodle { transform: translateY(-2px) rotate(-5deg); }
+@media (prefers-reduced-motion: reduce) { .nav-doodle { transition: none; } .nav-built:hover .nav-doodle { transform: none; } }
