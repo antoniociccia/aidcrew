@@ -13,7 +13,7 @@
 <meta property="og:image" content="https://aidcrew.dev/media/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2356b4e9'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='36' font-weight='700' text-anchor='middle' fill='%230e0f15'%3ED%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=projects2">
+<link rel="stylesheet" href="style.css?v=case-overlay3">
 <script>
 try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElement.dataset.skin = s } catch (e) {}
 </script>
@@ -106,29 +106,48 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
 </section>
 
 <section class="built-with" id="built-with">
-  <p class="eyebrow">Built with AIDCrew</p>
-  <h2>See AIDCrew at work.</h2>
-  <p class="lead">Real examples of the harness in action. Explore the models, working modes,
-    coordination strategies and API costs behind each project, with results and source you can inspect.</p>
-  <article class="case-card">
-    <div class="case-preview"><video controls muted loop playsinline preload="none" poster="media/skyforge-poster.jpg" aria-label="AIDCrew supervised build and world preview"><source src="media/skyforge-demo.mp4" type="video/mp4"></video></div>
+  <div class="built-edition">
+    <div class="built-intro">
+      <p class="eyebrow">The project collection <span>01 / World builders</span></p>
+      <h2>Built with <span>AIDCrew<span class="built-pixel" aria-hidden="true"></span></span></h2>
+      <p class="lead">Big ideas. Different models. One crew.<br>Explore what they built, how they worked and what it cost.</p>
+    </div>
+    <svg class="built-doodle" viewBox="0 0 420 260" fill="none" aria-hidden="true" focusable="false">
+      <defs>
+        <g id="voxel"><path d="M0 0 28-14 56 0 28 14Z" fill="#b9edac"/><path d="M0 0 28 14V43L0 29Z" fill="#438f79"/><path d="m28 14 28-14v29L28 43Z" fill="#286354"/><path d="m0 0 28 14L56 0" stroke="#d7ffd0" stroke-opacity=".45"/></g>
+        <g id="earth"><path d="M0 0 28-14 56 0 28 14Z" fill="#76c497"/><path d="M0 0 28 14V43L0 29Z" fill="#9c795c"/><path d="m28 14 28-14v29L28 43Z" fill="#68543f"/><path d="M0 0v8l28 14 28-14V0L28 14Z" fill="#438f79"/></g>
+      </defs>
+      <ellipse cx="214" cy="230" rx="123" ry="12" fill="currentColor" opacity=".06"/>
+      <path d="M43 135Q120 236 347 107" stroke="currentColor" opacity=".2" stroke-dasharray="3 8"/>
+      <g class="doodle-island">
+        <use href="#earth" x="169" y="147"/><use href="#earth" x="225" y="147"/><use href="#earth" x="141" y="161"/><use href="#earth" x="197" y="161"/><use href="#earth" x="169" y="175"/>
+        <path d="m211 145 9-4v-42l-9 4Z" fill="#b99a70"/><path d="m220 141 7 4v-42l-7-4Z" fill="#766348"/>
+        <use href="#voxel" x="183" y="74"/><use href="#voxel" x="211" y="60"/>
+      </g>
+      <g class="doodle-satellite"><use href="#earth" x="52" y="109"/><use href="#voxel" x="52" y="80"/></g>
+      <g class="doodle-block"><use href="#voxel" x="313" y="117"/></g>
+      <g stroke="#e8b678" stroke-width="2"><path d="M308 45v14m-7-7h14M110 47v10m-5-5h10M350 193v10m-5-5h10"/></g>
+      <path d="m270 78 6-3 6 3-6 3Z" fill="#e8b678"/>
+    </svg>
+  </div>
+  <article class="case-card case-hero">
+    <video id="skyforge-background" class="case-backdrop" muted loop playsinline preload="none" poster="media/skyforge-background.jpg" aria-hidden="true" tabindex="-1"><source src="media/skyforge-background.mp4" type="video/mp4"></video>
+    <div class="case-shade" aria-hidden="true"></div>
+    <div class="case-topline"><span class="case-status">01 / Skyforge Islands</span><button class="case-toggle" data-case-toggle aria-controls="skyforge-background" aria-pressed="false">Play background</button></div>
     <div class="case-content">
-      <span class="case-status">Supervised prototype · session closed</span>
-      <h3>A multiplayer world, built in the browser.</h3>
-      <p>Floating islands, shared construction and a persistent world. Follow the build
-        from the initial brief to the resulting prototype, with the agents and game side by side.</p>
+      <span class="case-kicker">Three models. One shared session.</span>
+      <h3>From a brief<br>to a shared world.</h3>
+      <p>AIDCrew builds a multiplayer browser prototype, with its terminal, Web UI and game preview working side by side.</p>
+      <div class="case-price"><strong>$4.95</strong><span>recorded agent API spend</span></div>
+      <a class="button" href="cases/skyforge-islands/">Watch the film &amp; explore the case <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="case-bottom">
       <dl class="case-facts">
         <div><dt>Architect</dt><dd>Muse Spark 1.3</dd></div>
         <div><dt>Coder</dt><dd>GLM 5.3 Flash</dd></div>
         <div><dt>Reviewer</dt><dd>DeepSeek V4.1 Flash</dd></div>
       </dl>
-      <dl class="case-facts">
-        <div><dt>Mode</dt><dd>Supervised session · TUI + Web UI</dd></div>
-        <div><dt>Strategy</dt><dd>Shared memory, one coder, milestone reviews</dd></div>
-        <div><dt>Agent API cost</dt><dd>$4.95 · agent API calls</dd></div>
-      </dl>
-      <p class="aside">Sync and restart persistence passed isolated checks. The house milestone remains unfinished. Source, costs and limitations are included in the case study.</p>
-      <a class="button" href="cases/skyforge-islands/">Watch the demo and inspect the case →</a>
+      <p class="case-disclosure">Supervised session. Explore the build, cost breakdown and source.</p>
     </div>
   </article>
   <div class="case-method">
@@ -312,5 +331,6 @@ aidcrew demo</code></pre>
 })()
 </script>
 
+<script type="module" src="case-preview.js"></script>
 </body>
 </html>
