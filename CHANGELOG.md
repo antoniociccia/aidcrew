@@ -4,7 +4,13 @@ Releases are cut from a tag (`bun run version:set`, then `git push
 --follow-tags`); the tag is what CI builds. Entries say what a release gives
 the person using it, in the order it matters.
 
-## Unreleased
+## 0.3.0 — 2026-09-10
+
+- Stop browser attempts after six identical page-reported rejection outcomes,
+  even when unrelated camera telemetry changes; report the blocker to the owner.
+- Give queued instructions priority over automatic turn-limit continuations.
+- Publish the first Built with AIDCrew case with a source snapshot, edited demo,
+  model costs and explicit incomplete acceptance criteria.
 
 - Add a bundled Web UI sharing agents, messages, controls and task state with
   the terminal. Bind remote actions to the displayed workspace session.
