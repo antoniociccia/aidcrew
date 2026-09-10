@@ -53,11 +53,11 @@ export async function startInterface(options: {
       if (!Number.isInteger(wanted) || wanted < 0 || wanted > 65535)
         throw new Error('Invalid AIDCREW_WEB_PORT')
       try {
-        web = startWebUI(connection, { port: wanted })
+        web = startWebUI(connection, { port: wanted, remoteOrigin: options.env.AIDCREW_WEB_ORIGIN })
       } catch (error) {
         if (options.env.AIDCREW_WEB_PORT || (error as NodeJS.ErrnoException).code !== 'EADDRINUSE')
           throw error
-        web = startWebUI(connection, { port: 0 })
+        web = startWebUI(connection, { port: 0, remoteOrigin: options.env.AIDCREW_WEB_ORIGIN })
       }
       const directory = join(home, '.aidcrew', 'web')
       mkdirSync(directory, { recursive: true, mode: 0o700 })
@@ -65,7 +65,11 @@ export async function startInterface(options: {
       accessFile = join(directory, `${process.pid}.json`)
       writeFileSync(
         accessFile,
-        JSON.stringify({ pid: process.pid, address: web.address, url: web.url }, null, 2),
+        JSON.stringify(
+          { pid: process.pid, address: web.address, url: web.url, remoteUrl: web.remoteUrl },
+          null,
+          2,
+        ),
         { mode: 0o600, flag: 'wx' },
       )
       runtime.host.registry.register(web.plugin)

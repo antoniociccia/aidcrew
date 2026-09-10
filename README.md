@@ -93,7 +93,8 @@ aidcrew                               # the interface: the whole team, one scree
 Starting `aidcrew` opens a terminal interface and a browser interface over the
 **same live session**. Inspect agents, send messages, review changes, manage models
 and approve tool calls from either surface. The bundled `web-ui` plugin runs
-locally; remote access works through an authenticated SSH tunnel. The new Studio
+locally; remote access works through an authenticated SSH tunnel or a private
+Tailscale Serve bridge with an explicitly configured HTTPS origin. The Studio
 palette coordinates both interfaces, and active keyboard shortcuts are highlighted.
 
 See [Web UI setup and remote access](plugins/web-ui/README.md). Use

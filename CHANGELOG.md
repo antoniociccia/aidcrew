@@ -4,6 +4,20 @@ Releases are cut from a tag (`bun run version:set`, then `git push
 --follow-tags`); the tag is what CI builds. Entries say what a release gives
 the person using it, in the order it matters.
 
+## Unreleased
+
+- Give unattended agents one changed-strategy recovery after an explicit stall,
+  within existing budgets. Cancellation and queued guidance take priority.
+  Escalate exhausted delegated attempts with the blocker and last explanation.
+- End repeated non-messaging tool attempts instead of spending the rest of the
+  turn on refusals. Keep message-loop handling under the existing governor.
+- Deduplicate shared notes by author, cap accumulated summaries and preserve
+  concurrent notes while sharing one compaction request per task.
+- Make milestone checks and review snapshots explicit in default team guidance.
+- Support an exact HTTPS remote origin in the Web UI for private reverse proxies,
+  retaining loopback binding, bearer authentication and session-bound actions.
+  Add an app manifest and a documented private Tailscale Serve setup.
+
 ## 0.3.0 — 2026-09-10
 
 - Stop browser attempts after six identical page-reported rejection outcomes,

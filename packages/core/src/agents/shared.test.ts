@@ -102,3 +102,22 @@ describe('when there is more than a task should carry', () => {
     expect(shorten(small, 'summary', 8)).toEqual(small)
   })
 })
+
+test('duplicate notes from the same author do not grow shared context', () => {
+  const once = remember(EMPTY_MEMORY, note('coder', 'keep the server on loopback'))
+  expect(remember(once, note('coder', ' keep the server on loopback '))).toBe(once)
+  expect(remember(once, note('reviewer', 'keep the server on loopback')).notes).toHaveLength(2)
+})
+test('repeated compaction has a bounded summary and identifies omitted history', () => {
+  let memory = {
+    notes: Array.from({ length: 30 }, (_, i) => note('coder', `note ${i}`)),
+    summary: '',
+  }
+  for (let i = 0; i < 20; i++) {
+    const shorter = shorten(memory, `round ${i}: ${'evidence '.repeat(100)}`)
+    memory = { notes: memory.notes, summary: shorter.summary ?? '' }
+  }
+  expect(memory.summary.length).toBeLessThanOrEqual(2400)
+  expect(memory.summary).toContain('older summary omitted')
+  expect(memory.summary).toContain('round 19')
+})

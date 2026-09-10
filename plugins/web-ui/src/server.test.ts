@@ -150,3 +150,77 @@ test('offers a single agent selector and a collapsed, explicitly controlled work
   expect(html).toContain('id="sidebar" hidden')
   expect(html).toContain('aria-controls="sidebar" aria-expanded="false"')
 })
+
+test('an explicit HTTPS bridge origin accepts authenticated same-origin access only', async () => {
+  const server = startWebUI(
+    { snapshot: () => state, dispatch: async () => null },
+    {
+      port: 0,
+      remoteOrigin: 'https://crew.example.ts.net',
+    },
+  )
+  servers.push(server)
+  const auth = { Authorization: `Bearer ${server.url.split('#')[1]}` }
+  expect(server.remoteUrl).toBe(`https://crew.example.ts.net/#${server.url.split('#')[1]}`)
+  expect(
+    (
+      await fetch(`${server.address}/api/state`, {
+        headers: { ...auth, Host: 'crew.example.ts.net', Origin: 'http://crew.example.ts.net' },
+      })
+    ).status,
+  ).toBe(403)
+
+  expect(
+    (
+      await fetch(`${server.address}/api/state`, {
+        headers: { ...auth, Host: 'crew.example.ts.net', Origin: 'https://crew.example.ts.net' },
+      })
+    ).status,
+  ).toBe(200)
+  expect(
+    (
+      await fetch(`${server.address}/api/state`, {
+        headers: { Host: 'crew.example.ts.net', Origin: 'https://crew.example.ts.net' },
+      })
+    ).status,
+  ).toBe(401)
+  expect(
+    (
+      await fetch(`${server.address}/api/state`, {
+        headers: { ...auth, Host: 'crew.example.ts.net', Origin: 'https://attacker.example' },
+      })
+    ).status,
+  ).toBe(403)
+  expect(
+    (
+      await fetch(`${server.address}/api/state`, {
+        headers: { ...auth, Host: 'attacker.example', 'X-Forwarded-Host': 'crew.example.ts.net' },
+      })
+    ).status,
+  ).toBe(403)
+})
+
+test('bridge origins reject cleartext, credentials, paths and wildcard hosts', () => {
+  for (const remoteOrigin of [
+    'http://crew.example',
+    'https://user:pass@crew.example',
+    'https://crew.example/path',
+    'https://*.example',
+    'https://crew.example/?token=x',
+  ]) {
+    expect(() =>
+      startWebUI({ snapshot: () => state, dispatch: async () => null }, { port: 0, remoteOrigin }),
+    ).toThrow()
+  }
+})
+
+test('the companion manifest launches the same UI without embedding an access token', async () => {
+  const server = start()
+  const response = await fetch(`${server.address}/manifest.webmanifest`)
+  expect(response.status).toBe(200)
+  const manifest = (await response.json()) as { start_url: string; display: string }
+  expect(manifest.start_url).toBe('/')
+  expect(manifest.display).toBe('standalone')
+  expect(JSON.stringify(manifest)).not.toContain(server.url.split('#')[1] ?? 'missing')
+  expect((await fetch(`${server.address}/app-icon.svg`)).status).toBe(200)
+})

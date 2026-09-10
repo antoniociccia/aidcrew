@@ -47,10 +47,12 @@ export const MAX_NOTE = 600
 export function remember(memory: SharedMemory, note: Note): SharedMemory {
   const text = note.text.trim()
   if (text === '') return memory
+  const kept = text.slice(0, MAX_NOTE)
+  if (memory.notes.some((entry) => entry.from === note.from && entry.text === kept)) return memory
 
   return {
     ...memory,
-    notes: [...memory.notes, { ...note, text: text.slice(0, MAX_NOTE) }],
+    notes: [...memory.notes, { ...note, text: kept }],
   }
 }
 
@@ -77,11 +79,13 @@ export function shorten(memory: SharedMemory, summary: string, keep = 8): Shared
   if (memory.notes.length <= keep) return memory
 
   const older = memory.notes.slice(0, memory.notes.length - keep)
+  const combined = [memory.summary, summary.trim() || `${older.length} earlier notes`]
+    .filter((part): part is string => part !== undefined && part !== '')
+    .join('\n')
+  const notice = '[older summary omitted]\n'
   return {
     notes: memory.notes.slice(-keep),
-    summary: [memory.summary, summary.trim() || `${older.length} earlier notes`]
-      .filter((part): part is string => part !== undefined && part !== '')
-      .join('\n'),
+    summary: combined.length <= 2400 ? combined : notice + combined.slice(-(2400 - notice.length)),
   }
 }
 
