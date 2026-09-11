@@ -520,9 +520,8 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     (providerId) => runtime.host.registry.provider(providerId)?.needsKey !== false,
   )
 
-  if (options.skills.length > 0) {
-    runtime.host.registry.register(createSkillsPlugin(options.skills))
-  }
+  runtime.host.registry.forget('tool-skills')
+  runtime.host.registry.register(createSkillsPlugin(options.skills))
 
   // Whatever this project said before, already on screen: a resumed session
   // that opens empty looks like the work was lost.

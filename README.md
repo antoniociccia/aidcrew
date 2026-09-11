@@ -173,6 +173,11 @@ it a team works on the same wording built in. Call it something else, or keep
 one for every project, with `[sources] orchestration` beside `agents` and
 `skills`.
 
+AIDCrew includes [Decision Lab](docs/decision-lab.md), an on-demand skill for
+comparing approaches before implementing one. It ships in the binary, starts with
+a lightweight exploration, and ends with a recommendation and a concrete check.
+Agents with the `skill` tool can discover it without installing extra files.
+
 One agent leads, and every job comes back to it. When the architect hands a fix
 to the coder and the coder hands it to the tester, the tester's verdict returns
 to the architect — not to the coder it heard from — so the one who was given

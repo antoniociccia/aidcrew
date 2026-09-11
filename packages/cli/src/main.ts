@@ -2,7 +2,7 @@
 import { homedir } from 'node:os'
 import type { AgentDef, Hooks, LoopResult, Message, Tool } from '@aidcrew/core'
 import { runAgentLoop } from '@aidcrew/core'
-import { createSkillsPlugin, renderSkillIndex } from '@aidcrew/tool-skills'
+import { createSkillsPlugin } from '@aidcrew/tool-skills'
 import type { CliArgs } from './args.ts'
 import { parseCliArgs, USAGE, UsageError } from './args.ts'
 import type { Config } from './config.ts'
@@ -322,12 +322,9 @@ async function prepare(
     io.writeError(`source not loaded (${failure.path}): ${failure.reason}\n`)
   }
 
-  // Registered after loading, because it serves the skills actually found on
-  // this machine — and not at all when there are none: a tool the model can
-  // never usefully call still costs tokens in every request of every turn.
-  if (sources.skills.length > 0) {
-    host.registry.register(createSkillsPlugin(sources.skills))
-  }
+  // Local skills override the bundled catalog; the plugin publishes its index
+  // through the instruction hook only to agents that can call the skill tool.
+  host.registry.register(createSkillsPlugin(sources.skills))
 
   return {
     host,
@@ -348,7 +345,6 @@ async function prepare(
       cwd: args.cwd,
       platform: process.platform,
       instructions: sources.instructions.map((instruction) => instruction.text),
-      skillIndex: renderSkillIndex(sources.skills),
     }),
     tools: host.registry.tools(),
     hooks: host.registry

@@ -6,6 +6,10 @@ the person using it, in the order it matters.
 
 ## Unreleased
 
+- Bundle Decision Lab in the skill plugin and executable: on-demand exploration
+  with a lightweight default, bounded optional delegation and testable decisions.
+  Expose the catalog through instruction hooks in CLI and shared UI sessions.
+
 - Give unattended agents one changed-strategy recovery after an explicit stall,
   within existing budgets. Cancellation and queued guidance take priority.
   Escalate exhausted delegated attempts with the blocker and last explanation.

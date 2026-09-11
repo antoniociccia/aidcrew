@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import type { Plugin, Skill } from '@aidcrew/core'
-import { definePlugin, defineTool } from '@aidcrew/plugin-sdk'
+import { defineHooks, definePlugin, defineTool } from '@aidcrew/plugin-sdk'
 import { z } from 'zod'
+import { builtinBody, withBuiltinSkills } from './builtin.ts'
 
 /**
  * Lists the available skills for the system prompt.
@@ -25,10 +26,15 @@ export function renderSkillIndex(skills: Skill[]): string {
  * skills actually found on this machine, in this project.
  */
 export function createSkillsPlugin(skills: Skill[]): Plugin {
-  const byName = new Map(skills.map((skill) => [skill.name, skill]))
+  const available = withBuiltinSkills(skills)
+  const byName = new Map(available.map((skill) => [skill.name, skill]))
 
   return definePlugin({
     name: 'tool-skills',
+    hooks: defineHooks({
+      instructions: (context) =>
+        context.tools.includes('skill') ? renderSkillIndex(available) : undefined,
+    }),
     tools: [
       defineTool({
         name: 'skill',
@@ -51,7 +57,7 @@ export function createSkillsPlugin(skills: Skill[]): Plugin {
           }
 
           try {
-            return { content: await readFile(skill.path, 'utf8') }
+            return { content: builtinBody(skill) ?? (await readFile(skill.path, 'utf8')) }
           } catch (cause) {
             // The file was there when the index was built and is not now:
             // say so plainly rather than pretending the skill is empty.

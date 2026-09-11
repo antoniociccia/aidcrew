@@ -223,6 +223,7 @@ describe('aidcrew end to end', () => {
       'lsof',
       'outline',
       'read',
+      'skill',
       'stat',
       'symbols',
       'toml',

@@ -149,11 +149,13 @@ describe('an existing Claude Code setup, used as it is', () => {
     expect(messages.at(-1)?.content).toContain('Run bun deploy.')
   })
 
-  test('does not offer a skill tool when the project has no skills', async () => {
-    // A tool the model can never usefully call still costs tokens every turn.
+  test('offers the bundled skill tool when the project has no local skills', async () => {
+    // The bundled catalog remains available without external skill paths.
     await run(serve([textTurn('ok')]))
 
-    expect(toolsOf(0)).not.toContain('skill')
+    expect(toolsOf(0)).toContain('skill')
+    expect(systemOf(0)).toContain('decision-lab')
+    expect(systemOf(0)).not.toContain('# Decision Lab')
   })
 
   test('honours a config that points somewhere else entirely', async () => {
