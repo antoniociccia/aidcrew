@@ -6,6 +6,9 @@ the person using it, in the order it matters.
 
 ## Unreleased
 
+- Compact completed tool rounds during long autonomous turns without splitting
+  tool calls from results or repeatedly summarising only the previous summary.
+
 - Give every crew member access to the skill catalog, including restricted and
   newly spawned agents, and carry discovered project skills into shared UI sessions.
 
