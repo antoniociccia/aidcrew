@@ -269,6 +269,7 @@ export type SourceKind = 'instructions' | 'skills' | 'agents' | 'orchestration'
 
 export type ProjectState = {
   config: WorkspaceConfig
+  skills: Parameters<typeof createSkillsPlugin>[0]
   agents: AgentDef[]
   /** Agents that could not run, and why, so the interface can say so. */
   blocked: { agentId: string; providerId: string }[]
@@ -313,6 +314,7 @@ export async function readProject(
 
   return {
     config,
+    skills: sources.skills,
     agents: team,
     blocked: credentials.missing,
     sources: [

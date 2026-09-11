@@ -133,6 +133,7 @@ export function createTeamHost(options: TeamOptions): InProcessHost {
   return new InProcessHost({
     cwd: options.cwd,
     tools: options.tools,
+    commonTools: ['skill'],
     limits: options.limits,
     isolate: options.isolate,
     onEvent: options.onEvent,

@@ -176,7 +176,8 @@ one for every project, with `[sources] orchestration` beside `agents` and
 AIDCrew includes [Decision Lab](docs/decision-lab.md), an on-demand skill for
 comparing approaches before implementing one. It ships in the binary, starts with
 a lightweight exploration, and ends with a recommendation and a concrete check.
-Agents with the `skill` tool can discover it without installing extra files.
+Every agent can discover and read skills by default, without adding `skill` to
+its tool list. Skill content loads only when requested.
 
 One agent leads, and every job comes back to it. When the architect hands a fix
 to the coder and the coder hands it to the tester, the tester's verdict returns

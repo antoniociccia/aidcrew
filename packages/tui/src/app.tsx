@@ -506,13 +506,14 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
       return
     }
 
-    await enterSession(cwd, project.agents, project.config)
+    await enterSession(cwd, project.agents, project.config, project.skills)
   }
 
   async function enterSession(
     cwd: string,
     members: AgentDef[],
     config: WorkspaceConfig,
+    skills: Parameters<typeof startTeam>[0]['skills'],
   ): Promise<void> {
     // Declared before it is built, because `onChange` below runs before this
     // assignment does: startTeam spawns the agents, spawning emits events, and
@@ -544,7 +545,7 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
       defaultProvider:
         env.AIDCREW_PROVIDER ?? config.defaults.provider ?? defaults.provider ?? 'zen',
       prices: config.prices,
-      skills: [],
+      skills,
       sharedMemory: config.sharedMemory,
       onChange: (nextLines, nextSnapshots) => {
         setLines(nextLines)
@@ -693,7 +694,7 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
     setLayout(remembered)
     setOrder(remembered.order)
     setSharedNotes(project.config.sharedMemory)
-    await enterSession(cwd, project.agents, project.config)
+    await enterSession(cwd, project.agents, project.config, project.skills)
     // The team exists; now what a team is for. A first run used to end at a
     // cursor, with nothing having said what happens when two agents want the
     // same file or where the work goes.

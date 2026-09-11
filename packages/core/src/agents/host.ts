@@ -219,6 +219,8 @@ export type HostOptions = {
    */
   providerFor(agent: AgentDef, cwd: string): Provider
   tools: Tool[]
+  /** Host-selected shared capabilities, available alongside each agent tool list. */
+  commonTools?: readonly string[]
   limits: Limits
   /** Give each agent its own git worktree. Off in tests and in plain directories. */
   isolate: boolean
@@ -2030,7 +2032,10 @@ Inspect the evidence already in this conversation. State what failed, choose a m
   #toolsFor(base: Tool[], incoming: AgentMessage): Tool[] {
     this.#origin = incoming.origin
     const allowed = this.#def.tools
-    const usable = allowed ? base.filter((tool) => allowed.includes(tool.name)) : base
+    const common = this.#host.internals.options.commonTools ?? []
+    const usable = allowed
+      ? base.filter((tool) => allowed.includes(tool.name) || common.includes(tool.name))
+      : base
 
     return [
       ...usable,

@@ -16,9 +16,10 @@ No improvement in cost or task success has been measured yet.
 Decision Lab ships inside the `tool-skills` plugin and compiled executables. It is
 available without project skill directories, including when `[sources] skills = []`.
 That setting controls external skill discovery; it does not remove bundled skills.
-An agent must have the `skill` tool in its allowed tools to discover and read it.
+Every AIDCrew agent receives the read-only `skill` tool as a host-wide capability,
+even when its agent file lists only a subset of tools.
 The shared instruction hook serves CLI, TUI and Web UI sessions; the skill body
-is never injected automatically. An explicit tool allowlist without `skill` is respected.
+is never injected automatically. Agent tool lists continue to restrict other capabilities such as shell and file writes.
 
 A local skill with the same name overrides the bundled definition, using the existing
 loader precedence. Put overrides in a configured skills directory and restart the
@@ -44,7 +45,8 @@ sharing, bounded handoffs and a return to execution.
 ## Validation
 
 The catalog integration test verifies retrieval without project files, description-only
-instructions and absence of the index for agents without the skill tool. This establishes integration,
+instructions and local overrides and retrieval. Runtime tests verify access for restricted agents,
+late-spawned agents and discovered project skills in shared UI sessions. This establishes integration,
 not behavioral effectiveness. Evaluate the latter on matched tasks with fixed criteria,
 tracking extra calls, total spend, interventions and whether the selected approach
 passes its stated verification. Include simple tasks where the skill should be skipped

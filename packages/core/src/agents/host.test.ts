@@ -4514,3 +4514,40 @@ test('notes written while compaction waits survive and share one summarizer requ
   expect(host.sharedMemory('main').summary).toBe('earlier findings')
   await host.shutdown()
 })
+
+test('host-wide tools remain available to restricted and later-spawned agents without exposing other tools', async () => {
+  const seen: string[][] = []
+  const provider: Provider = {
+    id: 'test',
+    async *send(request) {
+      seen.push(request.tools.map((tool) => tool.name))
+      yield* text('done')
+    },
+  }
+  const reference: Tool = {
+    name: 'reference',
+    description: 'Read reference',
+    inputSchema: {},
+    execute: async () => ({ content: 'reference' }),
+  }
+  const host = new InProcessHost({
+    cwd: process.cwd(),
+    providerFor: () => provider,
+    tools: [reference, { ...reference, name: 'write' }],
+    commonTools: ['reference'],
+    limits: { maxHops: 3 },
+    isolate: false,
+    onEvent: () => {},
+  })
+  for (const id of ['first', 'later']) {
+    await host.spawn({ ...def(id, 'test'), tools: [] })
+    await host.tell(id, 'Read available references')
+    await host.idle()
+  }
+  expect(seen).toHaveLength(2)
+  for (const names of seen) {
+    expect(names.filter((name) => name === 'reference')).toHaveLength(1)
+    expect(names).not.toContain('write')
+  }
+  await host.shutdown()
+})

@@ -6,6 +6,9 @@ the person using it, in the order it matters.
 
 ## Unreleased
 
+- Give every crew member access to the skill catalog, including restricted and
+  newly spawned agents, and carry discovered project skills into shared UI sessions.
+
 - Bundle Decision Lab in the skill plugin and executable: on-demand exploration
   with a lightweight default, bounded optional delegation and testable decisions.
   Expose the catalog through instruction hooks in CLI and shared UI sessions.
