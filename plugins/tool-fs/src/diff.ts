@@ -167,7 +167,7 @@ function clean(line: string): string {
  * A trailing newline terminates the last line, it does not start an empty
  * one — the same reasoning as `read`, and the same bug avoided.
  */
-function linesOf(text: string): string[] {
+export function linesOf(text: string): string[] {
   if (text === '') return []
   return (text.endsWith('\n') ? text.slice(0, -1) : text).split('\n')
 }

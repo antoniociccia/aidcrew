@@ -180,7 +180,7 @@ export function undo(
  * outside, and the root is resolved first so a workspace reached through a
  * link still compares against itself.
  */
-function within(root: string, path: string): string | undefined {
+export function within(root: string, path: string): string | undefined {
   const real = existsSync(root) ? realpathSync(root) : resolve(root)
   const full = resolve(real, path)
   const rel = relative(real, full)
