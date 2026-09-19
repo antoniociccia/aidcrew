@@ -6,6 +6,23 @@ the person using it, in the order it matters.
 
 ## Unreleased
 
+- Show every change as it is made. `write` and `edit` now carry the lines they
+  changed to the interface — coloured in the pane of the agent that made them,
+  and in the browser — through a channel the model never reads, so seeing the
+  work costs no tokens.
+
+- Take one hunk back with `^v` and `x`, without stopping anybody. The file goes
+  back to what it was, the agent is told inside the turn it is taking, and a
+  revert that would discard later work says how much before it does it.
+
+- Say when two agents are heading for the same lines of the same file in two
+  checkouts — before the merge finds out. Both agents are told and neither is
+  blocked.
+
+- Keep a copy per change rather than per millisecond: an agent that wrote the
+  same file twice inside one millisecond used to overwrite its own snapshot,
+  and the older change then restored the newer bytes.
+
 - Compact completed tool rounds during long autonomous turns without splitting
   tool calls from results or repeatedly summarising only the previous summary.
 

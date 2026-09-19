@@ -79,3 +79,19 @@ export type SessionBridge = {
   snapshot(): WebState
   dispatch(action: WebAction): Promise<unknown>
 }
+
+/**
+ * Which part of a change one row is, from the marker it begins with.
+ *
+ * The same four markers the terminal paints by. `client.js` is served to the
+ * browser as text and cannot import this, so it carries the same table with a
+ * comment pointing here — the markers themselves are fixed by the tests of
+ * whichever plugin writes them.
+ */
+export function diffClass(row: string): 'head' | 'add' | 'del' | 'ctx' {
+  const mark = row.slice(0, 1)
+  if (mark === '+') return 'add'
+  if (mark === '-') return 'del'
+  if (mark === '~') return 'head'
+  return 'ctx'
+}

@@ -1,5 +1,17 @@
 'use strict'
 const $ = (id) => document.getElementById(id)
+/**
+ * Which part of a change a row is. The same four markers as `diffClass` in
+ * protocol.ts, which is tested; this file is served as text and cannot
+ * import it.
+ */
+const diffClass = (row) => {
+  const mark = row.slice(0, 1)
+  if (mark === '+') return 'add'
+  if (mark === '-') return 'del'
+  if (mark === '~') return 'head'
+  return 'ctx'
+}
 const palette = ['#b7f4cf', '#b6caff', '#efc1ff', '#ffd392', '#9de0ed', '#f7b4aa']
 let token = location.hash.slice(1) || sessionStorage.getItem('aidcrew-token') || ''
 if (location.hash) history.replaceState(null, '', location.pathname)
@@ -391,7 +403,34 @@ function renderFeed() {
     )
     fragment.append(empty)
   }
-  for (const l of lines.slice(-400)) {
+  const shown = lines.slice(-400)
+  for (let at = 0; at < shown.length; at++) {
+    const l = shown[at]
+
+    // A change arrives as one line per row of it. Drawn as separate entries
+    // they would be twelve cards with twelve avatars for one edit, so the run
+    // is gathered back into the single block the terminal draws.
+    if (l.kind === 'diff') {
+      const rows = []
+      const who = l.agentId
+      while (at < shown.length && shown[at].kind === 'diff' && shown[at].agentId === who) {
+        rows.push(shown[at].text)
+        at++
+      }
+      at--
+      const el = node('article', undefined, 'entry diff')
+      el.append(avatar(who))
+      const content = node('div')
+      const head = node('div', undefined, 'entry-head')
+      head.append(node('b', who), node('span', 'changed'))
+      const body = node('div', undefined, 'entry-content diff-body')
+      for (const row of rows) body.append(node('div', row, `diff-row ${diffClass(row)}`))
+      content.append(head, body)
+      el.append(content)
+      fragment.append(el)
+      continue
+    }
+
     const el = node('article', undefined, `entry ${l.kind}`)
     el.append(avatar(l.agentId, l.kind === 'ask' ? 'YOU' : undefined))
     const content = node('div')

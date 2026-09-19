@@ -357,6 +357,9 @@ aidcrew plugin trust my-plugin     # a plugin that arrived with a clone runs onl
 | **Browser (optional)** | [browser-chromium](plugins/browser-chromium/README.md): six plugin tools for a shared visible Chromium, runtime diagnostics and human-review screenshots, backed by Chrome DevTools MCP |
 | **MCP** | Any MCP server, over stdio or HTTP, declared in the `.mcp.json` a project already has. Its tools arrive as ordinary tools and the agent loop never learns the difference. A server is a program, so one a project declares does not start until `aidcrew mcp trust <server>` says it may |
 | **Guards** | Protected file-tool paths, snapshots before edits, and approval for irreversible commands in ask mode. Explicit yolo skips tool approval prompts. Headless teams honor trusted per-agent yolo; otherwise an irreversible command is refused |
+| **Changes, live** | Every `write` and `edit` shows the lines it changed, in the pane that made it and in the browser, through a channel the model never reads — so watching the work costs nothing |
+| **The veto** | `^v` lists every change of the session, hunk by hunk; `x` puts one back and tells the agent why, inside the turn it is taking. Nobody is stopped, and a revert that would discard later work says so first |
+| **Collision radar** | Two agents editing the same lines in two worktrees are told about each other when it happens, rather than when the branches meet |
 | **Context** | Conversations shortened when they no longer fit, summarised by a cheaper model when the project names one |
 | **Cost** | Per agent, per job and per session, from the provider's own price list, from the project's stated prices, or from the remaining balance on the key. When a job comes home the pane says what it cost, on which models, and what the same tokens would have cost on the models people default to |
 | **Images** | Pasted into the prompt and sent to models that accept them |

@@ -1038,3 +1038,30 @@ dialog::backdrop {
 }
 .cards .agent-card { width: 100%; max-width: none; }
 .cards .card-top b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* A change, in the same colours and the same order as the terminal draws it. */
+.entry.diff {
+  background: #0d1218;
+  padding: 12px;
+  border-radius: 8px;
+}
+.diff-body {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+}
+.diff-row.head {
+  color: #e2e9ef;
+  font-weight: 600;
+}
+.diff-row.add {
+  color: #b7f4cf;
+}
+.diff-row.del {
+  color: #f6a7a0;
+}
+.diff-row.ctx {
+  color: #6b7a88;
+}
