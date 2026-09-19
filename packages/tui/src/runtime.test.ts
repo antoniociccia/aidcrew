@@ -1687,3 +1687,37 @@ describe('a note that says what the one before it said', () => {
     }
   })
 })
+
+describe('a change on screen', () => {
+  const ended = (output: Record<string, unknown>): TeamEvent =>
+    ({
+      type: 'agent_event',
+      id: 'coder',
+      event: { type: 'tool_end', id: 't1', name: 'edit', durationMs: 1, output },
+    }) as TeamEvent
+
+  test('becomes one row per line of the change', () => {
+    const lines = toLines(
+      ended({
+        content: 'edited a.ts (1 replacement)',
+        shown: { kind: 'diff', text: '~ a.ts +1 -1\n- 2 two\n+ 2 TWO' },
+      }),
+    )
+
+    expect(lines).toEqual([
+      { agentId: 'coder', kind: 'diff', text: '~ a.ts +1 -1' },
+      { agentId: 'coder', kind: 'diff', text: '- 2 two' },
+      { agentId: 'coder', kind: 'diff', text: '+ 2 TWO' },
+    ])
+  })
+
+  test('a result with nothing to show adds nothing', () => {
+    expect(toLines(ended({ content: 'wrote a.ts (12 bytes)' }))).toEqual([])
+  })
+
+  test('a kind this interface has no painter for is still shown, plainly', () => {
+    const lines = toLines(ended({ content: 'ok', shown: { kind: 'table', text: 'a | b' } }))
+
+    expect(lines).toEqual([{ agentId: 'coder', kind: 'tool', text: 'a | b' }])
+  })
+})

@@ -51,7 +51,7 @@ const EDITING_CHORDS = new Set(['w', 'u'])
 
 export type Line = {
   agentId: string
-  kind: 'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinking'
+  kind: 'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinking' | 'diff'
   text: string
 }
 
@@ -1812,8 +1812,8 @@ export function textOf(row: PaintedRow): string {
     .replace(/\s+$/, '')
 }
 
-/** One row of what an agent said or did. */
-function transcriptRow(
+/** One row of what an agent said or did. Exported for the tests that paint it. */
+export function transcriptRow(
   line: { kind: Line['kind']; text: string; first: boolean },
   colour: string,
   theme: Theme,
@@ -1853,6 +1853,22 @@ function transcriptRow(
             { text: line.first ? GUTTER.say : ' ', color: colour },
             { text: ` ${line.text}`, color: theme.text },
           ],
+    }
+  }
+
+  // A change, a row at a time, coloured by the marker the row begins with:
+  // `~` names the file, `+` and `-` are the change itself, and anything else
+  // is context, which is here to be read past rather than read.
+  if (line.kind === 'diff') {
+    const mark = line.text.slice(0, 1)
+    const tone =
+      mark === '+' ? theme.ok : mark === '-' ? theme.bad : mark === '~' ? colour : theme.faint
+    return {
+      background: ground,
+      segments: [
+        { text: ' ' },
+        { text: ` ${line.text}`, color: tone, ...(mark === '~' ? { bold: true } : {}) },
+      ],
     }
   }
 

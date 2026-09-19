@@ -1469,6 +1469,22 @@ export function toLines(event: TeamEvent): Line[] {
         return [{ agentId: event.id, kind: 'error', text: inner.output.content.slice(0, 200) }]
       }
 
+      // What the tool wants a person to see, which the model never read. One
+      // row per line, because a pane lays out rows and a change is already
+      // written as them — and because a marker per row is what lets the
+      // painter colour an addition differently from the line it replaced.
+      if (inner.type === 'tool_end' && inner.output.shown !== undefined) {
+        const shown = inner.output.shown
+        // A kind this interface has no painter for is still worth showing:
+        // a plugin that knows how to report itself should not need us to
+        // have heard of it first.
+        const kind = shown.kind === 'diff' ? ('diff' as const) : ('tool' as const)
+        return shown.text
+          .split('\n')
+          .filter((text) => text !== '')
+          .map((text) => ({ agentId: event.id, kind, text }))
+      }
+
       // What the agent actually said — the thing the whole interface exists
       // to show, and which nothing was emitting.
       if (inner.type === 'assistant_turn') {

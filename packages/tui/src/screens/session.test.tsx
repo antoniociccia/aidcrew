@@ -6,7 +6,7 @@ import { widthOf } from '../components/text-width.ts'
 import { GRAPHITE, GUTTER } from '../theme.ts'
 import { ThemeProvider } from '../theme-context.tsx'
 import type { Pending, SessionProps } from './session.tsx'
-import { askedBefore, Session } from './session.tsx'
+import { askedBefore, Session, transcriptRow } from './session.tsx'
 
 /**
  * The mouse, end to end.
@@ -1066,4 +1066,30 @@ test('a used shortcut is promoted and highlighted even when ordinary hints do no
       else process.env[key] = value
     }
   }
+})
+
+describe('painting a change', () => {
+  const row = (text: string) =>
+    transcriptRow({ kind: 'diff', text, first: true }, '#ffffff', GRAPHITE, undefined, false)
+
+  const colours = (text: string) => row(text).segments.map((segment) => segment.color)
+
+  test('an addition is the colour of something that worked', () => {
+    expect(colours('+ 2 TWO')).toContain(GRAPHITE.ok)
+  })
+
+  test('a removal is the colour of something that failed', () => {
+    expect(colours('- 2 two')).toContain(GRAPHITE.bad)
+  })
+
+  test('context is quiet, because it did not change', () => {
+    expect(colours('  1 unchanged')).toContain(GRAPHITE.faint)
+  })
+
+  test('the heading carries the name of the file, in the agent own voice', () => {
+    const painted = row('~ src/rates.ts +2 -1')
+
+    expect(painted.segments.map((segment) => segment.text).join('')).toContain('src/rates.ts')
+    expect(colours('~ src/rates.ts +2 -1')).toContain('#ffffff')
+  })
 })

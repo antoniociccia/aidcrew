@@ -17,7 +17,7 @@ export type Pulse = {
 }
 
 export type PulseLine = {
-  kind: 'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinking'
+  kind: 'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinking' | 'diff'
   text: string
 }
 
@@ -34,7 +34,11 @@ export function pulseOf(agent: AgentSnapshot, lines: PulseLine[], now = Date.now
     }
     // What it is doing beats what it last said: while it is running, the tool
     // in flight is the thing you are waiting on.
-    const doing = lines.at(-1)
+    //
+    // The rows of a change are not a thing being done — they are what the
+    // write already did. Read off the last row, this line said `+ 2 TWO`,
+    // which reads as an agent stopped halfway down a file.
+    const doing = [...lines].reverse().find((line) => line.kind !== 'diff')
     if (doing && doing.kind !== 'say') {
       return { text: `${oneLine(doing.text)}${forHowLong}`, kind: 'working' }
     }
