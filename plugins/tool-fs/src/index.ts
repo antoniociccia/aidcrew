@@ -2,6 +2,7 @@ export {
   changeOf,
   type FileChange,
   type Hunk,
+  hunkRows,
   linesOf,
   rangesOf,
   render,

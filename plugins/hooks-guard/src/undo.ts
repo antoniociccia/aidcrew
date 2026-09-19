@@ -83,9 +83,14 @@ export function snapshot(cwd: string, path: string, agentId: string, now: number
   }
 
   if (existsSync(full)) {
-    // Named by when and by what: two agents changing the same file in the same
-    // millisecond is unlikely, and the name still has to be theirs.
-    const name = `${now}-${agentId}-${change.path.replace(/[^\w.-]/g, '_')}`
+    // Named by when, by whom, and by a count that never repeats. The clock
+    // alone was not enough: an agent that wrote the same file twice inside one
+    // millisecond wrote its second copy over its first, and the older change
+    // then offered to restore the newer bytes — an undo that says it undid
+    // something and did not.
+    const stem = `${now}-${agentId}-${change.path.replace(/[^\w.-]/g, '_')}`
+    let name = stem
+    for (let again = 1; existsSync(join(where, name)); again += 1) name = `${stem}-${again}`
     copyFileSync(full, join(where, name))
     change.kept = name
   }

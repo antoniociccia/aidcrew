@@ -78,7 +78,7 @@ export function render(change: FileChange): string {
   let elided = 0
 
   for (const hunk of change.hunks) {
-    for (const row of rowsOf(hunk)) {
+    for (const row of hunkRows(hunk)) {
       if (left === 0) {
         elided += 1
         continue
@@ -107,7 +107,8 @@ export function rangesOf(change: FileChange): [number, number][] {
   })
 }
 
-function rowsOf(hunk: Hunk): string[] {
+/** One hunk as marked rows, which is what both interfaces paint. */
+export function hunkRows(hunk: Hunk): string[] {
   const rows: string[] = []
   const common = leading(hunk)
   const tail = trailing(hunk, common)

@@ -146,6 +146,20 @@ describe('taking one hunk back', () => {
   })
 })
 
+describe('two changes in the same millisecond', () => {
+  test('keep two copies, not one written over the other', () => {
+    // The kept file used to be named by the millisecond and the agent, so an
+    // agent that wrote twice inside one tick overwrote its own first copy —
+    // and the older change then offered to restore the newer bytes, which is
+    // silently undoing nothing while saying it undid something.
+    changed('one\ntwo\n', 'one\nTWO\n', 'coder', 7)
+    changed('one\nTWO\n', 'one\nTHREE\n', 'coder', 7)
+
+    expect(revertHunk(workspace, 0, 0, { anyway: true })).toMatchObject({ ok: true })
+    expect(readFileSync(file, 'utf8')).toBe('one\ntwo\n')
+  })
+})
+
 describe('a path inside a worktree', () => {
   test('is named by the file, not by where the agent was working', () => {
     expect(fileOf('.aidcrew/wt/rates/src/rates.ts')).toBe('src/rates.ts')

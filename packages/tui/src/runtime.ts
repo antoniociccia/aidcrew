@@ -43,7 +43,8 @@ import type {
 } from '@aidcrew/core'
 import { addUsage, DEFAULT_LIMITS, DEFAULT_MAX_HOPS } from '@aidcrew/core'
 import { createCompactPlugin, DEFAULT_BUDGET, parseCompactWith } from '@aidcrew/hooks-compact'
-import type { GuardRequest } from '@aidcrew/hooks-guard'
+import type { GuardRequest, Revertable } from '@aidcrew/hooks-guard'
+import { revertable, revertHunk, undoRoot } from '@aidcrew/hooks-guard'
 import type { Allowance, PriceTable } from '@aidcrew/prices'
 import {
   allLeft,
@@ -422,6 +423,24 @@ export type LiveTeam = {
   kill(agentId: string): Promise<{ workspace: 'removed' | 'kept' | 'none' }>
   /** What an agent has changed in its worktree, as a diff. */
   diff(agentId: string): Promise<string>
+  /**
+   * Every change of this session that is still a change, newest first.
+   *
+   * Worked out from the bytes the guard kept, each time it is asked: a change
+   * an agent has itself undone simply stops being listed.
+   */
+  changed(): Revertable[]
+  /**
+   * Takes one hunk of one change back, and tells whoever made it.
+   *
+   * The agent is not stopped. The message goes into the turn it is taking, so
+   * it learns before its next write rather than after its last — which is the
+   * difference between steering and braking.
+   *
+   * `anyway` answers the one refusal this has: that putting an old change
+   * back would discard what was written over it since.
+   */
+  revert(at: number, hunk: number, reason: string, anyway?: boolean): Promise<string>
   /** Merges the branch of the job an agent is on into the repository. */
   merge(agentId: string): Promise<MergeOutcome>
   /** Resolves once nobody on the team has anything left to do. */
@@ -1266,6 +1285,55 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
       // — the transcript only has to say that it changed.
       record({ agentId, kind: 'note', text: on ? 'unleashed' : 'asking again' })
       return true
+    },
+
+    changed: () => revertable(undoRoot(cwd)),
+
+    revert: async (at, hunk, reason, anyway = false) => {
+      const workspace = undoRoot(cwd)
+      // Read before it is taken back: the list is worked out from the file as
+      // it stands, and afterwards this change is no longer one.
+      const change = revertable(workspace).find((one) => one.at === at)
+      const outcome = revertHunk(workspace, at, hunk, { anyway })
+
+      if (!outcome.ok) {
+        if (outcome.because === 'later') {
+          return `that would discard ${outcome.later} later change${
+            outcome.later === 1 ? '' : 's'
+          } to the same file`
+        }
+        return outcome.because === 'outside'
+          ? 'that change names a path outside this project, and was not touched'
+          : 'that change is not there any more'
+      }
+
+      const [from, to] = outcome.lines
+      const where = outcome.removed
+        ? `${outcome.path}, which only existed because of it`
+        : `${outcome.path} lines ${from}-${to}`
+      const said = reason === '' ? '' : ` Reason: ${reason}`
+
+      const agentId = change?.agentId
+      if (agentId !== undefined) {
+        record({
+          agentId,
+          kind: 'note',
+          text: `a person took back ${where}${said}`,
+        })
+        // Not through `tell`, which records what you typed as a question you
+        // asked. This is the session speaking about itself.
+        await host.tell(
+          agentId,
+          `A person has reverted your change to ${where}.${
+            said === ''
+              ? ' No reason was given: do not make it again unchanged — ask what is wanted instead.'
+              : `${said}`
+          }`,
+        )
+        announce()
+      }
+
+      return `put back ${where}${agentId === undefined ? '' : `, and told ${agentId}`}`
     },
 
     tell: async (agentId, text) => {

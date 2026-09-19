@@ -398,3 +398,22 @@ export const GUTTER: Record<'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinkin
 
 /** Braille turns one column wide at every frame, so nothing beside it shifts. */
 export const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] as const
+
+/**
+ * How one row of a change is coloured, from the marker it begins with.
+ *
+ * In one place because two places would drift: the pane paints a change as it
+ * arrives and the changes screen paints the same rows later, and an addition
+ * that is green in one and red in the other is worse than either.
+ */
+export function diffTone(
+  row: string,
+  theme: Theme,
+  voice: string,
+): { color: string; bold?: boolean } {
+  const mark = row.slice(0, 1)
+  if (mark === '+') return { color: theme.ok }
+  if (mark === '-') return { color: theme.bad }
+  if (mark === '~') return { color: voice, bold: true }
+  return { color: theme.faint }
+}

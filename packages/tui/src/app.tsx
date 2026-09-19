@@ -28,6 +28,7 @@ import { oneAtATime } from './one-at-a-time.ts'
 import { setAgentModel } from './project-config.ts'
 import type { LiveTeam, Runtime, SourceKind } from './runtime.ts'
 import { readProject, startTeam } from './runtime.ts'
+import { Changes, changeRows } from './screens/changes.tsx'
 import { Keys } from './screens/keys.tsx'
 import { Notices } from './screens/notices.tsx'
 import { Opening } from './screens/opening.tsx'
@@ -66,6 +67,7 @@ type Screen =
   | { at: 'notices'; cwd: string }
   | { at: 'keys'; cwd: string; because?: string }
   | { at: 'tasks'; cwd: string }
+  | { at: 'changes'; cwd: string }
 
 export type AppProps = {
   runtime: Runtime
@@ -1121,6 +1123,19 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
     )
   }
 
+  if (screen.at === 'changes') {
+    return wrap(
+      <Changes
+        changes={changeRows(team?.changed() ?? [])}
+        onRevert={async (change, reason, anyway) =>
+          (await team?.revert(change.at, change.hunk, reason, anyway)) ??
+          'there is no team running to take anything back from'
+        }
+        onClose={() => setScreen({ at: 'session', cwd: screen.cwd })}
+      />,
+    )
+  }
+
   if (screen.at === 'tasks') {
     return wrap(
       <Tasks
@@ -1248,6 +1263,9 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
       onOpenNotices={() => setScreen({ at: 'notices', cwd: screen.cwd })}
       onOpenKeys={(because) =>
         setScreen({ at: 'keys', cwd: screen.cwd, ...(because ? { because } : {}) })
+      }
+      onOpenChanges={() =>
+        setScreen({ at: 'changes', cwd: screen.at === 'session' ? screen.cwd : '' })
       }
       onOpenTasks={() => {
         void refreshTasks(screen.at === 'session' ? screen.cwd : '')

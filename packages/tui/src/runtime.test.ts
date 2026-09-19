@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHost, openJournal } from '@aidcrew/cli'
 import type { TeamEvent } from '@aidcrew/core'
+import { keep } from '@aidcrew/hooks-guard'
 import { openRuntime, stallNotice, startTeam, toLines } from './runtime.ts'
 import type { Line } from './screens/session.tsx'
 
@@ -1719,5 +1720,116 @@ describe('a change on screen', () => {
     const lines = toLines(ended({ content: 'ok', shown: { kind: 'table', text: 'a | b' } }))
 
     expect(lines).toEqual([{ agentId: 'coder', kind: 'tool', text: 'a | b' }])
+  })
+})
+
+describe('taking a change back while the team works', () => {
+  const model = () =>
+    Bun.serve({
+      port: 0,
+      fetch: () =>
+        new Response(
+          [
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: 'ok' } }] })}\n\n`,
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`,
+            'data: [DONE]\n\n',
+          ].join(''),
+          { headers: { 'Content-Type': 'text/event-stream' } },
+        ),
+    })
+
+  const member = (id: string) => ({
+    id,
+    description: '',
+    systemPrompt: '',
+    provider: 'openai-compat',
+    model: 'test-model',
+  })
+
+  async function withTeam(
+    body: (team: Awaited<ReturnType<typeof startTeam>>, cwd: string) => Promise<void>,
+  ): Promise<void> {
+    const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-revert-')))
+    const served = model()
+    try {
+      const team = await startTeam({
+        runtime: await openRuntime(cwd, cwd),
+        cwd,
+        env: { AIDCREW_BASE_URL: `${served.url.origin}/v1`, AIDCREW_API_KEY: 'test' },
+        agents: [member('coder')],
+        skills: [],
+        defaultProvider: 'openai-compat',
+        onChange: () => {},
+      })
+      try {
+        await body(team, cwd)
+      } finally {
+        await team.shutdown()
+      }
+    } finally {
+      served.stop(true)
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  }
+
+  /** A change made the way the guard records one. */
+  function changed(cwd: string, before: string, after: string): void {
+    writeFileSync(join(cwd, 'a.ts'), before)
+    keep(cwd, 'a.ts', 'coder', Date.now())
+    writeFileSync(join(cwd, 'a.ts'), after)
+  }
+
+  test('lists what can still be taken back', async () => {
+    await withTeam(async (team, cwd) => {
+      changed(cwd, 'one\ntwo\n', 'one\nTWO\n')
+
+      const all = team.changed()
+
+      expect(all).toHaveLength(1)
+      expect(all[0]).toMatchObject({ agentId: 'coder', file: 'a.ts' })
+    })
+  })
+
+  test('puts the file back and tells the agent, with the reason', async () => {
+    await withTeam(async (team, cwd) => {
+      changed(cwd, 'one\ntwo\n', 'one\nTWO\n')
+
+      const said = await team.revert(0, 0, 'the default is missing')
+
+      expect(readFileSync(join(cwd, 'a.ts'), 'utf8')).toBe('one\ntwo\n')
+      expect(said).toContain('a.ts')
+      // Told, not merely reverted: an agent that does not know carries on
+      // from a file it believes it wrote, and writes it again.
+      await team.idle()
+      expect(team.snapshots().find((one) => one.id === 'coder')?.turns).toBe(1)
+    })
+  })
+
+  test('with no reason it still says not to make it again unchanged', async () => {
+    await withTeam(async (team, cwd) => {
+      changed(cwd, 'one\ntwo\n', 'one\nTWO\n')
+
+      await team.revert(0, 0, '')
+      await team.idle()
+
+      const prompts = team.snapshots().find((one) => one.id === 'coder')
+      expect(prompts?.turns).toBe(1)
+    })
+  })
+
+  test('refuses to discard later work without being told twice', async () => {
+    await withTeam(async (team, cwd) => {
+      changed(cwd, 'one\ntwo\n', 'one\nTWO\n')
+      changed(cwd, 'one\nTWO\n', 'one\nTHREE\n')
+
+      const said = await team.revert(0, 0, '')
+
+      expect(said).toContain('later change')
+      expect(readFileSync(join(cwd, 'a.ts'), 'utf8')).toBe('one\nTHREE\n')
+
+      const anyway = await team.revert(0, 0, '', true)
+      expect(anyway).toContain('a.ts')
+      expect(readFileSync(join(cwd, 'a.ts'), 'utf8')).toBe('one\ntwo\n')
+    })
   })
 })

@@ -21,7 +21,7 @@ import { wordmark } from '../logo.ts'
 import { hidePaths, shorten } from '../private.ts'
 import { marquee, pulseOf } from '../pulse.ts'
 import type { Theme } from '../theme.ts'
-import { GUTTER, MARK, SPINNER } from '../theme.ts'
+import { diffTone, GUTTER, MARK, SPINNER } from '../theme.ts'
 import { useTheme, useVoice } from '../theme-context.tsx'
 import { headerTint, litTint, loudTint, mix, paneTint } from '../tint.ts'
 import { pagesOf, toRows } from '../transcript.ts'
@@ -143,6 +143,8 @@ export type SessionProps = {
   onClearQueue?(agentId: string): void
   /** Opens the list of jobs this repository has open. */
   onOpenTasks?(): void
+  /** Opens everything the team has changed, where one part of it can be taken back. */
+  onOpenChanges?(): void
   rows?: number
   columns?: number
   /** Agents shown side by side; empty means only the one being addressed. */
@@ -349,6 +351,9 @@ export function Session(props: SessionProps) {
     // writing.
     t: () => setFinding(true),
     k: () => props.onOpenTasks?.(),
+    // ^v for the changes: every other letter this screen could have used is
+    // spoken for, and this is the one somebody reaches for while watching.
+    v: () => props.onOpenChanges?.(),
     e: props.onOpenAgents,
     n: () => props.onOpenNotices?.(),
     o: () => props.onOpenKeys?.(),
@@ -901,6 +906,7 @@ function Tray({
     ['^r', thinking ? 'hide reasoning' : 'reasoning'],
     ['^t', 'name a file'],
     ['^k', 'tasks'],
+    ['^v', 'changes'],
     ['^e', 'team'],
     ['^o', 'every key'],
     ['^s', 'settings'],
@@ -1860,14 +1866,12 @@ export function transcriptRow(
   // `~` names the file, `+` and `-` are the change itself, and anything else
   // is context, which is here to be read past rather than read.
   if (line.kind === 'diff') {
-    const mark = line.text.slice(0, 1)
-    const tone =
-      mark === '+' ? theme.ok : mark === '-' ? theme.bad : mark === '~' ? colour : theme.faint
+    const tone = diffTone(line.text, theme, colour)
     return {
       background: ground,
       segments: [
         { text: ' ' },
-        { text: ` ${line.text}`, color: tone, ...(mark === '~' ? { bold: true } : {}) },
+        { text: ` ${line.text}`, color: tone.color, ...(tone.bold ? { bold: true } : {}) },
       ],
     }
   }
