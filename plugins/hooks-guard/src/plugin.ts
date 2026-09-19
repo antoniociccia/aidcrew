@@ -1,8 +1,12 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { Hooks, Plugin, ToolCallInfo, ToolContext, ToolOutput } from '@aidcrew/core'
 import { defineHooks, definePlugin } from '@aidcrew/plugin-sdk'
+import { changeOf, rangesOf } from '@aidcrew/tool-fs'
+import type { Collision, createRadar } from './collide.ts'
 import { irreversible } from './irreversible.ts'
 import { refuseWrite } from './protected.ts'
-import { commit, discard, type Snapshot, snapshot } from './undo.ts'
+import { commit, discard, type Snapshot, snapshot, UNDO_DIR } from './undo.ts'
 
 /**
  * The guards that make an agent safe enough to leave alone.
@@ -29,6 +33,15 @@ export type GuardOptions = {
   ask?(request: GuardRequest): Promise<boolean>
   /** Off for a run that must not touch the disk more than it already is. */
   snapshots?: boolean
+  /**
+   * Watches for two agents editing the same lines in two checkouts.
+   *
+   * Passed in rather than made here, because whoever owns the team is the one
+   * who knows when a job has come home and an agent is out of the way.
+   */
+  radar?: ReturnType<typeof createRadar>
+  /** Told about a collision, for the screen. The agents are told regardless. */
+  onCollision?(hit: Collision, sentence: string): void
   now?(): number
 }
 
@@ -109,11 +122,61 @@ export function createGuard(options: GuardOptions): Hooks {
       if (!pending) return undefined
       taken.delete(call.id)
 
-      if (output.isError) discard(pending)
-      else commit(pending)
-      return undefined
+      if (output.isError) {
+        discard(pending)
+        return undefined
+      }
+      commit(pending)
+
+      const radar = options.radar
+      if (radar === undefined) return undefined
+
+      const ranges = changedRanges(pending)
+      if (ranges.length === 0) return undefined
+
+      const hits = radar.saw({
+        agentId: pending.change.agentId,
+        path: pending.change.path,
+        ranges,
+        at: pending.change.at,
+      })
+      if (hits.length === 0) return undefined
+
+      // Said in the result the agent is about to read, rather than in a
+      // message that would arrive a turn later — by which time it has built
+      // another change on top of the one that is already contested.
+      const said = hits.map((hit) => {
+        const sentence = radar.sentence(hit, now())
+        options.onCollision?.(hit, sentence)
+        return sentence
+      })
+
+      return { ...output, content: `${output.content}\n\n${said.join('\n')}` }
     },
   })
+}
+
+/**
+ * Which lines of the new file a change touched.
+ *
+ * Worked out again here rather than carried from the tool: a hook is the one
+ * place that sees every write, including those from a tool this plugin has
+ * never heard of, and the bytes to compare against are already kept.
+ */
+function changedRanges(taken: Snapshot): [number, number][] {
+  try {
+    const before =
+      taken.change.kept === undefined
+        ? ''
+        : readFileSync(join(taken.root, UNDO_DIR, taken.change.kept), 'utf8')
+    const after = readFileSync(join(taken.root, taken.change.path), 'utf8')
+    const change = changeOf(taken.change.path, before, after)
+    return change === undefined ? [] : rangesOf(change)
+  } catch {
+    // A file that has since gone, or one that is not text. Neither is worth
+    // failing a write that has already happened.
+    return []
+  }
 }
 
 /**

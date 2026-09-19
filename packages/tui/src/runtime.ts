@@ -43,8 +43,8 @@ import type {
 } from '@aidcrew/core'
 import { addUsage, DEFAULT_LIMITS, DEFAULT_MAX_HOPS } from '@aidcrew/core'
 import { createCompactPlugin, DEFAULT_BUDGET, parseCompactWith } from '@aidcrew/hooks-compact'
-import type { GuardRequest, Revertable } from '@aidcrew/hooks-guard'
-import { revertable, revertHunk, undoRoot } from '@aidcrew/hooks-guard'
+import type { Collision, GuardRequest, Revertable } from '@aidcrew/hooks-guard'
+import { createRadar, revertable, revertHunk, undoRoot } from '@aidcrew/hooks-guard'
 import type { Allowance, PriceTable } from '@aidcrew/prices'
 import {
   allLeft,
@@ -94,11 +94,15 @@ export type GuardSession = {
   askPlugin?(question: { plugin: string; title: string; detail?: string }): Promise<boolean>
   /** Where a plugin's news goes once there is a session to draw it in. */
   note?(text: string): void
+  /** Two agents found in the same lines of the same file. */
+  onCollision?(hit: Collision, sentence: string): void
 }
 
 export type Runtime = {
   /** What the guards consult, replaced as projects are opened. */
   session: GuardSession
+  /** Who is working where, so two agents in one place can be told. */
+  radar: ReturnType<typeof createRadar>
   store: SettingsStore
   host: Host
   providers: string[]
@@ -138,6 +142,13 @@ export async function openRuntime(cwd: string, home = homedir()): Promise<Runtim
   // know — who is trusted, who to ask — is only known once a team is running,
   // so the host is given a way to look it up rather than the answers.
   const session: GuardSession = { trust: () => 'ask' }
+  /**
+   * What each agent has open, for spotting two of them in one place.
+   *
+   * Made here rather than inside the guards because a job coming home is what
+   * empties it, and that is news the team has, not the hook.
+   */
+  const radar = createRadar()
   // What plugins said before there was a screen, and what this project's
   // config asked for and did not get. Read below, drawn later.
   const notes: string[] = settings.refused.map(refusalLine)
@@ -190,6 +201,10 @@ export async function openRuntime(cwd: string, home = homedir()): Promise<Runtim
     guard: {
       trust: (agentId) => session.trust(agentId),
       ask: async (request) => (await session.ask?.(request)) ?? false,
+      // One radar for the host, which outlives any one team: an agent's open
+      // ranges have to survive the session being reopened on the same project.
+      radar,
+      onCollision: (hit, sentence) => session.onCollision?.(hit, sentence),
     },
   })
 
@@ -197,6 +212,7 @@ export async function openRuntime(cwd: string, home = homedir()): Promise<Runtim
     store,
     host,
     session,
+    radar,
     providers: host.registry.providers().map((provider) => provider.id),
     home,
     notes,
@@ -699,6 +715,27 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
       })) !== 'no'
   }
 
+  /**
+   * Two agents found in one place, said in three directions.
+   *
+   * The one that just wrote already has it — the guard put it in the result
+   * it is about to read, which is a turn earlier than a message would be.
+   * This is for the person, whose panes both say it, and for the other agent,
+   * which otherwise carries on believing its checkout is its own.
+   */
+  runtime.session.onCollision = (hit, sentence) => {
+    for (const line of collisionLines(hit)) record(line)
+    void host.tell(
+      hit.theirs,
+      `${hit.mine} has just changed ${hit.file} lines ${hit.lines[0]}-${hit.lines[1]} in another checkout, ` +
+        `which overlaps lines ${hit.theirLines[0]}-${hit.theirLines[1]} of yours. ` +
+        'Neither of you is blocked. If you are still working there, say so to the other one rather than merging blind.',
+    )
+    // Unused here, and taken so that the two descriptions cannot drift: the
+    // guard writes this sentence once, and both agents read the same one.
+    void sentence
+  }
+
   // Shortening a conversation that no longer fits. Which model writes the
   // summary is a decision per agent: its own by default, and a cheaper one
   // when the project names it, because summarising is small mechanical work.
@@ -834,8 +871,13 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
         const said = sayJobCost(event.task)
         if (said) record({ agentId: event.task, kind: 'note', text: said })
       }
-      if (event.type === 'agent_killed')
+      if (event.type === 'agent_killed') {
         roster.splice(0, roster.length, ...roster.filter((id) => id !== event.id))
+        runtime.radar.finished(event.id)
+      }
+      // Merged work is in the repository, so the lines it held are no longer
+      // anybody's to collide with.
+      if (event.type === 'job_merged') runtime.radar.finished(event.task)
       const produced = toLines(event)
       // Events with nothing to show still change the roster, so the interface
       // is told either way.
@@ -1391,6 +1433,31 @@ function cutShortly(reason: string, tool?: string): string {
 function firstLine(text: string): string {
   const line = text.split('\n').find((one) => one.trim() !== '') ?? ''
   return line.length > 90 ? `${line.slice(0, 90)}…` : line
+}
+
+/**
+ * A collision as it is written into the two panes it concerns.
+ *
+ * From each side, because the two agents need different things from it: the
+ * one that just wrote needs to know somebody is already there, and the one
+ * already there needs to know its work has just been written over somewhere
+ * else. The sentence the agents themselves are given is longer and says what
+ * to do; these are for the person watching.
+ */
+export function collisionLines(hit: Collision): Line[] {
+  const where = hit.task === undefined ? '' : ` in ${hit.task}`
+  return [
+    {
+      agentId: hit.mine,
+      kind: 'note',
+      text: `heading for the same lines as ${hit.theirs}: ${hit.file} ${hit.lines[0]}-${hit.lines[1]} against ${hit.theirLines[0]}-${hit.theirLines[1]}${where}`,
+    },
+    {
+      agentId: hit.theirs,
+      kind: 'note',
+      text: `${hit.mine} has just changed ${hit.file} ${hit.lines[0]}-${hit.lines[1]}, which overlaps ${hit.theirLines[0]}-${hit.theirLines[1]} in your checkout`,
+    },
+  ]
 }
 
 export function toLines(event: TeamEvent): Line[] {

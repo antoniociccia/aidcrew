@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { createHost, openJournal } from '@aidcrew/cli'
 import type { TeamEvent } from '@aidcrew/core'
 import { keep } from '@aidcrew/hooks-guard'
-import { openRuntime, stallNotice, startTeam, toLines } from './runtime.ts'
+import { collisionLines, openRuntime, stallNotice, startTeam, toLines } from './runtime.ts'
 import type { Line } from './screens/session.tsx'
 
 const usage = { inputTokens: 1, outputTokens: 1 }
@@ -1831,5 +1831,34 @@ describe('taking a change back while the team works', () => {
       expect(anyway).toContain('a.ts')
       expect(readFileSync(join(cwd, 'a.ts'), 'utf8')).toBe('one\ntwo\n')
     })
+  })
+})
+
+describe('two agents about to collide', () => {
+  const hit = {
+    file: 'src/rates.ts',
+    mine: 'coder',
+    theirs: 'architect',
+    lines: [10, 12] as [number, number],
+    theirLines: [8, 14] as [number, number],
+    task: 'plan',
+    since: 0,
+  }
+
+  test('is written into both panes, from each side', () => {
+    const lines = collisionLines(hit)
+
+    expect(lines).toEqual([
+      {
+        agentId: 'coder',
+        kind: 'note',
+        text: 'heading for the same lines as architect: src/rates.ts 10-12 against 8-14 in plan',
+      },
+      {
+        agentId: 'architect',
+        kind: 'note',
+        text: 'coder has just changed src/rates.ts 10-12, which overlaps 8-14 in your checkout',
+      },
+    ])
   })
 })

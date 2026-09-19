@@ -6,6 +6,8 @@
  * tool in the interface's dependencies for the sake of a formatting helper.
  */
 export { hunkRows } from '@aidcrew/tool-fs'
+export type { Collision, Open } from './collide.ts'
+export { createRadar } from './collide.ts'
 export { irreversible } from './irreversible.ts'
 export type { GuardOptions, GuardRequest, Trust } from './plugin.ts'
 export { createGuard, createGuardPlugin, default } from './plugin.ts'

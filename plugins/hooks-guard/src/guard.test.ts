@@ -13,6 +13,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Hooks, ToolCallInfo, ToolContext, ToolOutput } from '@aidcrew/core'
+import { createRadar } from './collide.ts'
 import { irreversible } from './irreversible.ts'
 import { createGuard } from './plugin.ts'
 import { refuseWrite } from './protected.ts'
@@ -489,5 +490,73 @@ describe('taking a change back', () => {
     )
 
     expect(changes(workspace).map((change) => change.path)).toEqual(['a.ts', 'b.ts'])
+  })
+})
+
+describe('two agents writing in the same place', () => {
+  /** A guard with a radar, and somewhere to put what it sees. */
+  function watched() {
+    const seen: string[] = []
+    const radar = createRadar()
+    const guard = createGuard({
+      trust: () => 'yolo',
+      radar,
+      onCollision: (_hit, sentence) => seen.push(sentence),
+      now: () => 1,
+    })
+    return { guard, radar, seen }
+  }
+
+  /** One agent's write, through both halves of the hook. */
+  async function wrote(
+    guard: Hooks,
+    agentId: string,
+    text: string,
+  ): Promise<ToolOutput | undefined> {
+    const ctx: ToolContext = { cwd: workspace, signal: new AbortController().signal, agentId }
+    const info = call('write', { path: 'rates.ts', content: text })
+    await guard.preToolCall?.(info, ctx)
+    writeFileSync(join(workspace, 'rates.ts'), text)
+    return await guard.postToolCall?.(info, { content: 'wrote rates.ts' }, ctx)
+  }
+
+  test('the second one is told in the result it is about to read', async () => {
+    const { guard, seen } = watched()
+    writeFileSync(join(workspace, 'rates.ts'), 'one\ntwo\nthree\n')
+
+    await wrote(guard, 'architect', 'one\nTWO\nthree\n')
+    const output = await wrote(guard, 'coder', 'one\nTWO\nTHREE\n')
+
+    expect(output?.content).toContain('wrote rates.ts')
+    expect(output?.content).toContain('architect changed rates.ts')
+    expect(seen).toHaveLength(1)
+  })
+
+  test('one agent working alone is told nothing at all', async () => {
+    const { guard, seen } = watched()
+    writeFileSync(join(workspace, 'rates.ts'), 'one\ntwo\n')
+
+    await wrote(guard, 'coder', 'one\nTWO\n')
+    const output = await wrote(guard, 'coder', 'ONE\nTWO\n')
+
+    expect(output).toBeUndefined()
+    expect(seen).toEqual([])
+  })
+
+  test('a write that failed puts nothing on the radar', async () => {
+    const { guard, seen } = watched()
+    writeFileSync(join(workspace, 'rates.ts'), 'one\ntwo\n')
+    const ctx: ToolContext = {
+      cwd: workspace,
+      signal: new AbortController().signal,
+      agentId: 'architect',
+    }
+    const info = call('write', { path: 'rates.ts', content: 'x' })
+    await guard.preToolCall?.(info, ctx)
+    await guard.postToolCall?.(info, { content: 'refused', isError: true }, ctx)
+
+    await wrote(guard, 'coder', 'one\nTWO\n')
+
+    expect(seen).toEqual([])
   })
 })
