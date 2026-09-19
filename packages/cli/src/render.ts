@@ -49,6 +49,17 @@ export function createRenderer({ write, color }: RendererOptions) {
           if (event.output.isError) {
             write(paint('31', `  error: ${preview(event.output.content)}`))
             write('\n')
+            break
+          }
+          // What the tool wanted a person to see. `-p` printed the call and
+          // then the answer, and never what actually changed on disk — which
+          // is the only part of a run that outlives it.
+          if (event.output.shown !== undefined) {
+            for (const row of event.output.shown.text.split('\n')) {
+              if (row === '') continue
+              write(paint(shade(row), `  ${row}`))
+              write('\n')
+            }
           }
           break
 
@@ -61,6 +72,19 @@ export function createRenderer({ write, color }: RendererOptions) {
       newlineIfNeeded()
     },
   }
+}
+
+/**
+ * The colour of one row of a change, from the marker it begins with.
+ *
+ * The same four markers the interface paints by — green for what arrived, red
+ * for what went, plain for the file it happened in, faint for context.
+ */
+function shade(row: string): string {
+  const mark = row.slice(0, 1)
+  if (mark === '+') return '32'
+  if (mark === '-') return '31'
+  return mark === '~' ? '1' : '2'
 }
 
 /** The first string argument is almost always the one that identifies the call. */

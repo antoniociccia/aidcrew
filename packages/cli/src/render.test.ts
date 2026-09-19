@@ -150,3 +150,49 @@ describe('createTeamRenderer', () => {
     expect(out).toMatch(/coder.*picked up.*3 files/)
   })
 })
+
+describe('a change on the way past', () => {
+  const changed = (): LoopEvent => ({
+    type: 'tool_end',
+    id: 't1',
+    name: 'edit',
+    durationMs: 1,
+    output: {
+      content: 'edited rates.js (1 replacement)',
+      shown: {
+        kind: 'diff',
+        text: '~ rates.js +2 -1\n- 2   const rate = 0.2\n+ 2   const rate = config.rate',
+      },
+    },
+  })
+
+  test('is printed under the call that made it', () => {
+    const out = render([changed()])
+
+    expect(out).toContain('~ rates.js +2 -1')
+    expect(out).toContain('- 2   const rate = 0.2')
+    expect(out).toContain('+ 2   const rate = config.rate')
+  })
+
+  test('is coloured like a diff when the terminal takes colour', () => {
+    const out = render([changed()], true)
+
+    // Green for what arrived, red for what went: the same reading as the pane.
+    expect(out).toContain(`${String.fromCharCode(27)}[32m  + 2`)
+    expect(out).toContain(`${String.fromCharCode(27)}[31m  - 2`)
+  })
+
+  test('a result with nothing to show prints nothing', () => {
+    const out = render([
+      {
+        type: 'tool_end',
+        id: 't1',
+        name: 'read',
+        durationMs: 1,
+        output: { content: 'a.ts' },
+      },
+    ])
+
+    expect(out).toBe('')
+  })
+})
