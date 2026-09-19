@@ -538,3 +538,40 @@ describe('request-scoped plugin instructions', () => {
     expect(sent).toBe(false)
   })
 })
+
+describe('what a tool shows a person', () => {
+  const painter: Tool = {
+    name: 'paint',
+    description: 'Changes something, and has something to show for it.',
+    inputSchema: { type: 'object' },
+    execute: async () => ({
+      content: 'changed a.ts',
+      shown: { kind: 'diff', text: '~ a.ts +1 -1\n- 2 two\n+ 2 TWO', id: 'a.ts@1' },
+    }),
+  }
+
+  test('never reaches the model', async () => {
+    const provider = scripted([callTool('t1', 'paint', {}), endTurn('done')])
+
+    await drain(run({ provider, tools: [painter] }))
+
+    const secondCall = provider.seen[1] as Message[]
+    expect(secondCall.at(-1)).toEqual({
+      role: 'user',
+      content: [{ type: 'tool_result', toolUseId: 't1', content: 'changed a.ts', isError: false }],
+    })
+    expect(JSON.stringify(secondCall)).not.toContain('TWO')
+  })
+
+  test('reaches whoever is watching the loop', async () => {
+    const provider = scripted([callTool('t1', 'paint', {}), endTurn('done')])
+
+    const { events } = await drain(run({ provider, tools: [painter] }))
+
+    const ended = events.find((event): event is Extract<LoopEvent, { type: 'tool_end' }> => {
+      return event.type === 'tool_end'
+    })
+    expect(ended?.output.shown?.kind).toBe('diff')
+    expect(ended?.output.shown?.text).toContain('+ 2 TWO')
+  })
+})

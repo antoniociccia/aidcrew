@@ -29,6 +29,19 @@ export type ToolOutput = {
   stalled?: string
   content: string
   isError?: boolean
+  /**
+   * What a person should see of this result, which the model never reads.
+   *
+   * A write reports `wrote src/rates.ts (412 bytes)` because that is what the
+   * model needs; what a person wants is the change itself, and putting that in
+   * `content` would spend tokens on every write and fill the context with the
+   * file it is already editing.
+   *
+   * `kind` is an open string rather than a list of them. What a diff is, or a
+   * table, is the business of whichever plugin made one — this carries it and
+   * does not read it, which is the only way it can be here at all.
+   */
+  shown?: { kind: string; text: string; id?: string }
 }
 
 export type Tool = {
