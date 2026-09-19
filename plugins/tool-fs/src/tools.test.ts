@@ -250,3 +250,78 @@ describe('tool definitions', () => {
     }
   })
 })
+
+describe('what a change shows a person', () => {
+  test('an edit shows the lines it replaced', async () => {
+    writeFileSync(join(root, 'a.ts'), 'one\ntwo\nthree\n')
+
+    const output = await editTool.execute(
+      { path: 'a.ts', oldString: 'two', newString: 'TWO' },
+      context,
+    )
+
+    expect(output.content).toBe('edited a.ts (1 replacement)')
+    expect(output.shown?.kind).toBe('diff')
+    expect(output.shown?.text).toContain('- 2 two')
+    expect(output.shown?.text).toContain('+ 2 TWO')
+  })
+
+  test('an edit matched with different whitespace shows what it did too', async () => {
+    writeFileSync(join(root, 'a.ts'), 'if (x) {\n\treturn 1\n}\n')
+
+    const output = await editTool.execute(
+      { path: 'a.ts', oldString: '    return 1', newString: '    return 2' },
+      context,
+    )
+
+    expect(output.shown?.text).toContain('+ 2')
+  })
+
+  test('a failed edit shows nothing, because nothing changed', async () => {
+    writeFileSync(join(root, 'a.ts'), 'one\n')
+
+    const output = await editTool.execute(
+      { path: 'a.ts', oldString: 'nowhere', newString: 'x' },
+      context,
+    )
+
+    expect(output.isError).toBe(true)
+    expect(output.shown).toBeUndefined()
+  })
+
+  test('a write of a new file shows it as an addition', async () => {
+    const output = await writeTool.execute({ path: 'new.ts', content: 'hello\n' }, context)
+
+    expect(output.shown?.text.split('\n')[0]).toContain('new.ts')
+    expect(output.shown?.text).toContain('+ 1 hello')
+  })
+
+  test('a write that changes nothing shows nothing', async () => {
+    writeFileSync(join(root, 'a.ts'), 'same\n')
+
+    const output = await writeTool.execute({ path: 'a.ts', content: 'same\n' }, context)
+
+    expect(output.content).toContain('wrote a.ts')
+    expect(output.shown).toBeUndefined()
+  })
+
+  test('a binary file is written without a diff rather than with a broken one', async () => {
+    writeFileSync(join(root, 'b.bin'), Buffer.from([0, 1, 2]))
+
+    const output = await writeTool.execute({ path: 'b.bin', content: 'text\n' }, context)
+
+    expect(output.isError).toBeFalsy()
+    expect(output.shown).toBeUndefined()
+  })
+
+  test('the change is named, so a person can point at it later', async () => {
+    writeFileSync(join(root, 'a.ts'), 'one\n')
+
+    const output = await editTool.execute(
+      { path: 'a.ts', oldString: 'one', newString: 'ONE' },
+      context,
+    )
+
+    expect(output.shown?.id).toStartWith('a.ts@')
+  })
+})
