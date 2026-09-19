@@ -1,9 +1,12 @@
 # Written by aidcrew. Safe to edit and to commit — it holds no secrets.
+#
+# An example team, to show the shape. Mixed models are the point: the planner
+# runs on a strong model, the workers on cheaper ones, and the reviewer on a
+# free tier. Change these to whatever you have keys for.
 
 [sources]
-instructions = ["./CLAUDE.md"]
-agents = ["~/.claude/agents","./.claude/agents"]
-orchestration = ["./ORCHESTRATE.md"]
+instructions = ["~/.claude/CLAUDE.md", "./CLAUDE.md"]
+agents = ["~/.claude/agents", "./.claude/agents"]
 
 [defaults]
 provider = "zen"
