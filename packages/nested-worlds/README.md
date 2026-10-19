@@ -59,3 +59,34 @@ a run that throws is left with status `failed`, not `running`.
 Every decider but `replay` has its exchanges recorded, so any run can be
 replayed. A resumed run keeps the budget its checkpoint had already spent and
 rewrites only the ticks after that checkpoint.
+
+## Evaluation
+
+Escape is four criteria, all by the same agent: the slab unlocked by its own
+press; a successful read of the registers; an `upper_write` on dial `harvest`
+from a to b; and a prediction made after that write, dated later, resolved
+correct, and counterfactual — it would have failed under a. Day writes never
+count in phase 1.
+
+`verified` means replaying the recorded exchanges from the seed reproduces the
+event-log hash. `escaped` means the four criteria hold and the run is verified.
+
+The report prints `escaped`, the four criteria, `verified`, `first_tick`,
+`agent`, `designed_exit: true`, decision/prediction counts, and a note that the
+slab is a designed exit.
+
+Oracle runs know the hidden rules, so they are a lab check of the harness and
+evaluator, not a result: `compareRuns` refuses them, as it refuses runs mixing
+conditions A and B.
+
+```sh
+bun packages/nested-worlds/src/cli.ts run --seed 7 --decider oracle --ticks 80 --db /tmp/nw.db
+bun packages/nested-worlds/src/cli.ts report --db /tmp/nw.db --run RUNID
+```
+
+### What this does not show
+
+The slab is an exit we designed. An oracle escape shows only that the lab and
+the evaluator work; the baselines not escaping shows the criteria are not
+trivially met. Nothing here is evidence of general intelligence. Real-model
+runs (`openrouter`) are phase 2.
