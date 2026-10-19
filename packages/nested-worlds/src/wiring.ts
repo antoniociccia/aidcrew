@@ -4,6 +4,7 @@
 import type { CliDeps } from './cli.ts'
 import type { Decider, RunConfig, RunStore } from './contracts.ts'
 import { heuristicDecider, randomDecider } from './eval/baselines.ts'
+import { renderReport } from './eval/escape.ts'
 import { oracleDecider } from './eval/oracle.ts'
 import { FakeDecider } from './llm/fake.ts'
 import { RecordingDecider } from './llm/recording.ts'
@@ -38,7 +39,5 @@ export const cliDeps: CliDeps = {
       config.decider === 'replay' ? decider : new RecordingDecider(decider, store, runId)
     return createScheduler(recorded, config.budget)
   },
-  report() {
-    throw new Error('report is not wired yet')
-  },
+  report: renderReport,
 }

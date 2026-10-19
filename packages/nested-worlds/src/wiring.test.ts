@@ -65,6 +65,14 @@ describe('cliDeps', () => {
     expect(store.events(runId, { type: 'upper_unlocked' })).toHaveLength(1)
   })
 
+  it('should_report_a_run_as_text_with_its_escape_verdict', async () => {
+    const store = openStore(':memory:')
+    const runId = await runWith(store, config('fake'))
+    const report = await cliDeps.report(store, runId)
+    expect(report).toContain('escaped: false')
+    expect(report).toContain('verified: true')
+  })
+
   it('should_refuse_openrouter_until_phase_2', () => {
     const store = openStore(':memory:')
     expect(() => cliDeps.scheduler(config('openrouter'), store, 'r')).toThrow(/phase 2/)
