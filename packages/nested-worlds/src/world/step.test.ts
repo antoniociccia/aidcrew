@@ -183,8 +183,9 @@ describe('stepWorld', () => {
     expect(agent(r.state, 'ada').energy).toBe(61)
     expect(agent(r.state, 'bo').energy).toBe(61)
     expect(agent(r.state, 'cyr').energy).toBe(59)
-    expect(r.events.filter((e) => e.type === 'resonance')).toHaveLength(1)(w.items[1] as Item).pos =
-      { x: 6, y: 2 } // Manhattan 4: silent
+    expect(r.events.filter((e) => e.type === 'resonance')).toHaveLength(1)
+    const second = w.items[1] as Item
+    second.pos = { x: 6, y: 2 } // Manhattan 4: silent
     expect(agent(stepWorld(w, params(w), new Map()).state, 'ada').energy).toBe(59)
   })
 
