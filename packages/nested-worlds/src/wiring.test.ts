@@ -44,6 +44,21 @@ describe('cliDeps', () => {
     expect(store.findExchange(replay, 'ada', 0, '')).toBeNull()
   })
 
+  it('should_run_the_random_and_heuristic_baselines', async () => {
+    for (const decider of ['random', 'heuristic'] as const) {
+      const store = openStore(':memory:')
+      const runId = await runWith(store, config(decider))
+      expect(store.run(runId)?.status).toBe('finished')
+      const decisions = store.events(runId, { type: 'decision' })
+      expect(decisions.length).toBeGreaterThan(0)
+      // The world may refuse a move into water; the schema must refuse nothing.
+      const unparsed = store
+        .events(runId, { type: 'action_rejected' })
+        .filter((e) => e.payload.action === null)
+      expect(unparsed).toHaveLength(0)
+    }
+  })
+
   it('should_refuse_openrouter_until_phase_2', () => {
     const store = openStore(':memory:')
     expect(() => cliDeps.scheduler(config('openrouter'), store, 'r')).toThrow(/phase 2/)

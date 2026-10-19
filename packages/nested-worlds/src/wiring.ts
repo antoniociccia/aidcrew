@@ -3,6 +3,7 @@
 // it only reads what an earlier run recorded.
 import type { CliDeps } from './cli.ts'
 import type { Decider, RunConfig, RunStore } from './contracts.ts'
+import { heuristicDecider, randomDecider } from './eval/baselines.ts'
 import { FakeDecider } from './llm/fake.ts'
 import { RecordingDecider } from './llm/recording.ts'
 import { ReplayDecider } from './llm/replay.ts'
@@ -20,7 +21,9 @@ function deciderFor(config: RunConfig, store: RunStore): Decider {
         '--decider openrouter comes in phase 2; use fake, random, heuristic or oracle',
       )
     case 'random':
+      return randomDecider(config.seed)
     case 'heuristic':
+      return heuristicDecider(config.seed)
     case 'oracle':
       throw new Error(`--decider ${config.decider} is not wired yet`)
   }
