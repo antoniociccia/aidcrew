@@ -26,8 +26,14 @@ describe('FakeDecider', () => {
     const out = await d.decide(input(1))
     expect(out.action).toEqual({ type: 'move', dir: 'S' })
     expect(JSON.parse(out.raw).action).toEqual({ type: 'move', dir: 'S' })
-    const prompt = buildMessages(input(1)).map((m) => m.content).join('\n')
-    expect(out.usage).toEqual({ promptTokens: Math.ceil(prompt.length / 4), completionTokens: 20, costUsd: 0 })
+    const prompt = buildMessages(input(1))
+      .map((m) => m.content)
+      .join('\n')
+    expect(out.usage).toEqual({
+      promptTokens: Math.ceil(prompt.length / 4),
+      completionTokens: 20,
+      costUsd: 0,
+    })
   })
 })
 
