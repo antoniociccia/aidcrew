@@ -37,15 +37,21 @@ function* objects(text: string): Generator<string> {
 
 function closing(text: string, start: number): number {
   let depth = 0
-  let inString = false
   for (let i = start; i < text.length; i++) {
     const c = text[i]
-    if (inString) {
-      if (c === '\\') i++
-      else if (c === '"') inString = false
-    } else if (c === '"') inString = true
-    else if (c === '{') depth++
+    if (c === '"') {
+      i = stringEnd(text, i)
+      if (i < 0) return -1
+    } else if (c === '{') depth++
     else if (c === '}' && --depth === 0) return i
+  }
+  return -1
+}
+
+function stringEnd(text: string, open: number): number {
+  for (let i = open + 1; i < text.length; i++) {
+    if (text[i] === '\\') i++
+    else if (text[i] === '"') return i
   }
   return -1
 }
