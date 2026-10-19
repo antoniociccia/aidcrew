@@ -39,7 +39,8 @@ function decideRandomAction(seed: number, input: DecisionInput): Action {
       return { type: 'move', dir: DIRS[d.value]! }
     }
     case 'pick': {
-      if (visible.length > 0) return { type: 'pick', itemId: visible[drawIndex(visible.length)]!.id }
+      if (visible.length > 0)
+        return { type: 'pick', itemId: visible[drawIndex(visible.length)]!.id }
       return { type: 'wait' }
     }
     case 'drop': {
@@ -69,7 +70,12 @@ function decideRandomAction(seed: number, input: DecisionInput): Action {
       return {
         type: 'predict',
         id: `p-${drawIndex(1000000)}`,
-        claim: { kind: 'event_at', eventType: 'moved', atTick: input.tick + 1, occurs: drawIndex(2) === 0 },
+        claim: {
+          kind: 'event_at',
+          eventType: 'moved',
+          atTick: input.tick + 1,
+          occurs: drawIndex(2) === 0,
+        },
       }
     case 'revise_strategy':
       return { type: 'revise_strategy', text: `plan ${drawIndex(1000)}`, reason: 'random' }
@@ -132,7 +138,8 @@ export function heuristicDecider(seed: number): Decider {
       }
       const state = seedState(hashSeed(seed, input.agentId, input.tick))
       const d = nextInt(state, 0, 4)
-      const action: Action = d.value === 0 ? { type: 'wait' } : { type: 'move', dir: DIRS[d.value - 1]! }
+      const action: Action =
+        d.value === 0 ? { type: 'wait' } : { type: 'move', dir: DIRS[d.value - 1]! }
       return { raw: JSON.stringify(action), action }
     },
   }

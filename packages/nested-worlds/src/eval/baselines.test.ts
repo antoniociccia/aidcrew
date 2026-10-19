@@ -4,11 +4,7 @@ import type { DecisionInput } from '../contracts.ts'
 import { generateWorld } from '../world/generate.ts'
 import { observe } from '../world/observe.ts'
 
-const input = (
-  tick = 0,
-  agentId = 'ada',
-  over: Partial<DecisionInput> = {},
-): DecisionInput => ({
+const input = (tick = 0, agentId = 'ada', over: Partial<DecisionInput> = {}): DecisionInput => ({
   runId: 'r1',
   agentId,
   tick,
