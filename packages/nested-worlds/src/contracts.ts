@@ -129,6 +129,7 @@ export type EventType =
   | 'run_status'
 export interface WorldEvent {
   tick: number
+  /** Orders events within one (tick, path); across paths the store's insertion order holds. */
   seq: number
   path: WorldPath
   type: EventType
