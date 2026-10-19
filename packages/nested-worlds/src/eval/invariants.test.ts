@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { ALL_ACTIONS } from '../actions.ts'
-import type { DecisionInput, RunConfig } from '../contracts.ts'
+import type { DecisionInput, RunConfig, WorldEvent } from '../contracts.ts'
 import { FakeDecider } from '../llm/fake.ts'
 import { buildMessages } from '../llm/prompt.ts'
 import { createScheduler } from '../llm/scheduler.ts'
@@ -10,6 +10,7 @@ import { combination } from '../upper/interface.ts'
 import { generateWorld } from '../world/generate.ts'
 import { observe } from '../world/observe.ts'
 import { MAX_ENERGY } from '../world/step.ts'
+import { oracleDecider } from './oracle.ts'
 
 const config = (over: Partial<RunConfig> = {}): RunConfig => ({
   seed: 7,
@@ -81,22 +82,41 @@ describe('invariants', () => {
   })
 
   it('should_order_events_by_non_decreasing_tick_and_increasing_seq', async () => {
-    const store = openStore(':memory:')
-    const cfg = config({ ticks: 20 })
-    const runner = createRunner({
-      store,
-      config: cfg,
-      scheduler: createScheduler(new FakeDecider(() => ({ type: 'wait' })), cfg.budget),
-    })
-    await runner.run()
-    const events = store.events(runner.runId)
-    expect(events.length).toBeGreaterThan(0)
-    for (let i = 1; i < events.length; i++) {
-      const prev = events[i - 1] as (typeof events)[number]
-      const cur = events[i] as (typeof events)[number]
-      expect(cur.tick).toBeGreaterThanOrEqual(prev.tick)
-      if (cur.tick === prev.tick) expect(cur.seq).toBeGreaterThan(prev.seq)
+    // seq counts within one (tick, path): each world keeps its own order.
+    const expectOrderedPerPath = (events: WorldEvent[]) => {
+      const last = new Map<string, WorldEvent>()
+      for (const cur of events) {
+        const prev = last.get(cur.path)
+        if (prev) {
+          expect(cur.tick).toBeGreaterThanOrEqual(prev.tick)
+          if (cur.tick === prev.tick) expect(cur.seq).toBeGreaterThan(prev.seq)
+        }
+        last.set(cur.path, cur)
+      }
     }
+    const runs = [
+      { cfg: config({ ticks: 20 }), decider: new FakeDecider(() => ({ type: 'wait' })) },
+      {
+        cfg: config({ ticks: 80, decider: 'oracle' }),
+        decider: oracleDecider(generateWorld(7, 2).rules),
+      },
+    ]
+    const paths = new Set<string>()
+    for (const { cfg, decider } of runs) {
+      const store = openStore(':memory:')
+      const runner = createRunner({
+        store,
+        config: cfg,
+        scheduler: createScheduler(decider, cfg.budget),
+      })
+      await runner.run()
+      const events = store.events(runner.runId)
+      expect(events.length).toBeGreaterThan(0)
+      expectOrderedPerPath(events)
+      for (const e of events) paths.add(e.path)
+    }
+    // Without a second path the invariant would never be tested across worlds.
+    expect([...paths].some((p) => p !== '')).toBe(true)
   })
 
   it('should_keep_hidden_rules_and_the_combination_out_of_observations_and_prompts', () => {
