@@ -16,6 +16,7 @@ import type {
 } from '../contracts.ts'
 import { combination } from '../upper/interface.ts'
 import { HEIGHT, WIDTH } from '../world/generate.ts'
+import { manhattan, samePos as same, withinReach } from '../world/step.ts'
 
 const DELTA: Record<Dir, Pos> = {
   N: { x: 0, y: -1 },
@@ -33,12 +34,11 @@ interface Progress {
   wrote: boolean
   predicted: boolean
   known: Set<string>
+  /** The action sent last tick, which lastResult answers. */
+  sent: Action | null
 }
 
 const key = (p: Pos) => `${p.x},${p.y}`
-const same = (a: Pos, b: Pos) => a.x === b.x && a.y === b.y
-const manhattan = (a: Pos, b: Pos) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
-const chebyshev = (a: Pos, b: Pos) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
 const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b))
 
 /** A harvest period with no common factor with a, so most of its multiples are not a's. */
@@ -105,22 +105,32 @@ export function oracleDecider(rules: HiddenRules): Decider {
   function stateOf(agentId: AgentId): Progress {
     let p = progress.get(agentId)
     if (!p) {
-      p = { unlocked: false, read: false, wrote: false, predicted: false, known: new Set() }
+      p = {
+        unlocked: false,
+        read: false,
+        wrote: false,
+        predicted: false,
+        known: new Set(),
+        sent: null,
+      }
       progress.set(agentId, p)
     }
     return p
   }
 
-  /** What the slab said last tick moves the agent one step along the exit. */
+  /** A step along the exit counts once the world accepted the action that took it. */
   function advance(p: Progress, obs: Observation): void {
-    const said = obs.lastResult?.ok ? obs.lastResult.message : ''
-    if (said.startsWith('The slab opens')) p.unlocked = true
-    else if (p.unlocked && said.startsWith('Dials:')) p.read = true
-    else if (said.startsWith('The harvest dial turns')) p.wrote = true
+    const sent = p.sent
+    if (!sent || !obs.lastResult?.ok) return
+    if (sent.type === 'predict') p.predicted = true
+    if (sent.type !== 'interface') return
+    if (sent.op === 'press') p.unlocked = true
+    else if (sent.op === 'read' && p.unlocked) p.read = true
+    else if (sent.op === 'turn') p.wrote = true
   }
 
   /** After the write: empty a fertile tile, then predict the spawn only b brings. */
-  function provePrediction(input: DecisionInput, p: Progress): Action {
+  function provePrediction(input: DecisionInput): Action {
     const obs = input.observation
     const n = input.tick
     const here = obs.self.pos
@@ -132,7 +142,6 @@ export function oracleDecider(rules: HiddenRules): Decider {
       // multiple of b, and the spawn tick must not be one of a's.
       const spawn = nextMultiple(n, b)
       if (!food && n % b !== 0 && spawn % a !== 0) {
-        p.predicted = true
         return {
           type: 'predict',
           id: `p-${input.agentId}-${n}`,
@@ -160,7 +169,7 @@ export function oracleDecider(rules: HiddenRules): Decider {
     if (p.predicted) {
       return foodHere && !held ? { type: 'pick', itemId: foodHere.id } : { type: 'wait' }
     }
-    if (p.wrote) return provePrediction(input, p)
+    if (p.wrote) return provePrediction(input)
 
     // Grab food on the way so the walk never starves.
     if (foodHere && (!held || obs.self.energy < HUNGRY))
@@ -168,7 +177,7 @@ export function oracleDecider(rules: HiddenRules): Decider {
 
     const slab = obs.items.find((i) => i.kind === 'slab')
     if (!slab) return explore(obs, p.known)
-    if (chebyshev(slab.pos, obs.self.pos) > 1) {
+    if (!withinReach(obs.self.pos, slab.pos)) {
       const dir = stepToward(obs, slab.pos)
       return dir ? { type: 'move', dir } : explore(obs, p.known)
     }
@@ -191,7 +200,10 @@ export function oracleDecider(rules: HiddenRules): Decider {
     async decide(input) {
       // The first agent asked walks the exit; asking order follows the world's agent list.
       writer ??= input.agentId
-      return out(input.agentId === writer ? walkTheExit(input) : waitAndEat(input))
+      if (input.agentId !== writer) return out(waitAndEat(input))
+      const action = walkTheExit(input)
+      stateOf(input.agentId).sent = action
+      return out(action)
     },
   }
 }

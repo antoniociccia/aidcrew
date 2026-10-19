@@ -240,8 +240,13 @@ function eat(tk: Tick, agent: AgentState, action: Extract<Action, { type: 'use' 
   return tk.ok(agent, `You eat ${item.id}. Energy ${before} -> ${agent.energy}.`)
 }
 
+/** An item on the ground can be handled from its own tile or any of the eight around it. */
+export function withinReach(agentPos: Pos, itemPos: Pos): boolean {
+  return chebyshev(itemPos, agentPos) <= 1
+}
+
 function reachable(agent: AgentState, item: Item): boolean {
-  return item.holder === agent.id || (item.pos !== null && chebyshev(item.pos, agent.pos) <= 1)
+  return item.holder === agent.id || (item.pos !== null && withinReach(agent.pos, item.pos))
 }
 
 function inspect(
