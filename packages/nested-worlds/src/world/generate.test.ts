@@ -7,9 +7,9 @@ const FORBIDDEN =
   /simulation|simulated|escape|exit|outside|upper|level|program|code|computer|game|engine|password|key|register/i
 
 function groundConnected(w: WorldState): boolean {
-  const ground: Pos[] = []
-  for (let y = 0; y < w.height; y++)
-    for (let x = 0; x < w.width; x++) if (terrainAt(w, { x, y }) === 'ground') ground.push({ x, y })
+  const ground = w.terrain.flatMap((t, i) =>
+    t === 'ground' ? [{ x: i % w.width, y: Math.floor(i / w.width) }] : [],
+  )
   const start = ground[0]
   if (!start) return false
   const seen = new Set([`${start.x},${start.y}`])

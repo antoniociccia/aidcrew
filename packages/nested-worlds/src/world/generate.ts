@@ -48,10 +48,7 @@ export function generateWorld(seed: number, agentCount: number, path = ''): Worl
 
   const tiles: Pos[] = []
   for (let y = 0; y < HEIGHT; y++) for (let x = 0; x < WIDTH; x++) tiles.push({ x, y })
-  for (let i = tiles.length - 1; i > 0; i--) {
-    const j = int(0, i)
-    ;[tiles[i], tiles[j]] = [tiles[j] as Pos, tiles[i] as Pos]
-  }
+  shuffle(tiles, int)
   let cursor = 0
   const take = () => tiles[cursor++] as Pos
 
@@ -144,21 +141,30 @@ function groundConnected(terrain: Terrain[]): boolean {
   const stack = [start]
   let reached = 1
   while (stack.length > 0) {
-    const i = stack.pop() as number
-    const x = i % WIDTH
-    const y = Math.floor(i / WIDTH)
-    const around = [
-      x > 0 ? i - 1 : -1,
-      x < WIDTH - 1 ? i + 1 : -1,
-      y > 0 ? i - WIDTH : -1,
-      y < HEIGHT - 1 ? i + WIDTH : -1,
-    ]
-    for (const n of around) {
-      if (n < 0 || seen[n] || terrain[n] !== 'ground') continue
+    for (const n of neighbours(stack.pop() as number)) {
+      if (seen[n] || terrain[n] !== 'ground') continue
       seen[n] = 1
       reached++
       stack.push(n)
     }
   }
   return reached === terrain.filter((t) => t === 'ground').length
+}
+
+function neighbours(i: number): number[] {
+  const x = i % WIDTH
+  const y = Math.floor(i / WIDTH)
+  const out: number[] = []
+  if (x > 0) out.push(i - 1)
+  if (x < WIDTH - 1) out.push(i + 1)
+  if (y > 0) out.push(i - WIDTH)
+  if (y < HEIGHT - 1) out.push(i + WIDTH)
+  return out
+}
+
+function shuffle<T>(xs: T[], int: (min: number, max: number) => number): void {
+  for (let i = xs.length - 1; i > 0; i--) {
+    const j = int(0, i)
+    ;[xs[i], xs[j]] = [xs[j] as T, xs[i] as T]
+  }
 }
