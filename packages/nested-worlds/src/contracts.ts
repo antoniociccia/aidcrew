@@ -260,6 +260,8 @@ export interface RunStore extends ExchangeStore {
       toTick?: number
     },
   ): WorldEvent[]
+  /** Drops every event at `fromTick` or later — what a resume will write again. */
+  deleteEventsFrom(runId: string, fromTick: number): void
   saveCheckpoint(runId: string, tick: number, snapshot: LabSnapshot): void
   latestCheckpoint(runId: string): { tick: number; snapshot: LabSnapshot } | null
 }

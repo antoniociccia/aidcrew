@@ -5,6 +5,7 @@ import { ALL_ACTIONS, parseAction } from './actions.ts'
 import type {
   Action,
   AgentId,
+  BudgetUsage,
   DecisionInput,
   DecisionOutput,
   Observation,
@@ -46,14 +47,25 @@ export function createRunner(opts: RunnerOptions): Runner {
   return makeRunner(opts.store, runId, opts.config, opts.scheduler, host)
 }
 
-export function resumeRunner(store: RunStore, runId: string, scheduler: Scheduler): Runner {
+/**
+ * The scheduler is built here, from what the checkpoint says was already
+ * spent, so a resumed run cannot get its budget back by stopping.
+ */
+export function resumeRunner(
+  store: RunStore,
+  runId: string,
+  makeScheduler: (used?: BudgetUsage) => Scheduler,
+): Runner {
   const run = store.run(runId)
   if (!run) throw new Error(`no run ${runId}`)
   const cp = store.latestCheckpoint(runId)
   const host = cp
     ? createHost(cp.snapshot.base, cp.snapshot.upper)
     : createHost(generateWorld(run.config.seed, run.config.agents))
-  const runner = makeRunner(store, runId, run.config, scheduler, host)
+  // Events past the checkpoint belong to ticks the restored world has not
+  // lived yet; stepping again would write them a second time.
+  store.deleteEventsFrom(runId, cp?.tick ?? 0)
+  const runner = makeRunner(store, runId, run.config, makeScheduler(cp?.snapshot.budgetUsage), host)
   if (run.status === 'paused') runner.setStatus('running')
   return runner
 }

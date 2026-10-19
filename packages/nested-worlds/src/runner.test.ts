@@ -2,11 +2,13 @@ import { describe, expect, it } from 'bun:test'
 import type {
   AgentId,
   BudgetUsage,
+  Decider,
   DecisionInput,
   DecisionOutput,
   RunConfig,
   Scheduler,
 } from './contracts.ts'
+import { createScheduler } from './llm/scheduler.ts'
 import { createRunner, resumeRunner } from './runner.ts'
 import { openStore } from './store/sqlite.ts'
 
@@ -61,6 +63,22 @@ function scripted(
 }
 
 const walker = (i: DecisionInput) => ({ type: 'move', dir: i.tick % 2 === 0 ? 'E' : 'W' })
+
+/** A decider that walks and counts every call it is asked to make. */
+function counted(): Decider & { calls: number } {
+  return {
+    name: 'counted',
+    calls: 0,
+    async decide(i) {
+      this.calls++
+      const action = walker(i)
+      return { raw: JSON.stringify(action), action }
+    },
+  }
+}
+
+const strip = (es: { tick: number; type: string }[]) =>
+  es.filter((e) => e.type !== 'checkpoint' && e.type !== 'run_status').map((e) => JSON.stringify(e))
 
 describe('runner', () => {
   it('should_run_to_the_configured_tick_and_checkpoint_on_schedule', async () => {
@@ -135,14 +153,38 @@ describe('runner', () => {
     await b.run(7)
     b.pause()
     expect(store.run(b.runId)?.status).toBe('paused')
-    const c = resumeRunner(store, b.runId, scripted(walker))
+    const c = resumeRunner(store, b.runId, () => scripted(walker))
     expect(c.host.base.tick).toBe(7)
     expect(await c.run()).toBe('finished')
     expect(c.host.base).toEqual(a.host.base)
-    const strip = (es: { tick: number; type: string }[]) =>
-      es
-        .filter((e) => e.type !== 'checkpoint' && e.type !== 'run_status')
-        .map((e) => JSON.stringify(e))
+    expect(strip(store.events(b.runId))).toEqual(strip(straight.events(a.runId)))
+  })
+
+  it('should_carry_the_spent_budget_across_a_resume', async () => {
+    const cfg = config({ budget: { ...config().budget, maxCalls: 10 } })
+    const decider = counted()
+    const store = openStore(':memory:')
+    const b = createRunner({ store, config: cfg, scheduler: createScheduler(decider, cfg.budget) })
+    await b.run(3)
+    b.pause()
+    expect(decider.calls).toBe(6)
+    const c = resumeRunner(store, b.runId, (used) => createScheduler(decider, cfg.budget, used))
+    expect(await c.run()).toBe('budget_exhausted')
+    expect(decider.calls).toBe(10)
+  })
+
+  it('should_not_repeat_the_ticks_a_crash_lost_when_resuming', async () => {
+    const straight = openStore(':memory:')
+    const a = createRunner({ store: straight, config: config(), scheduler: scripted(walker) })
+    await a.run()
+
+    const store = openStore(':memory:')
+    // Seven ticks then nothing: the run is left 'running', its last checkpoint at tick 5.
+    const b = createRunner({ store, config: config(), scheduler: scripted(walker) })
+    await b.run(7)
+    const c = resumeRunner(store, b.runId, () => scripted(walker))
+    expect(c.host.base.tick).toBe(5)
+    expect(await c.run()).toBe('finished')
     expect(strip(store.events(b.runId))).toEqual(strip(straight.events(a.runId)))
   })
 

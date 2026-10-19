@@ -141,6 +141,9 @@ export function openStore(path: string): RunStore & { close(): void } {
           payload: JSON.parse(r.payload) as Record<string, unknown>,
         }))
     },
+    deleteEventsFrom(runId, fromTick) {
+      db.query('DELETE FROM events WHERE run_id = ? AND tick >= ?').run(runId, fromTick)
+    },
     saveCheckpoint(runId, tick, snapshot) {
       db.query('INSERT OR REPLACE INTO checkpoints (run_id, tick, snapshot) VALUES (?, ?, ?)').run(
         runId,

@@ -65,6 +65,17 @@ describe('openStore', () => {
     expect(s.events(id, { fromTick: 1, toTick: 1 })).toEqual([ev(1, 0, 'moved', 'bo')])
   })
 
+  it('should_delete_a_run_s_events_from_a_tick_on_and_leave_other_runs_alone', () => {
+    const s = openStore(':memory:')
+    const id = s.createRun(config)
+    const other = s.createRun(config)
+    s.appendEvents(id, [ev(0, 0, 'moved', 'ada'), ev(1, 0, 'moved', 'bo'), ev(2, 0, 'said', 'bo')])
+    s.appendEvents(other, [ev(1, 0, 'moved', 'ada')])
+    s.deleteEventsFrom(id, 1)
+    expect(s.events(id)).toEqual([ev(0, 0, 'moved', 'ada')])
+    expect(s.events(other)).toHaveLength(1)
+  })
+
   it('should_keep_the_latest_checkpoint', () => {
     const s = openStore(':memory:')
     const id = s.createRun(config)
