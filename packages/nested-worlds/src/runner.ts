@@ -100,7 +100,7 @@ function makeRunner(
       save()
       events.push(checkpointEvent(lastTick(), host.base.tick))
     }
-    store.appendEvents(runId, number(events))
+    store.appendEvents(runId, number(store, runId, events))
   }
   const doPause = () => {
     pauseRequested = false
@@ -141,7 +141,7 @@ function makeRunner(
       save()
       drafts.push(checkpointEvent(t, host.base.tick))
     }
-    store.appendEvents(runId, number(drafts))
+    store.appendEvents(runId, number(store, runId, drafts))
     if (exhausted) setStatus('budget_exhausted')
     else if (over) setStatus('finished')
   }
@@ -218,8 +218,19 @@ function checkpointEvent(tick: number, savedAt: number): Draft {
 }
 
 /** seq orders events within a tick; a later batch for the same tick continues the count. */
-function number(drafts: Draft[]): WorldEvent[] {
-  return drafts.map((d, seq) => ({ ...d, seq }))
+function number(store: RunStore, runId: string, drafts: Draft[]): WorldEvent[] {
+  const next = new Map<string, number>()
+  return drafts.map((d) => {
+    const key = `${d.tick}\u0000${d.path}`
+    let seq = next.get(key)
+    if (seq === undefined) {
+      // Read from the store, not memory, so the count also continues after a resume.
+      const stored = store.events(runId, { fromTick: d.tick, toTick: d.tick, path: d.path })
+      seq = stored.reduce((max, e) => Math.max(max, e.seq + 1), 0)
+    }
+    next.set(key, seq + 1)
+    return { ...d, seq }
+  })
 }
 
 function decisionInputs(
