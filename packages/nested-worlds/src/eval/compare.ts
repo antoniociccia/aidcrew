@@ -53,7 +53,7 @@ export async function compareRuns(store: RunStore, runIds: string[]): Promise<Co
     const result = await checkEscape(store, runId)
     const events = store.events(runId)
     const died = new Set(events.filter((e) => e.type === 'agent_died').map((e) => e.agentId))
-    const stats = (byDecider[config.decider] ??= {
+    const stats = byDecider[config.decider] ?? {
       runs: 0,
       escaped: 0,
       escapeRate: 0,
@@ -61,7 +61,8 @@ export async function compareRuns(store: RunStore, runIds: string[]): Promise<Co
       predictionsMade: 0,
       predictionsCorrect: 0,
       meanAliveAtEnd: 0,
-    })
+    }
+    byDecider[config.decider] = stats
     // Rates and the mean are kept as running totals here and divided below.
     stats.runs += 1
     stats.escaped += result.escaped ? 1 : 0
