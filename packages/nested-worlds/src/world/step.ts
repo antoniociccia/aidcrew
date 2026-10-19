@@ -391,9 +391,14 @@ function wakeGlitched(tk: Tick): void {
   }
 }
 
+/** Food grows back on every free fertile tile exactly on the ticks the period divides. */
+export function regrowsAt(tick: number, regrowthPeriod: number): boolean {
+  return tick % regrowthPeriod === 0
+}
+
 function regrow(tk: Tick): void {
   const s = tk.state
-  if (tk.t % s.params.regrowthPeriod !== 0) return
+  if (!regrowsAt(tk.t, s.params.regrowthPeriod)) return
   for (const f of s.rules.fertile) {
     if (s.items.some((i) => i.kind === 'food' && i.pos && samePos(i.pos, f))) continue
     const item: Item = {
