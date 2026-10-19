@@ -54,6 +54,14 @@ export interface WorldState {
   rules: HiddenRules
   pending: { itemId: ItemId; dueTick: number; to: Pos }[]
   notes?: never // memory lives in events, not state
+  /** The params the last step ran with, so the next one can say what changed. */
+  params: WorldParams
+  /** Open predictions; stepWorld resolves each at its atTick. */
+  predictions: { id: string; agentId: AgentId; hypothesisId?: string; claim: PredictionClaim }[]
+  /** Tick of each agent's last revise_strategy, for the one-per-10-ticks limit. */
+  strategyTicks: Record<AgentId, number>
+  /** Next number for a spawned item's id, so an eaten food's id is never reused. */
+  itemSeq: number
 }
 export interface UpperState {
   tick: number
