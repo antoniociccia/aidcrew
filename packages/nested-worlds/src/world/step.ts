@@ -253,8 +253,9 @@ function inspect(
   if (!item || !reachable(agent, item)) return tk.reject(agent, action, 'That is out of reach.')
   const description = String(item.props.description ?? item.kind)
   const text = item.props.text
-  tk.emit('inspected', agent.id, { itemId: item.id, kind: item.kind })
-  return tk.ok(agent, text === undefined ? description : `${description} Inscription: "${text}"`)
+  const message = text === undefined ? description : `${description} Inscription: "${text}"`
+  tk.emit('inspected', agent.id, { itemId: item.id, kind: item.kind, message })
+  return tk.ok(agent, message)
 }
 
 function say(tk: Tick, agent: AgentState, action: Extract<Action, { type: 'say' }>): ActionResult {
