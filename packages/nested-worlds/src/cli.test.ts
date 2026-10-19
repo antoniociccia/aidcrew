@@ -122,6 +122,21 @@ describe('main', () => {
     )
     expect(out[1]).toBe('escaped: false')
   })
+  it('should_wait_for_a_report_that_is_still_being_verified', async () => {
+    const path = db()
+    const out: string[] = []
+    const deps: CliDeps = {
+      scheduler: () => waiting(),
+      report: async () => 'verified: true',
+    }
+    await main(
+      ['run', '--seed', '3', '--decider', 'fake', '--ticks', '2', '--db', path],
+      deps,
+      (s) => out.push(s),
+    )
+    await main(['report', '--db', path, '--run', out[0] as string], deps, (s) => out.push(s))
+    expect(out.slice(1)).toEqual(['verified: true', 'verified: true'])
+  })
   it('should_mark_the_run_failed_when_its_decider_cannot_be_built', async () => {
     const path = db()
     const out: string[] = []

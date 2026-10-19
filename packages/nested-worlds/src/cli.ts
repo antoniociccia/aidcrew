@@ -25,7 +25,7 @@ export type CliCommand =
 
 export interface CliDeps {
   scheduler(config: RunConfig, store: RunStore, runId: string): Scheduler
-  report(store: RunStore, runId: string): unknown
+  report(store: RunStore, runId: string): unknown | Promise<unknown>
 }
 
 const Int = (min: number, max: number) => z.coerce.number().int().min(min).max(max)
@@ -115,7 +115,7 @@ export async function main(
   try {
     if (command.cmd === 'report') {
       if (!store.run(command.runId)) throw new Error(`no run ${command.runId} in ${command.db}`)
-      print(render(deps.report(store, command.runId)))
+      print(render(await deps.report(store, command.runId)))
       return
     }
     const runId = store.createRun(command.config)
@@ -133,7 +133,7 @@ export async function main(
       store.setStatus(runId, 'failed')
       throw err
     }
-    print(render(deps.report(store, runId)))
+    print(render(await deps.report(store, runId)))
   } finally {
     store.close()
   }
