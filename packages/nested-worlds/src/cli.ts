@@ -100,6 +100,11 @@ export function parseCli(argv: string[]): CliCommand {
   return { cmd: 'run', db: a.db, config }
 }
 
+// A report already rendered as text is printed as it is; anything else as JSON.
+function render(report: unknown): string {
+  return typeof report === 'string' ? report : JSON.stringify(report, null, 2)
+}
+
 export async function main(
   argv: string[],
   deps: CliDeps,
@@ -110,7 +115,7 @@ export async function main(
   try {
     if (command.cmd === 'report') {
       if (!store.run(command.runId)) throw new Error(`no run ${command.runId} in ${command.db}`)
-      print(JSON.stringify(deps.report(store, command.runId), null, 2))
+      print(render(deps.report(store, command.runId)))
       return
     }
     const runId = store.createRun(command.config)
@@ -128,6 +133,7 @@ export async function main(
       store.setStatus(runId, 'failed')
       throw err
     }
+    print(render(deps.report(store, runId)))
   } finally {
     store.close()
   }

@@ -107,8 +107,20 @@ describe('main', () => {
     )
     const runId = out[0] as string
     expect(openStore(path).run(runId)?.status).toBe('finished')
-    await main(['report', '--db', path, '--run', runId], deps, (s) => out.push(s))
     expect(JSON.parse(out[1] as string)).toEqual({ runId, status: 'finished' })
+    await main(['report', '--db', path, '--run', runId], deps, (s) => out.push(s))
+    expect(JSON.parse(out[2] as string)).toEqual({ runId, status: 'finished' })
+  })
+  it('should_print_a_text_report_as_it_is', async () => {
+    const path = db()
+    const out: string[] = []
+    const deps: CliDeps = { scheduler: () => waiting(), report: () => 'escaped: false' }
+    await main(
+      ['run', '--seed', '3', '--decider', 'fake', '--ticks', '2', '--db', path],
+      deps,
+      (s) => out.push(s),
+    )
+    expect(out[1]).toBe('escaped: false')
   })
   it('should_mark_the_run_failed_when_its_decider_cannot_be_built', async () => {
     const path = db()
