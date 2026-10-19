@@ -47,6 +47,14 @@ function episode(e: WorldEvent, me: AgentId): string | null {
   }
 }
 
+/** A shared note, signed and with what it rests on, so the group can weigh it. */
+function boardEntry(e: WorldEvent): MemoryView['board'][number] | null {
+  if (e.payload.shared !== true || !e.agentId) return null
+  const basedOn = (e.payload.basedOn as string[] | undefined) ?? []
+  const provenance = basedOn.length > 0 ? ` (based on: ${basedOn.join(', ')})` : ''
+  return { by: e.agentId, tick: e.tick, text: String(e.payload.text) + provenance }
+}
+
 export function memoryView(
   events: readonly WorldEvent[],
   agentId: AgentId,
@@ -59,13 +67,9 @@ export function memoryView(
   let strategy = ''
   for (const e of events) {
     if (e.type === 'note') {
-      const text = String(e.payload.text)
-      const basedOn = (e.payload.basedOn as string[] | undefined) ?? []
-      if (e.agentId === agentId) notes.push(text)
-      if (e.payload.shared === true && e.agentId) {
-        const provenance = basedOn.length > 0 ? ` (based on: ${basedOn.join(', ')})` : ''
-        board.push({ by: e.agentId, tick: e.tick, text: text + provenance })
-      }
+      if (e.agentId === agentId) notes.push(String(e.payload.text))
+      const posted = boardEntry(e)
+      if (posted) board.push(posted)
       continue
     }
     if (e.type === 'strategy_revised' && e.agentId === agentId) {
