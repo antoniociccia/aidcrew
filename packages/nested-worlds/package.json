@@ -1,0 +1,14 @@
+{
+  "name": "@aidcrew/nested-worlds",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^4.5.1"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  }
+}
