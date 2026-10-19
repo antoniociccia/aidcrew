@@ -6,6 +6,7 @@ import { z } from 'zod'
 import type { Budget, RunConfig, RunStore, Scheduler } from './contracts.ts'
 import { createRunner } from './runner.ts'
 import { openStore } from './store/sqlite.ts'
+import { cliDeps } from './wiring.ts'
 
 export const DEFAULT_BUDGET: Budget = {
   maxCalls: 10_000,
@@ -113,15 +114,28 @@ export async function main(
       return
     }
     const runId = store.createRun(command.config)
-    const runner = createRunner({
-      store,
-      config: command.config,
-      scheduler: deps.scheduler(command.config, store, runId),
-      runId,
-    })
-    await runner.run()
     print(runId)
+    try {
+      const runner = createRunner({
+        store,
+        config: command.config,
+        scheduler: deps.scheduler(command.config, store, runId),
+        runId,
+      })
+      await runner.run()
+    } catch (err) {
+      // A run that died must not read as one still going.
+      store.setStatus(runId, 'failed')
+      throw err
+    }
   } finally {
     store.close()
   }
+}
+
+if (import.meta.main) {
+  main(process.argv.slice(2), cliDeps, (line) => console.log(line)).catch((err: unknown) => {
+    console.error(err instanceof Error ? err.message : String(err))
+    process.exit(1)
+  })
 }

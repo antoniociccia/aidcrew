@@ -110,4 +110,20 @@ describe('main', () => {
     await main(['report', '--db', path, '--run', runId], deps, (s) => out.push(s))
     expect(JSON.parse(out[1] as string)).toEqual({ runId, status: 'finished' })
   })
+  it('should_mark_the_run_failed_when_its_decider_cannot_be_built', async () => {
+    const path = db()
+    const out: string[] = []
+    const deps: CliDeps = {
+      scheduler: () => {
+        throw new Error('phase 2')
+      },
+      report: () => null,
+    }
+    await expect(
+      main(['run', '--seed', '3', '--decider', 'openrouter', '--db', path], deps, (s) =>
+        out.push(s),
+      ),
+    ).rejects.toThrow('phase 2')
+    expect(openStore(path).run(out[0] as string)?.status).toBe('failed')
+  })
 })
