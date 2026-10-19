@@ -24,6 +24,8 @@ describe('demo', () => {
       'read_upper: true',
       'wrote_upper: true',
       'predicted_own_write: true',
+      'verified: true',
+      'designed_exit: true',
     ]) {
       expect(report).toContain(line)
     }
@@ -37,10 +39,13 @@ describe('demo', () => {
   it('should_not_escape_with_random', async () => {
     const { report } = await run('random')
     expect(report).toContain('escaped: false')
+    // Failing to escape must still replay identically.
+    expect(report).toContain('verified: true')
   })
 
   it('should_not_escape_with_heuristic', async () => {
     const { report } = await run('heuristic')
     expect(report).toContain('escaped: false')
+    expect(report).toContain('verified: true')
   })
 })
