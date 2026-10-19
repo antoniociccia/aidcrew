@@ -21,7 +21,7 @@ function episode(e: WorldEvent, me: AgentId): string | null {
     case 'moved':
       return `you moved to ${at(p.to)}`
     case 'action_rejected':
-      return `your ${(p.action as { type: string }).type} failed: ${p.reason}`
+      return `your ${(p.action as { type?: string } | null)?.type ?? 'answer'} failed: ${p.reason}`
     case 'picked':
       return `you picked up ${p.itemId}`
     case 'dropped':
