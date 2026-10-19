@@ -128,10 +128,21 @@ export type ParseResult = { ok: true; action: Action } | { ok: false; error: str
 
 export function parseAction(raw: unknown, allowed: readonly ActionType[]): ParseResult {
   const parsed = ActionSchema.safeParse(raw)
-  if (!parsed.success) return { ok: false, error: z.prettifyError(parsed.error) }
+  if (!parsed.success) return { ok: false, error: describe(parsed.error) }
   const action: Action = parsed.data
   if (!allowed.includes(action.type)) {
     return { ok: false, error: `action "${action.type}" is not allowed now` }
   }
   return { ok: true, action }
+}
+
+// zod's own messages list the accepted values, and some of those (event names)
+// must never reach an agent's prompt; where it went wrong and how is enough.
+function describe(error: z.ZodError): string {
+  return error.issues
+    .slice(0, 3)
+    .map(
+      (i) => `${i.path.length > 0 ? i.path.join('.') : 'action'}: ${i.code.replaceAll('_', ' ')}`,
+    )
+    .join('; ')
 }

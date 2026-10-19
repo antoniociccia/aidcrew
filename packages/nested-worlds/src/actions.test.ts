@@ -62,3 +62,22 @@ describe('parseAction', () => {
     })
   })
 })
+
+describe('parseAction errors', () => {
+  it('should_name_where_an_answer_went_wrong_without_listing_allowed_values', () => {
+    const r = parseAction(
+      {
+        type: 'predict',
+        id: 'p',
+        claim: { kind: 'event_at', eventType: 'nope', atTick: 3, occurs: true },
+      },
+      ALL_ACTIONS,
+    )
+    expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toContain('claim.eventType')
+      expect(r.error).not.toContain('upper')
+      expect(r.error).not.toContain('sim_')
+    }
+  })
+})
