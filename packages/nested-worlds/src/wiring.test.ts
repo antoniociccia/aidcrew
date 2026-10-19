@@ -59,6 +59,12 @@ describe('cliDeps', () => {
     }
   })
 
+  it('should_run_the_oracle_on_the_rules_of_the_seeded_world', async () => {
+    const store = openStore(':memory:')
+    const runId = await runWith(store, config('oracle', { ticks: 30 }))
+    expect(store.events(runId, { type: 'upper_unlocked' })).toHaveLength(1)
+  })
+
   it('should_refuse_openrouter_until_phase_2', () => {
     const store = openStore(':memory:')
     expect(() => cliDeps.scheduler(config('openrouter'), store, 'r')).toThrow(/phase 2/)

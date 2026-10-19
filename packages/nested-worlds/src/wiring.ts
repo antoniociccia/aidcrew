@@ -4,10 +4,12 @@
 import type { CliDeps } from './cli.ts'
 import type { Decider, RunConfig, RunStore } from './contracts.ts'
 import { heuristicDecider, randomDecider } from './eval/baselines.ts'
+import { oracleDecider } from './eval/oracle.ts'
 import { FakeDecider } from './llm/fake.ts'
 import { RecordingDecider } from './llm/recording.ts'
 import { ReplayDecider } from './llm/replay.ts'
 import { createScheduler } from './llm/scheduler.ts'
+import { generateWorld } from './world/generate.ts'
 
 function deciderFor(config: RunConfig, store: RunStore): Decider {
   switch (config.decider) {
@@ -25,7 +27,7 @@ function deciderFor(config: RunConfig, store: RunStore): Decider {
     case 'heuristic':
       return heuristicDecider(config.seed)
     case 'oracle':
-      throw new Error(`--decider ${config.decider} is not wired yet`)
+      return oracleDecider(generateWorld(config.seed, config.agents).rules)
   }
 }
 
