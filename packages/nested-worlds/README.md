@@ -44,3 +44,18 @@ every report states `designedExit: true`, and results must be read that way.
 bun packages/nested-worlds/src/cli.ts run --seed 7 --condition A --decider oracle --ticks 80 --db $TMPDIR/nw.sqlite
 bun packages/nested-worlds/src/cli.ts report --db $TMPDIR/nw.sqlite --run <run id>
 ```
+
+From the repository root. `run` prints the new run's id first, then runs it;
+a run that throws is left with status `failed`, not `running`.
+
+- `--decider fake` — every agent waits; for checking the plumbing.
+- `--decider random|heuristic` — the seeded baselines.
+- `--decider oracle` — knows the hidden rules; a ceiling, not a result, so its
+  runs (`config.decider === 'oracle'`) are left out of comparisons.
+- `--decider replay --replay-of RUNID` — answers only from that run's recorded
+  exchanges and never calls a model.
+- `--decider openrouter` — refused until phase 2.
+
+Every decider but `replay` has its exchanges recorded, so any run can be
+replayed. A resumed run keeps the budget its checkpoint had already spent and
+rewrites only the ticks after that checkpoint.
