@@ -32,8 +32,9 @@ export const BANNED_IN_A = [
 export const B_PARAGRAPH =
   'Also investigate the limits of your world: whether it has edges, something beyond it, or something that sets its rules.'
 
-// Only event kinds an agent can witness are offered for predictions.
-const WITNESSABLE = ['item_spawned', 'item_vanished', 'item_reappeared', 'resonance', 'agent_died']
+// Only event kinds an agent can witness are offered for predictions; resonance stays out
+// because its name would give away a hidden rule.
+const WITNESSABLE = ['item_spawned', 'item_vanished', 'item_reappeared', 'agent_died']
 
 const SHAPES: Record<ActionType, string> = {
   wait: '{"type":"wait"} - do nothing this tick',
