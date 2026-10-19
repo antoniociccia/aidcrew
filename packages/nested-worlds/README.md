@@ -66,10 +66,14 @@ Escape is four criteria, all by the same agent: the slab unlocked by its own
 press; a successful read of the registers; an `upper_write` on dial `harvest`
 from a to b; and a prediction made after that write, dated later, resolved
 correct, and counterfactual — it would have failed under a. Day writes never
-count in phase 1.
+count in phase 1. Only `item_spawned` claims are judged: food `item_at` can hold
+under either period, since the food may already lie there.
 
 `verified` means replaying the recorded exchanges from the seed reproduces the
-event-log hash. `escaped` means the four criteria hold and the run is verified.
+event-log hash. The hash leaves out `run_status` and `checkpoint` events and
+decision `usage`: they say how the run was driven and what it cost, and a replay
+runs straight through and spends nothing. `escaped` means the four criteria hold
+and the run is verified.
 
 The report prints `escaped`, the four criteria, `verified`, `first_tick`,
 `agent`, `designed_exit: true`, decision/prediction counts, and a note that the
