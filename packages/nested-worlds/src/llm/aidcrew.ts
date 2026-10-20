@@ -1,8 +1,9 @@
 // Asks a live model through an aidcrew provider. The provider is injected so
 // this package never holds keys or endpoints; the interfaces mirror the core
 // provider shapes structurally, so any real provider fits without this package
-// depending on core. Unparsable answers and provider failures both become
-// waits, never throws, so the runner records the raw text and moves on.
+// depending on core. Unparsable answers become waits, never throws, so the
+// runner records the raw text and moves on; provider failures throw, so the
+// run fails fast with the reason instead of recording a tick of waits.
 import type { Decider, DecisionInput, DecisionOutput, Usage } from '../contracts.ts'
 import { parseDecision } from './parse.ts'
 import { buildMessages } from './prompt.ts'
@@ -56,9 +57,6 @@ export function aidcrewDecider(opts: AidcrewDeciderOptions): Decider {
     decide: async (input: DecisionInput): Promise<DecisionOutput> => {
       const request = buildAidcrewRequest(opts, input)
       const seen = await streamRaw(opts.provider, request)
-      if (seen.error !== undefined) {
-        return { raw: `provider error: ${seen.error}`, action: { type: 'wait' } }
-      }
       return toDecision(seen.raw, seen.usage)
     },
   }
@@ -82,20 +80,14 @@ function buildAidcrewRequest(opts: AidcrewDeciderOptions, input: DecisionInput):
 interface Streamed {
   raw: string
   usage?: Usage
-  error?: string
 }
 
 async function streamRaw(provider: AidcrewProvider, request: AidcrewRequest): Promise<Streamed> {
   let raw = ''
   let usage: Usage | undefined
-  try {
-    for await (const delta of provider.send(request, new AbortController().signal)) {
-      if (delta.type === 'text_delta') raw += delta.text
-      else if (delta.type === 'done') usage = toUsage(delta.usage)
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return { raw: '', error: message }
+  for await (const delta of provider.send(request, new AbortController().signal)) {
+    if (delta.type === 'text_delta') raw += delta.text
+    else if (delta.type === 'done') usage = toUsage(delta.usage)
   }
   return usage === undefined ? { raw } : { raw, usage }
 }

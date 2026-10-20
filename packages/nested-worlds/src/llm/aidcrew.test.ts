@@ -74,7 +74,7 @@ describe('aidcrewDecider', () => {
     expect(out.raw).toBe('just thinking out loud, no decision here')
   })
 
-  it('should_answer_wait_instead_of_throwing_when_the_provider_fails', async () => {
+  it('should_throw_instead_of_waiting_when_the_provider_fails', async () => {
     const failing: AidcrewProvider = {
       id: 'stub',
       send(_request: AidcrewRequest): AsyncIterable<AidcrewDelta> {
@@ -82,8 +82,6 @@ describe('aidcrewDecider', () => {
       },
     }
     const d = aidcrewDecider({ provider: failing, providerId: 'opencode-go', model: 'muse-spark' })
-    const out = await d.decide(input(3))
-    expect(out.action).toEqual({ type: 'wait' })
-    expect(out.raw).toContain('connection reset')
+    await expect(d.decide(input(3))).rejects.toThrow('connection reset')
   })
 })
