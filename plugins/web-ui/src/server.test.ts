@@ -43,6 +43,85 @@ test('assets contain no token; session data requires authentication and response
     'javascript',
   )
 })
+
+test('serves embedded browser modules as JavaScript with the same security policy', async () => {
+  const server = start()
+  const html = await (await fetch(server.address)).text()
+  expect(html).toContain('type="module" src="/client.js"')
+  for (const path of [
+    '/overview.js',
+    '/overview-client.js',
+    '/overview-text.js',
+    '/tiling-layout.js',
+    '/tiling-client.js',
+    '/tiling-text.js',
+    '/settings-client.js',
+    '/settings-text.js',
+    '/activity.js',
+    '/activity-client.js',
+    '/activity-text.js',
+    '/quick-chat.js',
+    '/quick-chat-client.js',
+    '/quick-chat-text.js',
+    '/memory-graph.js',
+    '/memory-graph-client.js',
+    '/memory-text.js',
+    '/agent-avatar.js',
+    '/team-graph.js',
+    '/team-graph-client.js',
+    '/team-text.js',
+    '/team-interactions.js',
+    '/feed.js',
+    '/ui-text.js',
+    '/crew-pulse.js',
+    '/palette.js',
+    '/palette-text.js',
+    '/tasks.js',
+    '/task-text.js',
+    '/native-client.js',
+    '/native-protocol.js',
+    '/native-text.js',
+    '/xterm.js',
+    '/xterm-fit.js',
+  ]) {
+    const response = await fetch(`${server.address}${path}`)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toContain('text/javascript')
+    expect(response.headers.get('Content-Security-Policy')).toContain("script-src 'self'")
+    const source = await response.text()
+    expect(source).not.toContain(server.url.split('#')[1] ?? 'missing token')
+    expect(() => new Bun.Transpiler({ loader: 'js' }).scan(source)).not.toThrow()
+  }
+})
+
+test('offers labeled workspace navigation and a dedicated overview surface', async () => {
+  const server = start()
+  const html = await (await fetch(server.address)).text()
+  expect(html).toContain('data-view="overview"')
+  expect(html).toContain('data-view="graph"')
+  expect(html).not.toContain('data-view="activity"')
+  expect(html).toContain('id="overview-surface"')
+  const stylesheet = await fetch(`${server.address}/overview.css`)
+  expect(stylesheet.status).toBe(200)
+  expect(stylesheet.headers.get('Content-Type')).toContain('text/css')
+})
+test('loads relation highlighting styles with the authenticated app security policy', async () => {
+  const server = start()
+  const html = await (await fetch(server.address)).text()
+  expect(html).toContain('href="/memory-interactions.css"')
+  const response = await fetch(`${server.address}/memory-interactions.css`)
+  expect(response.status).toBe(200)
+  expect(response.headers.get('Content-Type')).toContain('text/css')
+  expect(response.headers.get('Content-Security-Policy')).toContain("script-src 'self'")
+})
+test('loads the grouped settings stylesheet', async () => {
+  const server = start()
+  const html = await (await fetch(server.address)).text()
+  expect(html).toContain('href="/settings.css"')
+  const response = await fetch(`${server.address}/settings.css`)
+  expect(response.status).toBe(200)
+  expect(response.headers.get('Content-Type')).toContain('text/css')
+})
 test('rejects cross-origin commands, invalid input and forged hosts before dispatch', async () => {
   const actions: WebAction[] = []
   const server = start(async (action) => {
@@ -140,6 +219,15 @@ test('web wordmark uses the terminal spelling and filled D instead of an unrelat
   expect(mark?.replace(/<[^>]+>/g, '')).toBe(wordmarkText())
   expect(mark).toContain('class="wordmark-d"')
   expect(html).not.toContain('A<span>↗</span>')
+  const rail = html.match(/<aside class="rail">(.*?)<nav/s)?.[1]
+  expect(rail).toContain('aria-label="AIDCrew"')
+  expect(rail).toContain(
+    '<span class="ai">A I</span><span class="d">D</span><span class="crew">C R E W</span>',
+  )
+  expect(rail).not.toContain('AI<span>DCrew</span>')
+  const icon = await (await fetch(`${server.address}/app-icon.svg`)).text()
+  expect(icon).toContain('fill="#56b4e9"')
+  expect(icon).toContain('>D</text>')
 })
 
 test('offers a single agent selector and a collapsed, explicitly controlled workspace sidebar', async () => {
@@ -223,4 +311,22 @@ test('the companion manifest launches the same UI without embedding an access to
   expect(manifest.display).toBe('standalone')
   expect(JSON.stringify(manifest)).not.toContain(server.url.split('#')[1] ?? 'missing')
   expect((await fetch(`${server.address}/app-icon.svg`)).status).toBe(200)
+})
+
+test('allows terminal-generated styles while keeping executable scripts restricted', async () => {
+  const server = start()
+  const response = await fetch(server.address)
+  const policy = response.headers.get('Content-Security-Policy') ?? ''
+  expect(policy).toContain("style-src 'self' 'unsafe-inline'")
+  expect(policy).toContain("script-src 'self';")
+  expect(await response.text()).toContain('rel="icon" href="/app-icon.svg"')
+})
+
+test('rejects foreign terminal upgrades and credentials in terminal URLs', async () => {
+  const server = start()
+  expect(
+    (await fetch(`${server.address}/api/terminal`, { headers: { Origin: 'https://evil.example' } }))
+      .status,
+  ).toBe(403)
+  expect((await fetch(`${server.address}/api/terminal?token=never-in-urls`)).status).toBe(400)
 })

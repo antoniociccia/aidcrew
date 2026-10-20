@@ -95,8 +95,9 @@ References: [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serv
 
 ## Controls and synchronization
 
-The mission view shows real agent state, cost and conversation. Activity combines
-all agents. Tasks and shared memory read the same worktrees and journal as the
+Agents shows real agent state, cost and conversation. Overview combines session
+status, pending decisions and the team's filterable event log. Tasks and shared
+memory read the same worktrees and journal as the
 terminal. Team settings include model/provider changes, per-session YOLO, queue
 clearing, history reset, role creation/editing/removal, provider keys, defaults,
 sources and terminal appearance. Changes can be inspected and merged through the
@@ -108,24 +109,63 @@ a stale tab cannot send an old instruction into a newly opened project. Switchin
 workspaces clears browser drafts and open action dialogs.
 
 Snapshots refresh every 750 ms while connected; reconnect is automatic. Transcript
-views render the most recent 400 matching lines from the runtime's 2,000-line
-window. Earlier conversation remains in the same journal. Cost is not guessed:
+views render the most recent 400 matching entries from the runtime's 2,000-line
+window; consecutive diff rows from the same agent count as one entry. Earlier
+conversation remains in the same journal. Cost is not guessed:
 unavailable prices show a dash, zero is a number, and list-price estimates are
 labelled. No `free` badge is introduced.
+
+Search finds literal text or agent names, ignoring case. Agents searches the
+selected agent; the Overview event log searches the team and can filter by agent,
+messages, tools, handoffs or errors. The agent transcript also provides changes
+and notes filters to find an edit or shared context.
+A matching diff retains its full available block, including filename and context.
+Reasoning stays excluded unless enabled. The result count shows how many matching
+entries are displayed; this searches the recent window, not the full journal.
+
+The transcript follows new activity while you are at the bottom. Scroll up to read
+without being pulled back; the displayed results stay fixed while new activity
+arrives, even when the runtime drops older entries. **Jump to latest** resumes
+following. Switching agents
+or changing filters starts at the newest matching entry. Workspace changes clear
+the search and filters along with drafts.
+
+**Command/Ctrl+K**, or **Commands**, opens a keyboard-accessible palette. Search
+views or agents by name, model, role or provider, use arrows to select and Enter
+to navigate. The palette provides local navigation only. Escape returns to the
+previous control; opening it never replaces an existing action dialog.
+
+The crew overview counts active agents and queued instructions, and its review
+button cycles through pending decisions, stopped agents, idle agents with queued
+work and agents whose worktrees are behind. Task cards replace raw inspection
+data with checkout paths, commit IDs, changed-file counts and assigned agents.
+Activity and a clean checkout are not completion verdicts. Costs are explicitly
+the current assigned agents' session costs, with unavailable and estimated prices
+distinguished; they are not historical totals for the task.
 
 The composer also accepts terminal slash commands and project-file attachments.
 It targets the selected browser agent even when another agent is selected in the
 terminal. `/copy`, `/split` and `/tour` remain terminal presentation commands;
-the browser has its own Activity view and keyboard guide. Browser drafts and view
+the browser has its own Overview event log and keyboard guide. `/search` is also a
+terminal presentation command; the browser explains how to use its search field
+and **F** shortcut instead of changing the terminal screen. Browser drafts and view
 selection are local; mutations and approvals are shared. Provider credentials are
 write-only in the web API. Role instruction edits take effect on the next session
 start, matching the saved project definitions.
 
 ## Keyboard
 
+Agents using `claude-code` expose a **Native terminal** tab after their first
+harness instruction. It attaches to the same agent process. **Detach** leaves
+the process running; **Stop native agent** closes it even between turns. Native
+keys do not trigger browser harness shortcuts. See the
+[native agent guide](../agent-native/README.md) for shared context and permissions.
+The terminal generates font and geometry styles dynamically, so CSP permits
+inline styles while keeping scripts restricted to the same origin.
+
 Outside text fields: **J/K** select agents, **/** focuses the composer, **R** toggles
 reasoning, **Escape** stops the selected agent, **?** opens the guide.
-**Command/Ctrl+Enter** sends a message. Activated shortcuts flash; toggle buttons
+**F** focuses transcript search. **Command/Ctrl+Enter** sends a message. Activated shortcuts flash; toggle buttons
 stay highlighted while enabled. The TUI also highlights active modes and promotes
 the last used shortcut into its limited tray space.
 
