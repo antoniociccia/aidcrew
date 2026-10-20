@@ -1,26 +1,43 @@
 // The real CliDeps: which decider each --decider names, and the report. Every
 // live decider is recorded so its run can be replayed; a replay is not, since
-// it only reads what an earlier run recorded.
+// it only reads what an earlier run recorded. A live model's provider is
+// found through `providerFor`, so tests can stand one in.
 import type { CliDeps } from './cli.ts'
 import type { Decider, RunConfig, RunStore } from './contracts.ts'
 import { heuristicDecider, randomDecider } from './eval/baselines.ts'
 import { renderReport } from './eval/escape.ts'
 import { oracleDecider } from './eval/oracle.ts'
+import { type AidcrewProvider, aidcrewDecider } from './llm/aidcrew.ts'
 import { FakeDecider } from './llm/fake.ts'
 import { RecordingDecider } from './llm/recording.ts'
 import { ReplayDecider } from './llm/replay.ts'
 import { createScheduler } from './llm/scheduler.ts'
 import { generateWorld } from './world/generate.ts'
 
-function deciderFor(config: RunConfig, store: RunStore): Decider {
+export type ProviderFor = (providerId: string, model: string) => Promise<AidcrewProvider>
+
+async function deciderFor(
+  config: RunConfig,
+  store: RunStore,
+  providerFor: ProviderFor,
+): Promise<Decider> {
   switch (config.decider) {
     case 'fake':
       return new FakeDecider(() => ({ type: 'wait' }))
     case 'replay':
       if (config.replayOf === undefined) throw new Error('--decider replay needs --replay-of RUNID')
       return new ReplayDecider(store, config.replayOf)
-    case 'aidcrew':
-      throw new Error('--decider aidcrew is not wired yet')
+    case 'aidcrew': {
+      const { provider, model } = config
+      if (provider === undefined || model === undefined) {
+        throw new Error('--decider aidcrew needs --provider ID and --model ID')
+      }
+      return aidcrewDecider({
+        provider: await providerFor(provider, model),
+        providerId: provider,
+        model,
+      })
+    }
     case 'openrouter':
       throw new Error(
         '--decider openrouter comes in phase 2; use fake, random, heuristic or oracle',
@@ -34,12 +51,18 @@ function deciderFor(config: RunConfig, store: RunStore): Decider {
   }
 }
 
-export const cliDeps: CliDeps = {
-  scheduler(config, store, runId) {
-    const decider = deciderFor(config, store)
-    const recorded =
-      config.decider === 'replay' ? decider : new RecordingDecider(decider, store, runId)
-    return createScheduler(recorded, config.budget)
-  },
-  report: renderReport,
+export function makeCliDeps(providerFor: ProviderFor): CliDeps {
+  return {
+    async scheduler(config, store, runId) {
+      const decider = await deciderFor(config, store, providerFor)
+      const recorded =
+        config.decider === 'replay' ? decider : new RecordingDecider(decider, store, runId)
+      return createScheduler(recorded, config.budget)
+    },
+    report: renderReport,
+  }
 }
+
+export const cliDeps: CliDeps = makeCliDeps(async (providerId) => {
+  throw new Error(`no aidcrew provider for ${providerId} yet`)
+})

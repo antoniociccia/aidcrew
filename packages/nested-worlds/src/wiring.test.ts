@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { DEFAULT_BUDGET } from './cli.ts'
 import type { DeciderKind, RunConfig } from './contracts.ts'
+import type { AidcrewProvider } from './llm/aidcrew.ts'
 import { createRunner } from './runner.ts'
 import { openStore } from './store/sqlite.ts'
-import { cliDeps } from './wiring.ts'
+import { cliDeps, makeCliDeps } from './wiring.ts'
 
 const config = (decider: DeciderKind, over: Partial<RunConfig> = {}): RunConfig => ({
   seed: 7,
@@ -71,6 +72,55 @@ describe('cliDeps', () => {
     const report = await cliDeps.report(store, runId)
     expect(report).toContain('escaped: false')
     expect(report).toContain('verified: true')
+  })
+
+  it('should_run_a_live_model_through_its_provider_and_replay_it_without_one', async () => {
+    const asked: string[] = []
+    const provider: AidcrewProvider = {
+      id: 'stub',
+      async *send(request) {
+        asked.push(request.model)
+        yield { type: 'text_delta', text: '{"action":{"type":"wait"},"rationale":"resting"}' }
+        yield {
+          type: 'done',
+          stopReason: 'end',
+          usage: { inputTokens: 10, outputTokens: 5, chargedUsd: 0.001 },
+        }
+      },
+    }
+    const found: string[] = []
+    const deps = makeCliDeps(async (providerId) => {
+      found.push(providerId)
+      return provider
+    })
+    const store = openStore(':memory:')
+    const cfg = config('aidcrew', {
+      provider: 'opencode-go',
+      model: 'muse-spark-1.3-contributor',
+      ticks: 3,
+    })
+    const runId = store.createRun(cfg)
+    await createRunner({
+      store,
+      config: cfg,
+      scheduler: await deps.scheduler(cfg, store, runId),
+      runId,
+    }).run()
+    expect(found).toEqual(['opencode-go'])
+    expect(asked).toHaveLength(6)
+    expect(new Set(asked)).toEqual(new Set(['muse-spark-1.3-contributor']))
+    const decision = store.events(runId, { type: 'decision' })[0]
+    expect(decision?.payload).toMatchObject({ decider: 'aidcrew', rationale: 'resting' })
+    expect(await deps.report(store, runId)).toContain('verified: true')
+  })
+
+  it('should_refuse_an_aidcrew_run_without_a_provider_or_model', async () => {
+    const deps = makeCliDeps(async () => {
+      throw new Error('unreachable')
+    })
+    const store = openStore(':memory:')
+    const built = Promise.resolve().then(() => deps.scheduler(config('aidcrew'), store, 'r'))
+    await expect(built).rejects.toThrow(/--provider/)
   })
 
   it('should_refuse_openrouter_until_phase_2', async () => {
