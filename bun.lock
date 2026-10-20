@@ -67,6 +67,7 @@
       "name": "@aidcrew/nested-worlds",
       "version": "0.0.0",
       "dependencies": {
+        "@aidcrew/cli": "workspace:*",
         "zod": "^4.5.1",
       },
     },

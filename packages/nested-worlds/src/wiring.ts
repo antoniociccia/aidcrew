@@ -9,12 +9,13 @@ import { renderReport } from './eval/escape.ts'
 import { oracleDecider } from './eval/oracle.ts'
 import { type AidcrewProvider, aidcrewDecider } from './llm/aidcrew.ts'
 import { FakeDecider } from './llm/fake.ts'
+import { providerFromAidcrew } from './llm/live.ts'
 import { RecordingDecider } from './llm/recording.ts'
 import { ReplayDecider } from './llm/replay.ts'
 import { createScheduler } from './llm/scheduler.ts'
 import { generateWorld } from './world/generate.ts'
 
-export type ProviderFor = (providerId: string, model: string) => Promise<AidcrewProvider>
+export type ProviderFor = (providerId: string) => Promise<AidcrewProvider>
 
 async function deciderFor(
   config: RunConfig,
@@ -33,7 +34,7 @@ async function deciderFor(
         throw new Error('--decider aidcrew needs --provider ID and --model ID')
       }
       return aidcrewDecider({
-        provider: await providerFor(provider, model),
+        provider: await providerFor(provider),
         providerId: provider,
         model,
       })
@@ -63,6 +64,4 @@ export function makeCliDeps(providerFor: ProviderFor): CliDeps {
   }
 }
 
-export const cliDeps: CliDeps = makeCliDeps(async (providerId) => {
-  throw new Error(`no aidcrew provider for ${providerId} yet`)
-})
+export const cliDeps: CliDeps = makeCliDeps((providerId) => providerFromAidcrew(providerId))

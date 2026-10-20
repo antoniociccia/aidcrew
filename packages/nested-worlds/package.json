@@ -5,6 +5,7 @@
   "type": "module",
   "license": "MIT",
   "dependencies": {
+    "@aidcrew/cli": "workspace:*",
     "zod": "^4.5.1"
   },
   "exports": {
