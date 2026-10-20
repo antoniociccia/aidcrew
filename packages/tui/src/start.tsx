@@ -1,11 +1,14 @@
 import { chmodSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { getNativeAgent } from '@aidcrew/agent-native'
 import { startWebUI } from '@aidcrew/web-ui'
 import { render } from 'ink'
 import { App } from './app.tsx'
 import { leaveOnSignal } from './hangup.ts'
-import { fixedKeyboard } from './keyboard.ts'
+import { keyboardBridge } from './keyboard.ts'
+import { attachNativeTerminal } from './native-attach.ts'
+import { NATIVE_TEXT } from './native-text.ts'
 import { paintOver } from './paint-over.ts'
 import { openRuntime } from './runtime.ts'
 import { claimScreen } from './screen.ts'
@@ -96,10 +99,16 @@ export async function startInterface(options: {
     }
   }
   const screen = claimScreen()
+  const keyboard = keyboardBridge(process.stdin)
 
   const app = render(
     <App
       runtime={runtime}
+      attachNative={async (cwd, agentId) => {
+        const session = getNativeAgent(cwd, agentId)
+        if (!session) throw new Error(NATIVE_TEXT.unavailable)
+        await attachNativeTerminal(session, keyboard)
+      }}
       home={home}
       env={options.env}
       web={connection}
@@ -116,7 +125,7 @@ export async function startInterface(options: {
     // Frames go out drawn over the last one rather than after wiping it, for
     // the terminals that paint a wipe before the frame arrives — see
     // paint-over.ts.
-    { stdin: fixedKeyboard(process.stdin), stdout: paintOver(process.stdout), exitOnCtrlC: false },
+    { stdin: keyboard.stream, stdout: paintOver(process.stdout), exitOnCtrlC: false },
   )
 
   // Signals skip the finally block, and ^C is how an interface is normally
@@ -129,6 +138,7 @@ export async function startInterface(options: {
         unlinkSync(accessFile)
       } catch {}
     }
+    keyboard.close()
     runtime.close()
     screen.release()
   }

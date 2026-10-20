@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { putBackKeys } from './keyboard.ts'
+import { PassThrough } from 'node:stream'
+import { keyboardBridge, putBackKeys } from './keyboard.ts'
 
 const ESC = '\u001b'
 
@@ -39,4 +40,23 @@ describe('putting back the keys a terminal will not send', () => {
     expect(putBackKeys('hello')).toBe('hello')
     expect(putBackKeys('')).toBe('')
   })
+})
+
+test('releases the real input stream while a native CLI owns the terminal', () => {
+  const input = Object.assign(new PassThrough(), {
+    isTTY: true,
+    setRawMode: () => {},
+    ref: () => {},
+    unref: () => {},
+  })
+  const bridge = keyboardBridge(input as never)
+  expect(input.listenerCount('data')).toBe(1)
+  bridge.pause()
+  expect(input.listenerCount('data')).toBe(0)
+  bridge.resume()
+  expect(input.listenerCount('data')).toBe(1)
+  bridge.resume()
+  expect(input.listenerCount('data')).toBe(1)
+  bridge.close()
+  expect(input.listenerCount('data')).toBe(0)
 })

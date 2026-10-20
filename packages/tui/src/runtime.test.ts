@@ -1591,6 +1591,37 @@ describe('a line about something that is not an agent', () => {
  * `unleashed` three times; the tab already says it, for as long as it is true.
  */
 describe('a note that says what the one before it said', () => {
+  test('explicit native yolo also trusts its harness MCP tools', async () => {
+    const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-native-yolo-')))
+    const runtime = await openRuntime(cwd, cwd)
+    const team = await startTeam({
+      runtime,
+      cwd,
+      env: {},
+      agents: [{ ...agent('coder'), provider: 'claude-code', yolo: true }],
+      skills: [],
+      defaultProvider: 'claude-code',
+      onChange: () => {},
+      onApproval: async () => 'no',
+    })
+    try {
+      expect(runtime.session.trust('coder')).toBe('yolo')
+      const clone = await team.spawn('coder')
+      expect(runtime.session.trust(clone)).toBe('yolo')
+      team.setYolo(clone, false)
+      expect(runtime.session.trust(clone)).toBe('ask')
+      expect(runtime.session.trust('coder')).toBe('yolo')
+      expect(team.setYolo('coder', false)).toBe(true)
+      expect(runtime.session.trust('coder')).toBe('ask')
+      expect(team.setYolo('coder', true)).toBe(true)
+      expect(runtime.session.trust('coder')).toBe('yolo')
+    } finally {
+      await team.shutdown()
+      runtime.close()
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
   test('the live guard follows per-agent yolo and switches back to asking', async () => {
     const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-yolo-')))
     const runtime = await openRuntime(cwd, cwd)
@@ -1861,4 +1892,75 @@ describe('two agents about to collide', () => {
       },
     ])
   })
+})
+
+test('TUI applies a project message allowance while preserving its bound', async () => {
+  const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-fanout-')))
+  const peers = ['coder', 'reviewer', 'tester', 'auditor', 'writer']
+  let next = 0
+  const lines: Line[] = []
+  const model = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const body = (await request.json()) as { model: string }
+      const to = body.model === 'architect' ? peers[next++] : undefined
+      const delta = to
+        ? {
+            tool_calls: [
+              {
+                index: 0,
+                id: `send-${next}`,
+                type: 'function',
+                function: {
+                  name: 'agent_send',
+                  arguments: JSON.stringify({ to, message: 'Check your assigned area.' }),
+                },
+              },
+            ],
+          }
+        : { content: 'done' }
+      const events = [
+        { choices: [{ index: 0, delta }] },
+        { choices: [{ index: 0, delta: {}, finish_reason: to ? 'tool_calls' : 'stop' }] },
+      ]
+      return new Response(
+        `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`,
+        { headers: { 'Content-Type': 'text/event-stream' } },
+      )
+    },
+  })
+  let team: Awaited<ReturnType<typeof startTeam>> | undefined
+  try {
+    team = await startTeam({
+      runtime: await openRuntime(cwd, cwd),
+      cwd,
+      env: { AIDCREW_API_KEY: 'test', AIDCREW_BASE_URL: `${model.url.origin}/v1` },
+      agents: ['architect', ...peers].map((id) => ({
+        id,
+        description: id,
+        systemPrompt: 'Reply briefly.',
+        provider: 'openai-compat',
+        model: id,
+      })),
+      skills: [],
+      defaultProvider: 'openai-compat',
+      maxMessagesPerTurn: 4,
+      onChange: (updated) => {
+        lines.splice(0, lines.length, ...updated)
+      },
+    })
+    await team.tell('architect', 'Delegate the checks.')
+    await team.idle()
+    expect(
+      lines.some((line) => line.agentId === 'architect' && line.text.startsWith('→ auditor:')),
+    ).toBe(true)
+    expect(
+      lines.some((line) => line.agentId === 'architect' && line.text.startsWith('→ writer:')),
+    ).toBe(false)
+    expect(lines.some((line) => line.text.includes('already sent 4 messages this turn'))).toBe(true)
+  } finally {
+    await team?.shutdown()
+    model.stop(true)
+    rmSync(cwd, { recursive: true, force: true })
+  }
 })
