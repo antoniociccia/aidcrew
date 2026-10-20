@@ -64,6 +64,14 @@
       "name": "@aidcrew/fast-width",
       "version": "0.0.0",
     },
+    "packages/nested-worlds": {
+      "name": "@aidcrew/nested-worlds",
+      "version": "0.0.0",
+      "dependencies": {
+        "@aidcrew/cli": "workspace:*",
+        "zod": "^4.5.1",
+      },
+    },
     "packages/plugin-sdk": {
       "name": "@aidcrew/plugin-sdk",
       "version": "0.0.0",
@@ -317,6 +325,8 @@
     "@aidcrew/loader-claude": ["@aidcrew/loader-claude@workspace:plugins/loader-claude"],
 
     "@aidcrew/mcp-bridge": ["@aidcrew/mcp-bridge@workspace:plugins/mcp-bridge"],
+
+    "@aidcrew/nested-worlds": ["@aidcrew/nested-worlds@workspace:packages/nested-worlds"],
 
     "@aidcrew/plugin-sdk": ["@aidcrew/plugin-sdk@workspace:packages/plugin-sdk"],
 
