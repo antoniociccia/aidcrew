@@ -50,6 +50,18 @@ describe('openStore', () => {
     expect(s.run('nope')).toBeNull()
   })
 
+  it('should_list_runs_newest_first_with_their_config_and_status', () => {
+    const s = openStore(':memory:')
+    const first = s.createRun(config)
+    const second = s.createRun({ ...config, seed: 8 })
+    s.setStatus(first, 'finished')
+    const runs = s.runs()
+    expect(runs.map((r) => r.runId)).toEqual([second, first])
+    expect(runs[0]?.config.seed).toBe(8)
+    expect(runs[1]?.status).toBe('finished')
+    expect(Number.isNaN(Date.parse(runs[0]?.createdAt ?? ''))).toBe(false)
+  })
+
   it('should_return_events_in_order_and_filter_them', () => {
     const s = openStore(':memory:')
     const id = s.createRun(config)

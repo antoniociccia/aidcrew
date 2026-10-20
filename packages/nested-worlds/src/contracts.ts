@@ -250,6 +250,8 @@ export interface RunStore extends ExchangeStore {
   createRun(config: RunConfig): string
   setStatus(runId: string, status: RunStatus): void
   run(runId: string): { config: RunConfig; status: RunStatus } | null
+  /** Every run, newest first. */
+  runs(): { runId: string; config: RunConfig; status: RunStatus; createdAt: string }[]
   appendEvents(runId: string, events: WorldEvent[]): void
   events(
     runId: string,

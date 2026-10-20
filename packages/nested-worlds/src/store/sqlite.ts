@@ -101,6 +101,19 @@ export function openStore(path: string): RunStore & { close(): void } {
         .get(runId)
       return row ? { config: JSON.parse(row.config) as RunConfig, status: row.status } : null
     },
+    runs() {
+      return db
+        .query<{ id: string; config: string; status: RunStatus; created_at: string }, []>(
+          'SELECT id, config, status, created_at FROM runs ORDER BY created_at DESC, rowid DESC',
+        )
+        .all()
+        .map((r) => ({
+          runId: r.id,
+          config: JSON.parse(r.config) as RunConfig,
+          status: r.status,
+          createdAt: r.created_at,
+        }))
+    },
     appendEvents(runId, events) {
       appendAll(runId, events)
     },
