@@ -1,8 +1,9 @@
 // Asks a live model through an aidcrew provider. The provider is injected so
 // this package never holds keys or endpoints; the interfaces mirror the core
 // provider shapes structurally, so any real provider fits without this package
-// depending on core. Unparsable answers become waits, never throws, so the
-// runner records the raw text and moves on; provider failures throw, so the
+// depending on core. An unparsable answer is passed on without an action, so
+// the runner records it as rejected with its raw text and the agent waits —
+// the same thing a replay of that text does; provider failures throw, so the
 // run fails fast with the reason instead of recording a tick of waits.
 import type { Decider, DecisionInput, DecisionOutput, Usage } from '../contracts.ts'
 import { parseDecision } from './parse.ts'
@@ -94,11 +95,6 @@ async function streamRaw(provider: AidcrewProvider, request: AidcrewRequest): Pr
 
 function toDecision(raw: string, usage: Usage | undefined): DecisionOutput {
   const parsed = parseDecision(raw)
-  if (parsed.action === undefined) {
-    return usage === undefined
-      ? { raw, action: { type: 'wait' } }
-      : { raw, action: { type: 'wait' }, usage }
-  }
   if (parsed.rationale === undefined) {
     return usage === undefined
       ? { raw, action: parsed.action }

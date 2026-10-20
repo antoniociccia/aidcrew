@@ -66,11 +66,11 @@ describe('aidcrewDecider', () => {
     expect(seen[0]?.messages[0]?.role).toBe('user')
   })
 
-  it('should_answer_wait_with_the_raw_kept_when_the_model_is_unparsable', async () => {
+  it('should_leave_the_action_to_the_runner_with_the_raw_kept_when_the_model_is_unparsable', async () => {
     const { provider } = stub(['just thinking out loud, no decision here'])
     const d = aidcrewDecider({ provider, providerId: 'opencode-go', model: 'muse-spark' })
     const out = await d.decide(input(2))
-    expect(out.action).toEqual({ type: 'wait' })
+    expect(out.action).toBeUndefined()
     expect(out.raw).toBe('just thinking out loud, no decision here')
   })
 
