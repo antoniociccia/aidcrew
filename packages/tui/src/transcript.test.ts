@@ -122,3 +122,22 @@ describe('folding the same message twice', () => {
     expect(oldest[0]?.text).toBe('line 0')
   })
 })
+
+describe('a change an agent made', () => {
+  const diff = (text: string): Entry => ({ kind: 'diff', text })
+
+  test('is cut to the pane rather than wrapped', () => {
+    // Wrapped, a line of code loses its marker on every row after the first,
+    // so the second half of a removal is painted as though it were context.
+    const rows = toRows([diff(`+ 1 ${'x'.repeat(200)}`)], 20, 5)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.text.startsWith('+ 1 ')).toBe(true)
+  })
+
+  test('still takes one row per line of the change', () => {
+    const rows = toRows([diff('~ a.ts +1 -1'), diff('- 2 two'), diff('+ 2 TWO')], 40, 5)
+
+    expect(rows.map((row) => row.text)).toEqual(['~ a.ts +1 -1', '- 2 two', '+ 2 TWO'])
+  })
+})

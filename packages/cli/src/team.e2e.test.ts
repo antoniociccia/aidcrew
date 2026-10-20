@@ -398,3 +398,26 @@ describe('a headless run that ends with a verdict', () => {
     expect(verdict.agents.map((agent) => agent.id)).toEqual(['architect', 'coder', 'reviewer'])
   }, 30_000)
 })
+
+test('uses the project fan-out allowance and still rejects messages beyond it', async () => {
+  const peers = ['coder', 'reviewer', 'tester', 'auditor', 'writer']
+  for (const id of peers.slice(2))
+    write(
+      `.claude/agents/${id}.md`,
+      `---\nname: ${id}\ndescription: the ${id}\n---\n\nReply briefly.\n`,
+    )
+  write(
+    '.aidcrew/config.toml',
+    `${readFileSync(join(repo, '.aidcrew/config.toml'), 'utf8')}\n[defaults]\nmaxMessagesPerTurn = 4\n`,
+  )
+  const baseUrl = serveByModel({
+    'planner-model': [
+      ...peers.map((to) => useTool('agent_send', { to, message: 'Check your assigned area.' })),
+      say('delegated'),
+    ],
+  })
+  const { out, err } = await runTeam(baseUrl)
+  expect(out).toContain('architect → auditor')
+  expect(out).not.toContain('architect → writer')
+  expect(out + err).toContain('already sent 4 messages this turn')
+})

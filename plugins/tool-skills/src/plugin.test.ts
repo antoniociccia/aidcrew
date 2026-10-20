@@ -56,6 +56,16 @@ describe('the skill tool', () => {
     expect(output.isError).toBeFalsy()
   })
 
+  test('a local skill can override a bundled name without falling back to the bundled body', async () => {
+    const local = skill('decision-lab', 'Local decision policy.')
+    const configured = tool([local])
+    expect((await configured.execute({ name: local.name }, context)).content).toBe(
+      'Local decision policy.',
+    )
+    rmSync(local.path)
+    expect((await configured.execute({ name: local.name }, context)).isError).toBe(true)
+  })
+
   test('lists what exists when asked for a skill that does not', async () => {
     const output = await tool([skill('deploy', 'x')]).execute({ name: 'nope' }, context)
 
@@ -63,10 +73,10 @@ describe('the skill tool', () => {
     expect(output.content).toMatch(/deploy/)
   })
 
-  test('says plainly when no skills are configured', async () => {
+  test('lists bundled skills when no local skills are configured', async () => {
     const output = await tool([]).execute({ name: 'anything' }, context)
 
-    expect(output.content).toMatch(/no skills/)
+    expect(output.content).toMatch(/decision-lab/)
   })
 
   test('reports a skill whose file disappeared since startup', async () => {

@@ -115,3 +115,24 @@ describe('how long it has been thinking', () => {
     expect(pulseOf(agent({ status: 'working' }), [], now).text).toBe('thinking')
   })
 })
+
+describe('a pulse while a change is being written', () => {
+  test('says the call that is making it, not the last line of the diff', () => {
+    // The rows of a change are not something an agent is doing; the write
+    // that produced them is. Read off the last row, this line said "+ 2 TWO",
+    // which reads as the agent having stopped mid-file.
+    const pulse = pulseOf(agent({ status: 'working' }), [
+      { kind: 'tool', text: 'edit src/rates.ts' },
+      { kind: 'diff', text: '~ src/rates.ts +2 -1' },
+      { kind: 'diff', text: '+ 2 TWO' },
+    ])
+
+    expect(pulse.text).toStartWith('edit src/rates.ts')
+  })
+
+  test('falls back to thinking when a change is all there is', () => {
+    const pulse = pulseOf(agent({ status: 'working' }), [{ kind: 'diff', text: '+ 2 TWO' }])
+
+    expect(pulse.text).toStartWith('thinking')
+  })
+})

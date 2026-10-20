@@ -14,14 +14,18 @@ import { moveTo, tabAt } from '../components/reorder.ts'
 import type { Segment } from '../components/row.ts'
 import { clip, measure, split as splitAt } from '../components/row.ts'
 import { blanks, Row, Surface } from '../components/surface.tsx'
+import { TeamGraph } from '../components/team-graph.tsx'
 import { fold, widthOf } from '../components/text-width.ts'
 import type { DividerBox, PaneBox } from '../layout.ts'
 import { DIVIDER_STEP, dividerAt, nudge, paneAt, planPanes, resize } from '../layout.ts'
 import { wordmark } from '../logo.ts'
+import { NATIVE_TEXT } from '../native-text.ts'
 import { hidePaths, shorten } from '../private.ts'
 import { marquee, pulseOf } from '../pulse.ts'
+import { groupRoles, planTiles } from '../team-graph.ts'
+import { TEAM_VIEW_TEXT } from '../team-view-text.ts'
 import type { Theme } from '../theme.ts'
-import { GUTTER, MARK, SPINNER } from '../theme.ts'
+import { diffTone, GUTTER, MARK, SPINNER } from '../theme.ts'
 import { useTheme, useVoice } from '../theme-context.tsx'
 import { headerTint, litTint, loudTint, mix, paneTint } from '../tint.ts'
 import { pagesOf, toRows } from '../transcript.ts'
@@ -51,7 +55,7 @@ const EDITING_CHORDS = new Set(['w', 'u'])
 
 export type Line = {
   agentId: string
-  kind: 'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinking'
+  kind: 'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinking' | 'diff'
   text: string
 }
 
@@ -143,6 +147,8 @@ export type SessionProps = {
   onClearQueue?(agentId: string): void
   /** Opens the list of jobs this repository has open. */
   onOpenTasks?(): void
+  /** Opens everything the team has changed, where one part of it can be taken back. */
+  onOpenChanges?(): void
   rows?: number
   columns?: number
   /** Agents shown side by side; empty means only the one being addressed. */
@@ -271,6 +277,7 @@ export function Session(props: SessionProps) {
     props.initialDraft === undefined ? {} : { [props.target]: props.initialDraft },
   )
   const [split, setSplit] = useState<string[]>(props.initialSplit ?? props.layout?.split ?? [])
+  const [teamView, setTeamView] = useState<'graph' | 'grid' | undefined>()
   const [picking, setPicking] = useState(false)
   const [thinking, setThinking] = useState(props.showThinking ?? props.layout?.reasoning ?? false)
   // Relative, so a pane dragged wider keeps its share when the window changes.
@@ -337,7 +344,11 @@ export function Session(props: SessionProps) {
   }
 
   const shortcuts: Record<string, () => void> = {
-    l: () => (split.length > 0 ? setSplit([]) : setPicking(true)),
+    l: () => {
+      setTeamView(undefined)
+      if (split.length > 0) setSplit([])
+      else setPicking(true)
+    },
     b: () => turn(1),
     f: () => turn(-1),
     g: () => setPages((current) => ({ ...current, [props.target]: 0 })),
@@ -349,6 +360,9 @@ export function Session(props: SessionProps) {
     // writing.
     t: () => setFinding(true),
     k: () => props.onOpenTasks?.(),
+    // ^v for the changes: every other letter this screen could have used is
+    // spoken for, and this is the one somebody reaches for while watching.
+    v: () => props.onOpenChanges?.(),
     e: props.onOpenAgents,
     n: () => props.onOpenNotices?.(),
     o: () => props.onOpenKeys?.(),
@@ -407,6 +421,10 @@ export function Session(props: SessionProps) {
       // answer, and taking it as a cancel as well stopped the agent before it
       // could react to being refused.
       if (key.escape) {
+        if (teamView) {
+          setTeamView(undefined)
+          return
+        }
         if (props.pending?.agentId === props.target) return
         flashKey('esc')
         return props.onCancel?.(props.target)
@@ -454,12 +472,27 @@ export function Session(props: SessionProps) {
   // Everything below runs before the early return for the split picker: a hook
   // that is skipped on some renders and not others changes the order React
   // sees, and the first ^L tore the interface apart.
-  const shown = split.length > 0 ? props.agents.filter((a) => split.includes(a.id)) : []
+  const gridCapacity =
+    Math.max(1, Math.floor((rows - 2) / 9)) * Math.max(1, Math.min(3, Math.floor(columns / 36)))
+  const gridStart = Math.floor(Math.max(0, ids.indexOf(props.target)) / gridCapacity) * gridCapacity
+  const shown =
+    teamView === 'grid'
+      ? props.agents.slice(gridStart, gridStart + gridCapacity)
+      : teamView === 'graph'
+        ? []
+        : split.length > 0
+          ? props.agents.filter((a) => split.includes(a.id))
+          : []
 
   // Tab walks what is on screen. Side by side it used to walk the whole team,
   // so moving between two open panes meant pressing it past the agents you had
   // deliberately left out.
-  const reachable = shown.length > 0 ? shown.map((agent) => agent.id) : ids
+  const reachable =
+    teamView === 'graph'
+      ? groupRoles(props.agents).flatMap((group) => group.agents.map((agent) => agent.id))
+      : !teamView && shown.length > 0
+        ? shown.map((agent) => agent.id)
+        : ids
   const move = (step: number): void => {
     const at = Math.max(0, reachable.indexOf(props.target))
     const next = reachable[(at + step + reachable.length) % Math.max(1, reachable.length)]
@@ -468,12 +501,19 @@ export function Session(props: SessionProps) {
   const headerRows = shown.length > 0 ? 0 : HEADER_ROWS
   // One row for the tray, one for the rule above it.
   const bodyRows = Math.max(4, rows - headerRows - 2)
-  const plan = planPanes(
-    shown.map((agent) => agent.id),
-    columns,
-    bodyRows,
-    weights,
-  )
+  const plan =
+    teamView === 'grid'
+      ? planTiles(
+          shown.map((agent) => agent.id),
+          columns,
+          bodyRows,
+        )
+      : planPanes(
+          shown.map((agent) => agent.id),
+          columns,
+          bodyRows,
+          weights,
+        )
 
   /** The wheel pages whichever pane it is over, not whichever has the focus. */
   const scroll = (column: number, row: number, by: number): void => {
@@ -617,7 +657,7 @@ export function Session(props: SessionProps) {
   useMouse((event) => {
     // The picker owns the screen while it is up; a click behind it would move
     // the focus to something nobody can see.
-    if (picking) return
+    if (picking || teamView === 'graph') return
 
     if (event.kind === 'wheel') scroll(event.column, event.row, event.direction === 'up' ? 1 : -1)
     if (event.kind === 'up') {
@@ -693,7 +733,14 @@ export function Session(props: SessionProps) {
       if (props.notice?.to === agentId) props.onSend('carry on')
       return
     }
-    props.onSend(text.trim())
+    const command = text.trim()
+    if (command === '/graph' || command === '/grid') {
+      const next = command === '/graph' ? 'graph' : 'grid'
+      setTeamView((current) => (current === next ? undefined : next))
+      setDrafts((all) => ({ ...all, [agentId]: '' }))
+      return
+    }
+    props.onSend(command)
     setDrafts((all) => ({ ...all, [agentId]: '' }))
   }
 
@@ -760,11 +807,28 @@ export function Session(props: SessionProps) {
         />
       ) : null}
 
-      <Box flexGrow={1} height={bodyRows}>
+      <Box flexGrow={1} height={bodyRows} flexDirection={teamView === 'graph' ? 'column' : 'row'}>
+        {teamView === 'graph' ? (
+          <TeamGraph
+            agents={props.agents}
+            lines={props.lines}
+            hidden={props.hidePaths === true}
+            target={props.target}
+            width={columns}
+            height={Math.max(3, Math.min(bodyRows - 5, Math.floor(bodyRows * 0.72)))}
+          />
+        ) : null}
         {shown.length > 0 ? (
           <Grid agents={shown} plan={plan} theme={theme} paneFor={paneFor} />
         ) : (
-          paneFor(current, columns, false, bodyRows)
+          paneFor(
+            current,
+            columns,
+            false,
+            teamView === 'graph'
+              ? bodyRows - Math.max(3, Math.min(bodyRows - 5, Math.floor(bodyRows * 0.72)))
+              : bodyRows,
+          )
         )}
       </Box>
 
@@ -786,7 +850,11 @@ export function Session(props: SessionProps) {
 
       <Tray
         pressedKey={pressedKey}
-        {...(copied ? { said: copied } : {})}
+        {...(copied
+          ? { said: copied }
+          : teamView
+            ? { said: `${TEAM_VIEW_TEXT[teamView]} · ${TEAM_VIEW_TEXT.hint}` }
+            : {})}
         columns={columns}
         extras={props.extras?.({ slot: 'tray' }) ?? []}
         selecting={selecting}
@@ -901,6 +969,7 @@ function Tray({
     ['^r', thinking ? 'hide reasoning' : 'reasoning'],
     ['^t', 'name a file'],
     ['^k', 'tasks'],
+    ['^v', 'changes'],
     ['^e', 'team'],
     ['^o', 'every key'],
     ['^s', 'settings'],
@@ -1633,7 +1702,10 @@ function Pane({
                     // you have to read to learn nothing.
                     { text: agent.status === 'working' ? MARK.working : ' ', color: colour },
                     { text: ` ${agent.id}`, color: focused ? colour : theme.muted, bold: focused },
-                    { text: `  ${describe(agent)}`, color: theme.faint },
+                    {
+                      text: `  ${agent.permissionOwner === 'provider' ? NATIVE_TEXT.permissionsBadge : describe(agent)}`,
+                      color: theme.faint,
+                    },
                     ...(spend(agent) === ''
                       ? []
                       : [{ text: `  ${spend(agent)}`, color: theme.faint }]),
@@ -1812,8 +1884,8 @@ export function textOf(row: PaintedRow): string {
     .replace(/\s+$/, '')
 }
 
-/** One row of what an agent said or did. */
-function transcriptRow(
+/** One row of what an agent said or did. Exported for the tests that paint it. */
+export function transcriptRow(
   line: { kind: Line['kind']; text: string; first: boolean },
   colour: string,
   theme: Theme,
@@ -1853,6 +1925,20 @@ function transcriptRow(
             { text: line.first ? GUTTER.say : ' ', color: colour },
             { text: ` ${line.text}`, color: theme.text },
           ],
+    }
+  }
+
+  // A change, a row at a time, coloured by the marker the row begins with:
+  // `~` names the file, `+` and `-` are the change itself, and anything else
+  // is context, which is here to be read past rather than read.
+  if (line.kind === 'diff') {
+    const tone = diffTone(line.text, theme, colour)
+    return {
+      background: ground,
+      segments: [
+        { text: ' ' },
+        { text: ` ${line.text}`, color: tone.color, ...(tone.bold ? { bold: true } : {}) },
+      ],
     }
   }
 
@@ -2271,6 +2357,7 @@ function spend(agent: AgentSnapshot): string {
  * which is the kind of movement the eye chases and the mind cannot ignore.
  */
 function badge(agent: AgentSnapshot, showingSpend: boolean): string {
+  if (agent.permissionOwner === 'provider') return NATIVE_TEXT.permissionsBadge
   const model = describe(agent)
   const spent = spend(agent)
   if (spent === '') return model

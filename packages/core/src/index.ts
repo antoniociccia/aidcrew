@@ -1,4 +1,5 @@
 export { accumulate } from './accumulator.ts'
+export { type AgentAvatar, agentAvatar } from './agent-avatar.ts'
 export type { AgentMessage, Limits, Verdict } from './agents/governor.ts'
 export { DEFAULT_LIMITS, DEFAULT_MAX_HOPS, Governor } from './agents/governor.ts'
 export type {
@@ -36,7 +37,7 @@ export type {
   ToolContext,
   ToolOutput,
 } from './loop.ts'
-export { runAgentLoop } from './loop.ts'
+export { applyInstructions, applyPreTurn, runAgentLoop, runGuardedTool } from './loop.ts'
 export {
   CONTRACT,
   OLDEST_CONTRACT,

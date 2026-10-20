@@ -6,10 +6,10 @@
  *   bun scripts/build.ts --all           every platform we publish
  *   bun scripts/build.ts --target=...    one named platform
  *
- * A build script rather than a `bun build` command line, because two module
- * substitutions have to happen and only the programmatic API takes plugins.
- * Both are things `bunfig.toml` does for `bun run` and cannot do for a compiled
- * binary, where there is no config file to read — so leaving them out would
+ * A build script rather than a `bun build` command line, because module
+ * substitutions and isolated browser-source imports are needed and only the programmatic API takes plugins.
+ * The runtime substitutions come from `bunfig.toml` during `bun run`; a compiled
+ * binary has no config file to read — so leaving them out would
  * produce a binary that is subtly worse than running from source, which is the
  * hardest kind of difference to notice.
  */
@@ -17,6 +17,7 @@
 import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { BunPlugin } from 'bun'
+import { browserSources } from './browser-sources.ts'
 
 /**
  * The platforms we publish, named the way the release assets are.
@@ -95,7 +96,7 @@ async function build(target: Target, name: string, outdir: string): Promise<void
 
   const result = await Bun.build({
     entrypoints: ['packages/cli/src/bin.ts'],
-    plugins: [stubDevtools, fastWidth],
+    plugins: [stubDevtools, fastWidth, browserSources],
     // Most of the weight is the Bun runtime and nothing can be done about
     // that; this is only our own bundle, and it is free.
     minify: true,

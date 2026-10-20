@@ -74,7 +74,16 @@ export function buildResponsesBody(request: CanonicalRequest): ResponsesBody {
 
 function translate(message: Message): ResponsesItem[] {
   const items: ResponsesItem[] = []
-  const text: ResponsesContent[] = []
+  let text: ResponsesContent[] = []
+  const flushText = (): void => {
+    if (text.length === 0) return
+    items.push({
+      type: 'message',
+      role: message.role === 'assistant' ? 'assistant' : 'user',
+      content: text,
+    })
+    text = []
+  }
 
   for (const block of message.content) {
     if (block.type === 'text' && block.text !== '') {
@@ -89,6 +98,7 @@ function translate(message: Message): ResponsesItem[] {
       text.push({ type: 'input_image', image_url: `data:${block.mediaType};base64,${block.data}` })
     }
     if (block.type === 'tool_use') {
+      flushText()
       items.push({
         type: 'function_call',
         call_id: block.id,
@@ -97,18 +107,16 @@ function translate(message: Message): ResponsesItem[] {
       })
     }
     if (block.type === 'tool_result') {
+      flushText()
       items.push({ type: 'function_call_output', call_id: block.toolUseId, output: block.content })
     }
     // Thinking is dropped: replaying it is rejected and it is not conversation.
   }
 
-  if (text.length > 0) {
-    items.unshift({
-      type: 'message',
-      role: message.role === 'assistant' ? 'assistant' : 'user',
-      content: text,
-    })
-  }
+  // Shared memory and interjections follow tool results in the same canonical
+  // message. Moving that text ahead of the results breaks the call/result
+  // sequence and OpenCode Go rejects the next request with HTTP 400.
+  flushText()
 
   return items
 }

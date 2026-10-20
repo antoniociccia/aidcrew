@@ -1,3 +1,7 @@
+import { NATIVE_TEXT } from './native-text.ts'
+import { SEARCH_TEXT } from './search-text.ts'
+import { TEAM_VIEW_TEXT } from './team-view-text.ts'
+
 /**
  * What you can type instead of talking to a model.
  *
@@ -13,6 +17,8 @@
 
 export type Command =
   | { at: 'help' }
+  | { at: 'native' }
+  | { at: 'search'; query: string }
   | { at: 'spawn'; role: string; model?: string; provider?: string }
   | { at: 'kill'; agent: string }
   | { at: 'tell'; agent: string; text: string }
@@ -26,6 +32,8 @@ export type Command =
   | { at: 'copy'; agent?: string }
   | { at: 'task'; name: string; roles: string[] }
   | { at: 'split' }
+  | { at: 'graph' }
+  | { at: 'grid' }
   | { at: 'mcp' }
   | { at: 'tour' }
   /** Typed with a slash, but nothing we know. Carries the nearest match. */
@@ -44,6 +52,12 @@ export type CommandSpec = {
  * describes the version before last.
  */
 export const COMMANDS: CommandSpec[] = [
+  { name: 'native', args: '', what: NATIVE_TEXT.commandDescription },
+  {
+    name: 'search',
+    args: SEARCH_TEXT.commandArgs,
+    what: SEARCH_TEXT.commandDescription,
+  },
   { name: 'spawn', args: '<role> [provider] [model]', what: 'Start another agent on this job.' },
   {
     name: 'task',
@@ -84,6 +98,8 @@ export const COMMANDS: CommandSpec[] = [
     args: '[agent]',
     what: 'Put what an agent has said on the clipboard. Hold option and drag to select by hand.',
   },
+  { name: 'graph', args: '', what: TEAM_VIEW_TEXT.graphCommand },
+  { name: 'grid', args: '', what: TEAM_VIEW_TEXT.gridCommand },
   { name: 'split', args: '', what: 'Choose which agents are shown side by side.' },
   { name: 'mcp', args: '', what: 'List the MCP servers this project declares.' },
   { name: 'tour', args: '', what: 'What this program is, in eight pages.' },
@@ -113,6 +129,18 @@ export function parseCommand(text: string): Command | undefined {
     case 'help':
     case '?':
       return { at: 'help' }
+
+    case 'native':
+      return tail ? { at: 'unknown', typed: '/native', nearest: 'native' } : { at: 'native' }
+
+    case 'search':
+      return tail
+        ? { at: 'search', query: tail }
+        : { at: 'unknown', typed: '/search', nearest: 'search' }
+
+    case 'graph':
+    case 'grid':
+      return tail ? { at: 'unknown', typed: `/${verb}`, nearest: verb } : { at: verb }
 
     case 'split':
       return { at: 'split' }
@@ -303,4 +331,20 @@ function editDistance(a: string, b: string): number {
   }
 
   return rows[a.length]?.[b.length] ?? 0
+}
+
+/** Presentation commands cannot take over the terminal from a browser client. */
+export function assertWebCommand(text: string): void {
+  const command = parseCommand(text)
+  if (command?.at === 'native') throw new Error(NATIVE_TEXT.browserHint)
+  if (command?.at === 'search') throw new Error(SEARCH_TEXT.browserHint)
+  if (
+    command?.at === 'graph' ||
+    command?.at === 'grid' ||
+    command?.at === 'copy' ||
+    command?.at === 'split' ||
+    command?.at === 'tour'
+  ) {
+    throw new Error(SEARCH_TEXT.terminalOnly)
+  }
 }

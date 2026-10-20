@@ -1,6 +1,6 @@
 {
   "name": "@aidcrew/cli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -28,7 +28,8 @@
     "@aidcrew/tool-tree": "workspace:*",
     "@aidcrew/tool-unix": "workspace:*",
     "@aidcrew/tui": "workspace:*",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@aidcrew/agent-native": "workspace:*"
   },
   "devDependencies": {
     "gpt-tokenizer": "^4.0.0",

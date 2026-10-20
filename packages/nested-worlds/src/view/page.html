@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nested Worlds</title>
+    <link rel="stylesheet" href="/page.css" />
+    <script type="module" src="/page.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Nested Worlds</h1>
+      <label class="run-pick">
+        Run
+        <select id="run"></select>
+      </label>
+      <span id="meta" class="meta"></span>
+      <span id="escaped" class="badge">escaped: …</span>
+      <span id="verified" class="badge">verified: …</span>
+      <span id="live" class="badge live" hidden>live</span>
+      <label class="observer" title="Shows what no agent can see: fertile tiles and the hidden rules.">
+        <input id="observer" type="checkbox" />
+        Observer view (human only)
+      </label>
+      <p class="exit-note">
+        Designed exit: the slab is an exit the lab built. Escaping through it is not evidence of
+        general intelligence.
+      </p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <canvas id="world" width="600" height="600" aria-label="The base world"></canvas>
+        <div id="rules" class="rules" hidden>
+          <h2>Hidden rules — observer view, never shown to agents</h2>
+          <dl id="rules-list"></dl>
+        </div>
+      </section>
+      <aside class="side">
+        <section class="panel">
+          <h2>Upper world</h2>
+          <p id="upper-state"></p>
+          <p id="upper-dials"></p>
+          <ol id="upper-writes" class="list"></ol>
+        </section>
+        <section class="panel">
+          <h2>Agents</h2>
+          <div id="agents"></div>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <div class="controls">
+        <button id="back" type="button" title="Step back">◀︎</button>
+        <button id="play" type="button">Play</button>
+        <button id="forward" type="button" title="Step forward">▶︎</button>
+        <label>
+          Speed
+          <select id="speed">
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="4" selected>4×</option>
+            <option value="8">8×</option>
+            <option value="16">16×</option>
+          </select>
+        </label>
+        <input id="tick" type="range" min="0" max="0" value="0" aria-label="Tick" />
+        <span id="tick-label" class="tick-label">tick –</span>
+      </div>
+      <div class="log">
+        <label>
+          Events of
+          <select id="log-agent">
+            <option value="">every agent</option>
+          </select>
+        </label>
+        <ol id="log" class="list"></ol>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util'
 export type CliArgs = {
   /** `run` is one agent; `team` is everyone the project declares. */
   command:
+    | 'claude'
     | 'run'
     | 'team'
     | 'config'
@@ -39,6 +40,7 @@ export const USAGE = `aidcrew — a plugin-first multi-agent coding harness
 Usage:
   aidcrew -p "<task>"              one agent
   aidcrew                          the interface: everything from one screen
+  aidcrew claude [args...]         the installed Claude Code CLI, with its native commands
   aidcrew ui                       the same, for a script that would rather say so
   aidcrew team -p "<task>"         the whole team declared by the project
   aidcrew demo                     sixty seconds to a working agent, with no key
@@ -92,6 +94,17 @@ default); .aidcrew/config.toml gives each one its provider and model.`
  * it: a silently dropped flag looks like the harness disobeyed an instruction.
  */
 export function parseCliArgs(argv: string[]): CliArgs {
+  if (argv[0] === 'claude') {
+    return {
+      command: 'claude',
+      rest: argv.slice(1),
+      prompt: '',
+      cwd: process.cwd(),
+      maxTurns: 50,
+      help: false,
+      version: false,
+    }
+  }
   let parsed: ReturnType<typeof parseArgs>
   try {
     parsed = parseArgs({

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import {
+  assertWebCommand,
   COMMANDS,
   completions,
   fileCompletions,
@@ -185,4 +186,31 @@ describe('naming a file with @', () => {
   test('offers a few to start with rather than nothing', () => {
     expect(fileCompletions('', files, 2)).toEqual(['src/auth/guard.ts', 'src/auth.test.ts'])
   })
+})
+
+test('parses transcript search as a literal multiword query', () => {
+  expect(parseCommand('/search failed tests')).toEqual({ at: 'search', query: 'failed tests' })
+  expect(parseCommand('/search')).toEqual({ at: 'unknown', typed: '/search', nearest: 'search' })
+  expect(completions('/sea').map((entry) => entry.name)).toContain('search')
+})
+
+test('rejects terminal presentation commands from the browser before dispatch', () => {
+  for (const command of ['/copy', '/split', '/tour', '/search needle']) {
+    expect(() => assertWebCommand(command)).toThrow()
+  }
+  expect(() => assertWebCommand('/search needle')).toThrow('F')
+  expect(() => assertWebCommand('/stop coder')).not.toThrow()
+  expect(() => assertWebCommand('/tell coder hello')).not.toThrow()
+})
+
+test('native terminal command attaches only the selected agent and guides browser users', () => {
+  expect(parseCommand('/native')).toEqual({ at: 'native' })
+  expect(parseCommand('/native other')).toMatchObject({ at: 'unknown' })
+  expect(() => assertWebCommand('/native')).toThrow('Native tab')
+})
+
+test('recognizes local team views and refuses arguments', () => {
+  expect(parseCommand('/graph')).toEqual({ at: 'graph' })
+  expect(parseCommand('/grid')).toEqual({ at: 'grid' })
+  expect(parseCommand('/graph extra')?.at).toBe('unknown')
 })

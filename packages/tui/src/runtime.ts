@@ -43,7 +43,8 @@ import type {
 } from '@aidcrew/core'
 import { addUsage, DEFAULT_LIMITS, DEFAULT_MAX_HOPS } from '@aidcrew/core'
 import { createCompactPlugin, DEFAULT_BUDGET, parseCompactWith } from '@aidcrew/hooks-compact'
-import type { GuardRequest } from '@aidcrew/hooks-guard'
+import type { Collision, GuardRequest, Revertable } from '@aidcrew/hooks-guard'
+import { createRadar, revertable, revertHunk, undoRoot } from '@aidcrew/hooks-guard'
 import type { Allowance, PriceTable } from '@aidcrew/prices'
 import {
   allLeft,
@@ -93,11 +94,15 @@ export type GuardSession = {
   askPlugin?(question: { plugin: string; title: string; detail?: string }): Promise<boolean>
   /** Where a plugin's news goes once there is a session to draw it in. */
   note?(text: string): void
+  /** Two agents found in the same lines of the same file. */
+  onCollision?(hit: Collision, sentence: string): void
 }
 
 export type Runtime = {
   /** What the guards consult, replaced as projects are opened. */
   session: GuardSession
+  /** Who is working where, so two agents in one place can be told. */
+  radar: ReturnType<typeof createRadar>
   store: SettingsStore
   host: Host
   providers: string[]
@@ -137,6 +142,13 @@ export async function openRuntime(cwd: string, home = homedir()): Promise<Runtim
   // know — who is trusted, who to ask — is only known once a team is running,
   // so the host is given a way to look it up rather than the answers.
   const session: GuardSession = { trust: () => 'ask' }
+  /**
+   * What each agent has open, for spotting two of them in one place.
+   *
+   * Made here rather than inside the guards because a job coming home is what
+   * empties it, and that is news the team has, not the hook.
+   */
+  const radar = createRadar()
   // What plugins said before there was a screen, and what this project's
   // config asked for and did not get. Read below, drawn later.
   const notes: string[] = settings.refused.map(refusalLine)
@@ -189,6 +201,10 @@ export async function openRuntime(cwd: string, home = homedir()): Promise<Runtim
     guard: {
       trust: (agentId) => session.trust(agentId),
       ask: async (request) => (await session.ask?.(request)) ?? false,
+      // One radar for the host, which outlives any one team: an agent's open
+      // ranges have to survive the session being reopened on the same project.
+      radar,
+      onCollision: (hit, sentence) => session.onCollision?.(hit, sentence),
     },
   })
 
@@ -196,6 +212,7 @@ export async function openRuntime(cwd: string, home = homedir()): Promise<Runtim
     store,
     host,
     session,
+    radar,
     providers: host.registry.providers().map((provider) => provider.id),
     home,
     notes,
@@ -269,6 +286,7 @@ export type SourceKind = 'instructions' | 'skills' | 'agents' | 'orchestration'
 
 export type ProjectState = {
   config: WorkspaceConfig
+  skills: Parameters<typeof createSkillsPlugin>[0]
   agents: AgentDef[]
   /** Agents that could not run, and why, so the interface can say so. */
   blocked: { agentId: string; providerId: string }[]
@@ -313,6 +331,7 @@ export async function readProject(
 
   return {
     config,
+    skills: sources.skills,
     agents: team,
     blocked: credentials.missing,
     sources: [
@@ -420,6 +439,24 @@ export type LiveTeam = {
   kill(agentId: string): Promise<{ workspace: 'removed' | 'kept' | 'none' }>
   /** What an agent has changed in its worktree, as a diff. */
   diff(agentId: string): Promise<string>
+  /**
+   * Every change of this session that is still a change, newest first.
+   *
+   * Worked out from the bytes the guard kept, each time it is asked: a change
+   * an agent has itself undone simply stops being listed.
+   */
+  changed(): Revertable[]
+  /**
+   * Takes one hunk of one change back, and tells whoever made it.
+   *
+   * The agent is not stopped. The message goes into the turn it is taking, so
+   * it learns before its next write rather than after its last — which is the
+   * difference between steering and braking.
+   *
+   * `anyway` answers the one refusal this has: that putting an old change
+   * back would discard what was written over it since.
+   */
+  revert(at: number, hunk: number, reason: string, anyway?: boolean): Promise<string>
   /** Merges the branch of the job an agent is on into the repository. */
   merge(agentId: string): Promise<MergeOutcome>
   /** Resolves once nobody on the team has anything left to do. */
@@ -475,6 +512,8 @@ export type TeamOptions = {
   leader?: string
   /** Tool calls one turn may make, when the project says so. */
   toolCallsPerTurn?: number
+  /** Bounded project override for delivered team messages per instruction. */
+  maxMessagesPerTurn?: number
   /** The command a job is proved by, when the project says so. */
   check?: string
   /** Whether a verified job is merged; on unless said otherwise. */
@@ -502,6 +541,13 @@ export type TeamOptions = {
  */
 export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
   const { runtime, cwd, env, agents } = options
+  const providerSettings = (
+    await loadWorkspaceConfig({
+      cwd,
+      home: runtime.home,
+      trusted: trustedClaims(runtime.store, cwd),
+    })
+  ).plugins
 
   // Read once when the session opens rather than per turn: it is a file
   // somebody wrote about how their team works, not a live setting, and a disk
@@ -520,9 +566,8 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     (providerId) => runtime.host.registry.provider(providerId)?.needsKey !== false,
   )
 
-  if (options.skills.length > 0) {
-    runtime.host.registry.register(createSkillsPlugin(options.skills))
-  }
+  runtime.host.registry.forget('tool-skills')
+  runtime.host.registry.register(createSkillsPlugin(options.skills))
 
   // Whatever this project said before, already on screen: a resumed session
   // that opens empty looks like the work was lost.
@@ -550,7 +595,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
         apiKey: resolved.apiKey,
         cwd,
         ...(resolved.baseUrl ? { baseUrl: resolved.baseUrl } : {}),
-        ...providerOptions(providerId, env, runtime.store),
+        ...providerOptions(providerId, env, runtime.store, providerSettings),
       })
     } catch {
       // A provider that cannot be built is one summary that does not happen,
@@ -625,12 +670,14 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
   // Trust is per agent, and it is read from the project config rather than
   // from a switch here: it is a decision about this team, and it belongs where
   // the rest of that decision lives.
-  const trusted = new Set(agents.filter((agent) => agent.yolo === true).map((agent) => agent.id))
+  // Read live snapshots so dynamically spawned teammates inherit trusted YOLO.
+  const trustedByHarness = (agentId: string): boolean =>
+    host.list().some((agent) => agent.id === agentId && agent.yolo)
 
   const approval = createApprovalPlugin({
     remembered: new Set(),
     enabled: options.onApproval !== undefined,
-    trusted: (agentId) => trusted.has(agentId),
+    trusted: trustedByHarness,
     ask: options.onApproval ?? (async () => 'no'),
   })
 
@@ -640,7 +687,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
   // Told to the host's guards rather than registered again: registering a
   // second set would mean two of everything, and the headless one refusing
   // what this one is about to ask about.
-  runtime.session.trust = (agentId) => (trusted.has(agentId) ? 'yolo' : 'ask')
+  runtime.session.trust = (agentId) => (trustedByHarness(agentId) ? 'yolo' : 'ask')
   const onApproval = options.onApproval
   if (onApproval) {
     runtime.session.ask = async (request) =>
@@ -677,6 +724,27 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
         // as the first, one labelled "yes" beside one labelled "once".
         scopes: {},
       })) !== 'no'
+  }
+
+  /**
+   * Two agents found in one place, said in three directions.
+   *
+   * The one that just wrote already has it — the guard put it in the result
+   * it is about to read, which is a turn earlier than a message would be.
+   * This is for the person, whose panes both say it, and for the other agent,
+   * which otherwise carries on believing its checkout is its own.
+   */
+  runtime.session.onCollision = (hit, sentence) => {
+    for (const line of collisionLines(hit)) record(line)
+    void host.tell(
+      hit.theirs,
+      `${hit.mine} has just changed ${hit.file} lines ${hit.lines[0]}-${hit.lines[1]} in another checkout, ` +
+        `which overlaps lines ${hit.theirLines[0]}-${hit.theirLines[1]} of yours. ` +
+        'Neither of you is blocked. If you are still working there, say so to the other one rather than merging blind.',
+    )
+    // Unused here, and taken so that the two descriptions cannot drift: the
+    // guard writes this sentence once, and both agents read the same one.
+    void sentence
   }
 
   // Shortening a conversation that no longer fits. Which model writes the
@@ -753,7 +821,12 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     host: runtime.host,
     credentials,
     tools: runtime.host.registry.tools(),
-    limits: DEFAULT_LIMITS,
+    limits: {
+      ...DEFAULT_LIMITS,
+      ...(options.maxMessagesPerTurn !== undefined
+        ? { maxMessagesPerTurn: options.maxMessagesPerTurn }
+        : {}),
+    },
     isolate: true,
     defaultProvider: options.defaultProvider,
     ...(options.sharedMemory
@@ -798,7 +871,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
         }
       : {}),
     ...(options.onContention ? { onContention: options.onContention } : {}),
-    providerOptions: (id) => providerOptions(id, env, runtime.store),
+    providerOptions: (id) => providerOptions(id, env, runtime.store, providerSettings),
     onEvent: (event) => {
       // A turn ending is when a plan moves; the two-minute timer is the
       // backstop for a session where nothing is happening.
@@ -814,8 +887,13 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
         const said = sayJobCost(event.task)
         if (said) record({ agentId: event.task, kind: 'note', text: said })
       }
-      if (event.type === 'agent_killed')
+      if (event.type === 'agent_killed') {
         roster.splice(0, roster.length, ...roster.filter((id) => id !== event.id))
+        runtime.radar.finished(event.id)
+      }
+      // Merged work is in the repository, so the lines it held are no longer
+      // anybody's to collide with.
+      if (event.type === 'job_merged') runtime.radar.finished(event.task)
       const produced = toLines(event)
       // Events with nothing to show still change the roster, so the interface
       // is told either way.
@@ -944,18 +1022,29 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
    * costs money.
    */
   const priceFor = (model: string) => priceOf(table, model) ?? bundledPriceOf(model)
-  sayJobCost = (task) => jobCostSaid(host.list(), task, priceFor)
+  const reportsUsage = (agentId: string): boolean =>
+    runtime.host.registry.provider(
+      host.list().find((agent) => agent.id === agentId)?.provider ?? options.defaultProvider,
+    )?.reportsUsage !== false
+  sayJobCost = (task) =>
+    jobCostSaid(
+      host.list().map((agent) => ({ ...agent, reportsUsage: reportsUsage(agent.id) })),
+      task,
+      priceFor,
+    )
 
   const costFor = (agentId: string): number | undefined => {
     const agent = host.list().find((one) => one.id === agentId)
     if (!agent) return undefined
-    return costOf(agent.usage, priceFor(agent.model))
+    return costOf(agent.usage, priceFor(agent.model), reportsUsage(agentId))
   }
 
   /** Whether what is shown for an agent is a list price rather than a bill. */
   const estimatedFor = (agentId: string): boolean => {
     const agent = host.list().find((one) => one.id === agentId)
-    return agent !== undefined && isEstimate(agent.usage, priceFor(agent.model))
+    return (
+      agent !== undefined && reportsUsage(agentId) && isEstimate(agent.usage, priceFor(agent.model))
+    )
   }
 
   // What is left of the plan, asked once and refreshed as the session runs:
@@ -1059,7 +1148,10 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
       // What a card was charged and what came off a plan, apart. One team on
       // a subscription and an API key at once is the thing this is for, and a
       // single figure answers neither question it raises.
-      split: () => splitOf(host.list().map((agent) => agent.usage)),
+      split: () =>
+        host.list().some((agent) => !reportsUsage(agent.id))
+          ? {}
+          : splitOf(host.list().map((agent) => agent.usage)),
     },
     sharedNotes: () =>
       Object.fromEntries(
@@ -1256,8 +1348,6 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
 
     setYolo: (agentId, on) => {
       if (!host.setYolo(agentId, on)) return false
-      if (on) trusted.add(agentId)
-      else trusted.delete(agentId)
       // One word. The sentence explaining what unleashing means was written
       // once per agent, and a team of five turning loose read as five pieces
       // of news that were all the same sentence. The tab already says
@@ -1265,6 +1355,55 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
       // — the transcript only has to say that it changed.
       record({ agentId, kind: 'note', text: on ? 'unleashed' : 'asking again' })
       return true
+    },
+
+    changed: () => revertable(undoRoot(cwd)),
+
+    revert: async (at, hunk, reason, anyway = false) => {
+      const workspace = undoRoot(cwd)
+      // Read before it is taken back: the list is worked out from the file as
+      // it stands, and afterwards this change is no longer one.
+      const change = revertable(workspace).find((one) => one.at === at)
+      const outcome = revertHunk(workspace, at, hunk, { anyway })
+
+      if (!outcome.ok) {
+        if (outcome.because === 'later') {
+          return `that would discard ${outcome.later} later change${
+            outcome.later === 1 ? '' : 's'
+          } to the same file`
+        }
+        return outcome.because === 'outside'
+          ? 'that change names a path outside this project, and was not touched'
+          : 'that change is not there any more'
+      }
+
+      const [from, to] = outcome.lines
+      const where = outcome.removed
+        ? `${outcome.path}, which only existed because of it`
+        : `${outcome.path} lines ${from}-${to}`
+      const said = reason === '' ? '' : ` Reason: ${reason}`
+
+      const agentId = change?.agentId
+      if (agentId !== undefined) {
+        record({
+          agentId,
+          kind: 'note',
+          text: `a person took back ${where}${said}`,
+        })
+        // Not through `tell`, which records what you typed as a question you
+        // asked. This is the session speaking about itself.
+        await host.tell(
+          agentId,
+          `A person has reverted your change to ${where}.${
+            said === ''
+              ? ' No reason was given: do not make it again unchanged — ask what is wanted instead.'
+              : `${said}`
+          }`,
+        )
+        announce()
+      }
+
+      return `put back ${where}${agentId === undefined ? '' : `, and told ${agentId}`}`
     },
 
     tell: async (agentId, text) => {
@@ -1322,6 +1461,31 @@ function cutShortly(reason: string, tool?: string): string {
 function firstLine(text: string): string {
   const line = text.split('\n').find((one) => one.trim() !== '') ?? ''
   return line.length > 90 ? `${line.slice(0, 90)}…` : line
+}
+
+/**
+ * A collision as it is written into the two panes it concerns.
+ *
+ * From each side, because the two agents need different things from it: the
+ * one that just wrote needs to know somebody is already there, and the one
+ * already there needs to know its work has just been written over somewhere
+ * else. The sentence the agents themselves are given is longer and says what
+ * to do; these are for the person watching.
+ */
+export function collisionLines(hit: Collision): Line[] {
+  const where = hit.task === undefined ? '' : ` in ${hit.task}`
+  return [
+    {
+      agentId: hit.mine,
+      kind: 'note',
+      text: `heading for the same lines as ${hit.theirs}: ${hit.file} ${hit.lines[0]}-${hit.lines[1]} against ${hit.theirLines[0]}-${hit.theirLines[1]}${where}`,
+    },
+    {
+      agentId: hit.theirs,
+      kind: 'note',
+      text: `${hit.mine} has just changed ${hit.file} ${hit.lines[0]}-${hit.lines[1]}, which overlaps ${hit.theirLines[0]}-${hit.theirLines[1]} in your checkout`,
+    },
+  ]
 }
 
 export function toLines(event: TeamEvent): Line[] {
@@ -1466,6 +1630,22 @@ export function toLines(event: TeamEvent): Line[] {
       }
       if (inner.type === 'tool_end' && inner.output.isError) {
         return [{ agentId: event.id, kind: 'error', text: inner.output.content.slice(0, 200) }]
+      }
+
+      // What the tool wants a person to see, which the model never read. One
+      // row per line, because a pane lays out rows and a change is already
+      // written as them — and because a marker per row is what lets the
+      // painter colour an addition differently from the line it replaced.
+      if (inner.type === 'tool_end' && inner.output.shown !== undefined) {
+        const shown = inner.output.shown
+        // A kind this interface has no painter for is still worth showing:
+        // a plugin that knows how to report itself should not need us to
+        // have heard of it first.
+        const kind = shown.kind === 'diff' ? ('diff' as const) : ('tool' as const)
+        return shown.text
+          .split('\n')
+          .filter((text) => text !== '')
+          .map((text) => ({ agentId: event.id, kind, text }))
       }
 
       // What the agent actually said — the thing the whole interface exists

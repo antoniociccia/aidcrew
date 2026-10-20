@@ -29,6 +29,19 @@ export type ToolOutput = {
   stalled?: string
   content: string
   isError?: boolean
+  /**
+   * What a person should see of this result, which the model never reads.
+   *
+   * A write reports `wrote src/rates.ts (412 bytes)` because that is what the
+   * model needs; what a person wants is the change itself, and putting that in
+   * `content` would spend tokens on every write and fill the context with the
+   * file it is already editing.
+   *
+   * `kind` is an open string rather than a list of them. What a diff is, or a
+   * table, is the business of whichever plugin made one — this carries it and
+   * does not read it, which is the only way it can be here at all.
+   */
+  shown?: { kind: string; text: string; id?: string }
 }
 
 export type Tool = {
@@ -56,6 +69,8 @@ export type Tool = {
 
 export type Provider = {
   id: string
+  /** Owns native execution, including turn hooks and guarded tool execution. */
+  run?(options: LoopOptions): AsyncGenerator<LoopEvent, LoopResult>
   send(request: CanonicalRequest, signal: AbortSignal): AsyncIterable<StreamDelta>
 }
 
@@ -80,6 +95,8 @@ export type LoopResult = {
 }
 
 export type LoopOptions = {
+  /** Explicit user opt-in to unattended execution, including native provider permissions. */
+  yolo?: boolean
   provider: Provider
   model: string
   system: string
@@ -137,6 +154,8 @@ const DEFAULT_MAX_TOKENS = 32_768
  * inside it. That is what keeps the loop small enough to read in one sitting.
  */
 export async function* runAgentLoop(options: LoopOptions): AsyncGenerator<LoopEvent, LoopResult> {
+  if (options.provider.run) return yield* options.provider.run(options)
+
   const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS
   const signal = options.signal ?? new AbortController().signal
   const context: ToolContext = {
@@ -214,7 +233,7 @@ export async function* runAgentLoop(options: LoopOptions): AsyncGenerator<LoopEv
 }
 
 /** Request-scoped plugin guidance, never copied into the persisted conversation. */
-async function* applyInstructions(
+export async function* applyInstructions(
   system: string,
   hooks: Hooks[],
   context: TurnContext & { tools: readonly string[]; cwd: string },
@@ -297,7 +316,7 @@ async function* executeCalls(
               'Send the call again with valid JSON.',
             isError: true,
           }
-        : yield* guardedRun(info, byName.get(call.name), context, hooks, names)
+        : yield* runGuardedTool(info, byName.get(call.name), context, hooks, names)
       const durationMs = performance.now() - startedAt
 
       yield { type: 'tool_end', id: call.id, name: call.name, output, durationMs }
@@ -351,7 +370,7 @@ async function* executeCalls(
  * compaction does is leave the history long, while the worst a broken
  * approval does is run the command.
  */
-async function* applyPreTurn(
+export async function* applyPreTurn(
   messages: Message[],
   hooks: Hooks[],
   context: TurnContext,
@@ -379,15 +398,21 @@ async function* applyPreTurn(
  * `postToolCall` hook that throws is ignored and the original result stands,
  * because the work is already done and discarding it helps no one.
  */
-async function* guardedRun(
+export async function* runGuardedTool(
   call: ToolCallInfo,
   tool: Tool | undefined,
   context: ToolContext,
   hooks: Hooks[],
   names: string[] = [],
 ): AsyncGenerator<LoopEvent, ToolOutput> {
+  if (context.signal.aborted) {
+    return { content: `tool ${call.name} was not run: the turn was cancelled`, isError: true }
+  }
   const veto = yield* applyPreHooks(call, context, hooks, names)
   if (veto) return veto
+  if (context.signal.aborted) {
+    return { content: `tool ${call.name} was not run: the turn was cancelled`, isError: true }
+  }
 
   const output = await runTool(tool, call.name, call.input, context)
   return yield* applyPostHooks(call, output, context, hooks, names)

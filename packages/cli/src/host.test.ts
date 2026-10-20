@@ -57,6 +57,8 @@ describe('createHost', () => {
     expect(ids).toContain('openai-compat')
     expect(ids).toContain('anthropic')
     expect(ids).toContain('gemini')
+    expect(ids).toContain('claude-code')
+    expect(host.registry.provider('claude-code')?.needsKey).toBe(false)
   })
 
   test('every bundled tool comes from a plugin, not from the core', async () => {
@@ -157,4 +159,37 @@ describe('createProvider', () => {
 
     expect(createProvider(host, 'internal-gateway', {}).id).toBe('internal-gateway')
   })
+})
+
+test('provider construction retains the native runner capability', async () => {
+  const host = await createHost({ pluginDirs: [] })
+  host.registry.register({
+    name: 'native-test',
+    providers: [
+      {
+        id: 'native-test',
+        needsKey: false,
+        create: () => ({
+          id: 'native-test',
+          send() {
+            throw new Error('send must not run')
+          },
+          async *run(options) {
+            yield { type: 'turn_start', turn: 1 }
+            return {
+              messages: options.messages,
+              usage: { inputTokens: 0, outputTokens: 0 },
+              turns: 0,
+              stopReason: 'end_turn',
+            }
+          },
+        }),
+      },
+    ],
+  })
+  const provider = createProvider(host, 'native-test', {})
+  expect(provider.run).toBeDefined()
+  const run = provider.run?.({ provider, model: 'native', system: '', tools: [], messages: [] })
+  await run?.next()
+  expect((await run?.next())?.done).toBe(true)
 })

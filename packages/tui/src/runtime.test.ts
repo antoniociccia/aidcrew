@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHost, openJournal } from '@aidcrew/cli'
 import type { TeamEvent } from '@aidcrew/core'
-import { openRuntime, stallNotice, startTeam, toLines } from './runtime.ts'
+import { keep } from '@aidcrew/hooks-guard'
+import { collisionLines, openRuntime, stallNotice, startTeam, toLines } from './runtime.ts'
 import type { Line } from './screens/session.tsx'
 
 const usage = { inputTokens: 1, outputTokens: 1 }
@@ -1590,6 +1591,37 @@ describe('a line about something that is not an agent', () => {
  * `unleashed` three times; the tab already says it, for as long as it is true.
  */
 describe('a note that says what the one before it said', () => {
+  test('explicit native yolo also trusts its harness MCP tools', async () => {
+    const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-native-yolo-')))
+    const runtime = await openRuntime(cwd, cwd)
+    const team = await startTeam({
+      runtime,
+      cwd,
+      env: {},
+      agents: [{ ...agent('coder'), provider: 'claude-code', yolo: true }],
+      skills: [],
+      defaultProvider: 'claude-code',
+      onChange: () => {},
+      onApproval: async () => 'no',
+    })
+    try {
+      expect(runtime.session.trust('coder')).toBe('yolo')
+      const clone = await team.spawn('coder')
+      expect(runtime.session.trust(clone)).toBe('yolo')
+      team.setYolo(clone, false)
+      expect(runtime.session.trust(clone)).toBe('ask')
+      expect(runtime.session.trust('coder')).toBe('yolo')
+      expect(team.setYolo('coder', false)).toBe(true)
+      expect(runtime.session.trust('coder')).toBe('ask')
+      expect(team.setYolo('coder', true)).toBe(true)
+      expect(runtime.session.trust('coder')).toBe('yolo')
+    } finally {
+      await team.shutdown()
+      runtime.close()
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
   test('the live guard follows per-agent yolo and switches back to asking', async () => {
     const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-yolo-')))
     const runtime = await openRuntime(cwd, cwd)
@@ -1686,4 +1718,249 @@ describe('a note that says what the one before it said', () => {
       rmSync(cwd, { recursive: true, force: true })
     }
   })
+})
+
+describe('a change on screen', () => {
+  const ended = (output: Record<string, unknown>): TeamEvent =>
+    ({
+      type: 'agent_event',
+      id: 'coder',
+      event: { type: 'tool_end', id: 't1', name: 'edit', durationMs: 1, output },
+    }) as TeamEvent
+
+  test('becomes one row per line of the change', () => {
+    const lines = toLines(
+      ended({
+        content: 'edited a.ts (1 replacement)',
+        shown: { kind: 'diff', text: '~ a.ts +1 -1\n- 2 two\n+ 2 TWO' },
+      }),
+    )
+
+    expect(lines).toEqual([
+      { agentId: 'coder', kind: 'diff', text: '~ a.ts +1 -1' },
+      { agentId: 'coder', kind: 'diff', text: '- 2 two' },
+      { agentId: 'coder', kind: 'diff', text: '+ 2 TWO' },
+    ])
+  })
+
+  test('a result with nothing to show adds nothing', () => {
+    expect(toLines(ended({ content: 'wrote a.ts (12 bytes)' }))).toEqual([])
+  })
+
+  test('a kind this interface has no painter for is still shown, plainly', () => {
+    const lines = toLines(ended({ content: 'ok', shown: { kind: 'table', text: 'a | b' } }))
+
+    expect(lines).toEqual([{ agentId: 'coder', kind: 'tool', text: 'a | b' }])
+  })
+})
+
+describe('taking a change back while the team works', () => {
+  const model = () =>
+    Bun.serve({
+      port: 0,
+      fetch: () =>
+        new Response(
+          [
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: 'ok' } }] })}\n\n`,
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`,
+            'data: [DONE]\n\n',
+          ].join(''),
+          { headers: { 'Content-Type': 'text/event-stream' } },
+        ),
+    })
+
+  const member = (id: string) => ({
+    id,
+    description: '',
+    systemPrompt: '',
+    provider: 'openai-compat',
+    model: 'test-model',
+  })
+
+  async function withTeam(
+    body: (team: Awaited<ReturnType<typeof startTeam>>, cwd: string) => Promise<void>,
+  ): Promise<void> {
+    const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-revert-')))
+    const served = model()
+    try {
+      const team = await startTeam({
+        runtime: await openRuntime(cwd, cwd),
+        cwd,
+        env: { AIDCREW_BASE_URL: `${served.url.origin}/v1`, AIDCREW_API_KEY: 'test' },
+        agents: [member('coder')],
+        skills: [],
+        defaultProvider: 'openai-compat',
+        onChange: () => {},
+      })
+      try {
+        await body(team, cwd)
+      } finally {
+        await team.shutdown()
+      }
+    } finally {
+      served.stop(true)
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  }
+
+  /** A change made the way the guard records one. */
+  function changed(cwd: string, before: string, after: string): void {
+    writeFileSync(join(cwd, 'a.ts'), before)
+    keep(cwd, 'a.ts', 'coder', Date.now())
+    writeFileSync(join(cwd, 'a.ts'), after)
+  }
+
+  test('lists what can still be taken back', async () => {
+    await withTeam(async (team, cwd) => {
+      changed(cwd, 'one\ntwo\n', 'one\nTWO\n')
+
+      const all = team.changed()
+
+      expect(all).toHaveLength(1)
+      expect(all[0]).toMatchObject({ agentId: 'coder', file: 'a.ts' })
+    })
+  })
+
+  test('puts the file back and tells the agent, with the reason', async () => {
+    await withTeam(async (team, cwd) => {
+      changed(cwd, 'one\ntwo\n', 'one\nTWO\n')
+
+      const said = await team.revert(0, 0, 'the default is missing')
+
+      expect(readFileSync(join(cwd, 'a.ts'), 'utf8')).toBe('one\ntwo\n')
+      expect(said).toContain('a.ts')
+      // Told, not merely reverted: an agent that does not know carries on
+      // from a file it believes it wrote, and writes it again.
+      await team.idle()
+      expect(team.snapshots().find((one) => one.id === 'coder')?.turns).toBe(1)
+    })
+  })
+
+  test('with no reason it still says not to make it again unchanged', async () => {
+    await withTeam(async (team, cwd) => {
+      changed(cwd, 'one\ntwo\n', 'one\nTWO\n')
+
+      await team.revert(0, 0, '')
+      await team.idle()
+
+      const prompts = team.snapshots().find((one) => one.id === 'coder')
+      expect(prompts?.turns).toBe(1)
+    })
+  })
+
+  test('refuses to discard later work without being told twice', async () => {
+    await withTeam(async (team, cwd) => {
+      changed(cwd, 'one\ntwo\n', 'one\nTWO\n')
+      changed(cwd, 'one\nTWO\n', 'one\nTHREE\n')
+
+      const said = await team.revert(0, 0, '')
+
+      expect(said).toContain('later change')
+      expect(readFileSync(join(cwd, 'a.ts'), 'utf8')).toBe('one\nTHREE\n')
+
+      const anyway = await team.revert(0, 0, '', true)
+      expect(anyway).toContain('a.ts')
+      expect(readFileSync(join(cwd, 'a.ts'), 'utf8')).toBe('one\ntwo\n')
+    })
+  })
+})
+
+describe('two agents about to collide', () => {
+  const hit = {
+    file: 'src/rates.ts',
+    mine: 'coder',
+    theirs: 'architect',
+    lines: [10, 12] as [number, number],
+    theirLines: [8, 14] as [number, number],
+    task: 'plan',
+    since: 0,
+  }
+
+  test('is written into both panes, from each side', () => {
+    const lines = collisionLines(hit)
+
+    expect(lines).toEqual([
+      {
+        agentId: 'coder',
+        kind: 'note',
+        text: 'heading for the same lines as architect: src/rates.ts 10-12 against 8-14 in plan',
+      },
+      {
+        agentId: 'architect',
+        kind: 'note',
+        text: 'coder has just changed src/rates.ts 10-12, which overlaps 8-14 in your checkout',
+      },
+    ])
+  })
+})
+
+test('TUI applies a project message allowance while preserving its bound', async () => {
+  const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'aidcrew-fanout-')))
+  const peers = ['coder', 'reviewer', 'tester', 'auditor', 'writer']
+  let next = 0
+  const lines: Line[] = []
+  const model = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const body = (await request.json()) as { model: string }
+      const to = body.model === 'architect' ? peers[next++] : undefined
+      const delta = to
+        ? {
+            tool_calls: [
+              {
+                index: 0,
+                id: `send-${next}`,
+                type: 'function',
+                function: {
+                  name: 'agent_send',
+                  arguments: JSON.stringify({ to, message: 'Check your assigned area.' }),
+                },
+              },
+            ],
+          }
+        : { content: 'done' }
+      const events = [
+        { choices: [{ index: 0, delta }] },
+        { choices: [{ index: 0, delta: {}, finish_reason: to ? 'tool_calls' : 'stop' }] },
+      ]
+      return new Response(
+        `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`,
+        { headers: { 'Content-Type': 'text/event-stream' } },
+      )
+    },
+  })
+  let team: Awaited<ReturnType<typeof startTeam>> | undefined
+  try {
+    team = await startTeam({
+      runtime: await openRuntime(cwd, cwd),
+      cwd,
+      env: { AIDCREW_API_KEY: 'test', AIDCREW_BASE_URL: `${model.url.origin}/v1` },
+      agents: ['architect', ...peers].map((id) => ({
+        id,
+        description: id,
+        systemPrompt: 'Reply briefly.',
+        provider: 'openai-compat',
+        model: id,
+      })),
+      skills: [],
+      defaultProvider: 'openai-compat',
+      maxMessagesPerTurn: 4,
+      onChange: (updated) => {
+        lines.splice(0, lines.length, ...updated)
+      },
+    })
+    await team.tell('architect', 'Delegate the checks.')
+    await team.idle()
+    expect(
+      lines.some((line) => line.agentId === 'architect' && line.text.startsWith('→ auditor:')),
+    ).toBe(true)
+    expect(
+      lines.some((line) => line.agentId === 'architect' && line.text.startsWith('→ writer:')),
+    ).toBe(false)
+    expect(lines.some((line) => line.text.includes('already sent 4 messages this turn'))).toBe(true)
+  } finally {
+    await team?.shutdown()
+    model.stop(true)
+    rmSync(cwd, { recursive: true, force: true })
+  }
 })

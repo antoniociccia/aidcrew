@@ -77,6 +77,69 @@ describe('the responses dialect', () => {
     ])
   })
 
+  test('keeps shared memory and interjections after parallel tool results', () => {
+    const body = buildResponsesBody({
+      ...request,
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', id: 'c1', name: 'read', input: { path: 'a' } },
+            { type: 'tool_use', id: 'c2', name: 'read', input: { path: 'b' } },
+          ],
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'tool_result', toolUseId: 'c1', content: 'first', isError: false },
+            { type: 'tool_result', toolUseId: 'c2', content: 'second', isError: false },
+            { type: 'text', text: 'Shared memory: the files are ready.' },
+            { type: 'text', text: 'Please summarize them now.' },
+          ],
+        },
+      ],
+    })
+
+    expect(body.input.map((item) => item.type)).toEqual([
+      'function_call',
+      'function_call',
+      'function_call_output',
+      'function_call_output',
+      'message',
+    ])
+    expect(body.input.at(-1)).toEqual({
+      type: 'message',
+      role: 'user',
+      content: [
+        { type: 'input_text', text: 'Shared memory: the files are ready.' },
+        { type: 'input_text', text: 'Please summarize them now.' },
+      ],
+    })
+  })
+
+  test('preserves assistant text on either side of a tool call', () => {
+    const body = buildResponsesBody({
+      ...request,
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'Before' },
+            { type: 'tool_use', id: 'c1', name: 'read', input: {} },
+            { type: 'thinking', text: 'Private reasoning is omitted.' },
+            { type: 'text', text: 'After' },
+          ],
+        },
+      ],
+    })
+
+    expect(body.input).toEqual([
+      { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Before' }] },
+      { type: 'function_call', call_id: 'c1', name: 'read', arguments: '{}' },
+      { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'After' }] },
+    ])
+  })
+
   test('turns named events into canonical deltas', async () => {
     const deltas = await collect(
       parseResponsesStream(

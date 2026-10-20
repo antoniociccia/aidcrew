@@ -1,4 +1,13 @@
 export {
+  changeOf,
+  type FileChange,
+  type Hunk,
+  hunkRows,
+  linesOf,
+  rangesOf,
+  render,
+} from './diff.ts'
+export {
   explainMissing,
   repositoryBehind,
   resolveInWorkspace,

@@ -748,3 +748,7 @@ describe('a cost that is only part of the answer', () => {
     expect(costOf(quiet, { input: 0.000003, output: 0.000015, from: 'a test' })).toBeCloseTo(3, 10)
   })
 })
+
+test('unreported usage stays unknown even when placeholder token counters are zero', () => {
+  expect(costOf({ inputTokens: 0, outputTokens: 0 }, undefined, false)).toBeUndefined()
+})

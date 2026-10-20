@@ -1,35 +1,43 @@
 # Written by aidcrew. Safe to edit and to commit — it holds no secrets.
-#
-# An example team, to show the shape. Mixed models are the point: the planner
-# runs on a strong model, the workers on cheaper ones, and the reviewer on a
-# free tier. Change these to whatever you have keys for.
 
 [sources]
-instructions = ["~/.claude/CLAUDE.md", "./CLAUDE.md"]
-agents = ["~/.claude/agents", "./.claude/agents"]
+instructions = ["~/.codex/AGENTS.md"]
+agents = ["~/.claude/agents","./.claude/agents"]
+orchestration = ["./ORCHESTRATE.md"]
 
 [defaults]
-provider = "zen"
-model = "deepseek-v4-flash"
+maxMessagesPerTurn = 12
+provider = "opencode-go"
+model = "muse-spark-1.3-contributor"
 sharedMemory = true
 leader = "architect"
 
 [agents.architect]
-provider = "anthropic"
-model = "claude-opus-5"
+yolo = true
+provider = "claude-code"
+model = "native"
 
 [agents.coder]
-provider = "zen"
-model = "deepseek-v4"
+yolo = true
+provider = "claude-code"
+model = "native"
 
 [agents.reviewer]
-provider = "zen"
-model = "deepseek-v4-flash-free"
+yolo = true
+provider = "opencode-go"
+model = "muse-spark-1.3-contributor"
 
 [agents.tester]
-provider = "zen"
-model = "deepseek-v4-flash"
+yolo = true
+provider = "opencode-go"
+model = "muse-spark-1.3-contributor"
 
 [agents.plugin-writer]
-provider = "zen"
-model = "deepseek-v4"
+yolo = true
+provider = "opencode-go"
+model = "muse-spark-1.3-contributor"
+
+# Go reasoning can pause longer than the default 60-second stream idle limit.
+[plugins.provider-openai-compat.providers.opencode-go]
+firstByteTimeoutMs = 180000
+idleTimeoutMs = 180000

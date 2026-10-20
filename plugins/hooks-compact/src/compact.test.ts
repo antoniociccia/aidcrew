@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Message, Provider, StreamDelta, TurnContext, Usage } from '@aidcrew/core'
-import { DEFAULT_BUDGET, plan } from './decide.ts'
+import { asMessage, DEFAULT_BUDGET, plan } from './decide.ts'
 import { createCompactor, parseCompactWith } from './plugin.ts'
 
 const said = (role: 'user' | 'assistant', text: string): Message => ({
@@ -124,13 +124,52 @@ describe('choosing where to cut', () => {
     expect(decided.compact && decided.keep[0]?.role).toBe('user')
   })
 
-  test('does nothing rather than cutting badly when there is no safe place', () => {
-    const decided = plan([called('t1'), answered('t1'), said('assistant', 'x')], usage(5000), {
-      compactAt: 1000,
-      keep: 1,
-    })
+  test('compacts completed tool rounds within a long autonomous turn', () => {
+    const history = [asMessage('earlier decisions')]
+    for (let i = 0; i < 45; i++) history.push(called(`t${i}`), answered(`t${i}`))
+    const decided = plan(history, usage(5000), { compactAt: 1000, keep: 12 })
+    if (!decided.compact) throw new Error('expected useful compaction')
+    expect(decided.summarise).toHaveLength(79)
+    expect(decided.keep).toEqual(history.slice(79))
+    expect(decided.keep).toHaveLength(12)
+  })
 
-    expect(decided.compact).toBe(false)
+  test('does not pay to summarise just the previous summary again', () => {
+    const history = [
+      asMessage('earlier decisions'),
+      said('user', 'task'),
+      called('pending'),
+      said('assistant', 'waiting'),
+    ]
+    expect(plan(history, usage(5000), { compactAt: 1000, keep: 1 }).compact).toBe(false)
+  })
+
+  test('keeps a whole parallel tool batch when its last result is recent', () => {
+    const batch: Message = {
+      role: 'assistant',
+      content: [
+        { type: 'tool_use', id: 'a', name: 'bash', input: {} },
+        { type: 'tool_use', id: 'b', name: 'bash', input: {} },
+      ],
+    }
+    const history = [
+      said('user', 'task'),
+      called('old'),
+      answered('old'),
+      batch,
+      answered('a'),
+      answered('b'),
+      called('next'),
+      answered('next'),
+    ]
+    const decided = plan(history, usage(5000), { compactAt: 1000, keep: 3 })
+    if (!decided.compact) throw new Error('expected useful compaction')
+    expect(decided.keep).toEqual(history.slice(3))
+  })
+
+  test('does nothing when every available cut would split an unanswered call', () => {
+    const history = [called('pending'), said('assistant', 'waiting'), said('user', 'continue')]
+    expect(plan(history, usage(5000), { compactAt: 1000, keep: 1 }).compact).toBe(false)
   })
 })
 

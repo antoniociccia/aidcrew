@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { defineTool } from '@aidcrew/plugin-sdk'
 import { z } from 'zod'
+import { changeOf, type FileChange, render } from './diff.ts'
 import { explainMissing, resolveInWorkspace } from './paths.ts'
 
 /** Guards against a single read filling the whole context window. */
@@ -79,9 +80,17 @@ export const writeTool = defineTool({
   }),
   async run({ path, content }, { cwd }) {
     const resolved = resolveInWorkspace(cwd, path)
+    // Read before overwriting, so there is something to compare against. The
+    // file is about to be written anyway, and a person who cannot see what a
+    // write replaced cannot tell a correction from a wipe.
+    const before = await previously(resolved)
     await mkdir(dirname(resolved), { recursive: true })
     await writeFile(resolved, content, 'utf8')
-    return { content: `wrote ${path} (${content.length} bytes)` }
+
+    return {
+      content: `wrote ${path} (${content.length} bytes)`,
+      ...showing(before === undefined ? undefined : changeOf(path, before, content)),
+    }
   },
 })
 
@@ -116,7 +125,10 @@ export const editTool = defineTool({
         const replacement = reindented(newString, oldString, loose.indent)
         const updated = text.slice(0, loose.start) + replacement + text.slice(loose.end)
         await writeFile(resolved, updated, 'utf8')
-        return { content: `edited ${path} (1 replacement, matched with different whitespace)` }
+        return {
+          content: `edited ${path} (1 replacement, matched with different whitespace)`,
+          ...showing(changeOf(path, text, updated)),
+        }
       }
       const nearest = nearestLine(text, oldString)
       return {
@@ -146,9 +158,44 @@ export const editTool = defineTool({
       : text.replace(oldString, () => newString)
     await writeFile(resolved, updated, 'utf8')
 
-    return { content: `edited ${path} (${occurrences} replacement${occurrences > 1 ? 's' : ''})` }
+    return {
+      content: `edited ${path} (${occurrences} replacement${occurrences > 1 ? 's' : ''})`,
+      ...showing(changeOf(path, text, updated)),
+    }
   },
 })
+
+/**
+ * The change, dressed for the interface, or nothing to add to the result.
+ *
+ * Spread into the output rather than assigned, so a tool call that changed
+ * nothing carries no key at all: `shown: undefined` and no `shown` mean the
+ * same thing to every reader, and only one of them survives a round trip
+ * through JSON.
+ */
+function showing(change: FileChange | undefined): {
+  shown?: { kind: string; text: string; id: string }
+} {
+  if (change === undefined) return {}
+  return { shown: { kind: 'diff', text: render(change), id: `${change.path}@${Date.now()}` } }
+}
+
+/**
+ * What is in a file now, for comparing against what is about to replace it.
+ *
+ * Nothing for a file that is not there — a creation is all additions — and
+ * nothing for one holding a NUL byte either: a diff of a binary file is a
+ * screenful of replacement characters, which says less than not showing one.
+ */
+async function previously(resolved: string): Promise<string | undefined> {
+  let raw: Buffer
+  try {
+    raw = await readFile(resolved)
+  } catch {
+    return ''
+  }
+  return raw.includes(0) ? undefined : raw.toString('utf8')
+}
 
 function truncate(line: string, max: number): string {
   return line.length > max ? `${line.slice(0, max)}… [truncated]` : line

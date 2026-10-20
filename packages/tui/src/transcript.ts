@@ -1,4 +1,4 @@
-import { fold } from './components/text-width.ts'
+import { cutAt, fold, widthOf } from './components/text-width.ts'
 
 /**
  * Turning what an agent said into rows of a fixed-height pane.
@@ -9,7 +9,7 @@ import { fold } from './components/text-width.ts'
  * whatever was there. Folding first is what makes the arithmetic true.
  */
 
-export type Kind = 'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinking'
+export type Kind = 'ask' | 'say' | 'tool' | 'error' | 'note' | 'thinking' | 'diff'
 
 export type Entry = {
   kind: Kind
@@ -41,9 +41,23 @@ function rowsOf(entry: Entry, width: number): string[] {
   const kept = folded.get(entry)
   if (kept && kept.width === width) return kept.rows
 
-  const rows = fold(entry.text, width)
+  const rows = entry.kind === 'diff' ? [cut(entry.text, width)] : fold(entry.text, width)
   folded.set(entry, { width, rows })
   return rows
+}
+
+/**
+ * One line of a change, cut to the pane.
+ *
+ * Folded, a long line of code would spill onto rows that carry no marker —
+ * and the marker is the whole of how a removal is told from the line above
+ * it. The second half of a deletion painted as context is worse than not
+ * seeing it: the file is right there, and this is a glance, not a reader.
+ */
+function cut(text: string, width: number): string {
+  if (widthOf(text) <= width) return text
+  const [kept] = cutAt(text, Math.max(1, width - 1))
+  return `${kept}…`
 }
 
 /**

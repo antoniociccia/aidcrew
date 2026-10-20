@@ -19,18 +19,21 @@ import { removeAgent, toTemplate, writeAgent } from './agents-file.ts'
 import { answersFor } from './answers.ts'
 import { isDirectory, projectFiles } from './browse.ts'
 import type { Command } from './commands.ts'
-import { COMMANDS, parseCommand } from './commands.ts'
+import { assertWebCommand, COMMANDS, parseCommand } from './commands.ts'
 import type { SessionNotice } from './components/notice.tsx'
 import { listModels } from './models.ts'
+import { NATIVE_TEXT } from './native-text.ts'
 import type { Notice } from './notices.ts'
 import { askingNotice, noticeFor, seeing, total, unseenBy } from './notices.ts'
 import { oneAtATime } from './one-at-a-time.ts'
 import { setAgentModel } from './project-config.ts'
 import type { LiveTeam, Runtime, SourceKind } from './runtime.ts'
 import { readProject, startTeam } from './runtime.ts'
+import { Changes, changeRows } from './screens/changes.tsx'
 import { Keys } from './screens/keys.tsx'
 import { Notices } from './screens/notices.tsx'
 import { Opening } from './screens/opening.tsx'
+import { Search } from './screens/search.tsx'
 import type { Line, Pending } from './screens/session.tsx'
 import { Session } from './screens/session.tsx'
 import { Settings } from './screens/settings.tsx'
@@ -56,6 +59,7 @@ import type { WebSession } from './web-session.ts'
 
 type Screen =
   | { at: 'loading' }
+  | { at: 'search'; cwd: string; agent: string; query: string }
   /** The guided tour, shown after a first run and reachable with /tour. */
   | { at: 'tour'; cwd: string }
   | { at: 'workspaces' }
@@ -66,6 +70,7 @@ type Screen =
   | { at: 'notices'; cwd: string }
   | { at: 'keys'; cwd: string; because?: string }
   | { at: 'tasks'; cwd: string }
+  | { at: 'changes'; cwd: string }
 
 export type AppProps = {
   runtime: Runtime
@@ -76,6 +81,7 @@ export type AppProps = {
   webAccessFile?: string
   /** Where to start, when the command line named a directory. */
   initialCwd?: string
+  attachNative?(cwd: string, agentId: string): Promise<void>
 }
 
 /**
@@ -104,7 +110,15 @@ Then ask me what the plugin should do, unless I have already said. Write a
 failing test first, then the plugin, then run bun test and bunx tsc --noEmit
 and make them pass.`
 
-export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppProps) {
+export function App({
+  runtime,
+  home,
+  env,
+  initialCwd,
+  web,
+  webAccessFile,
+  attachNative,
+}: AppProps) {
   const [themeName, setThemeName] = useState(runtime.store.get('theme'))
   const [fill, setFill] = useState(runtime.store.get('theme.fill'))
   const themes = loadThemes(home)
@@ -113,7 +127,8 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
   // suggests, so somebody who has only ever chosen a palette keeps what they
   // chose.
   const theme = themeNamed(themes, themeName, fill as never)
-  const { exit } = useApp()
+  const { exit, suspendTerminal, waitUntilRenderFlush } = useApp()
+  const [nativeAttached, setNativeAttached] = useState(false)
   const [screen, setScreen] = useState<Screen>({ at: 'loading' })
   const [agents, setAgents] = useState<AgentDef[]>([])
   const [snapshots, setSnapshots] = useState<AgentSnapshot[]>([])
@@ -274,6 +289,28 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
     if (!team) return
 
     switch (command.at) {
+      case 'native': {
+        const agent = team.snapshots().find((one) => one.id === recipient)
+        if (!agent || !attachNative) throw new Error(NATIVE_TEXT.unsupported)
+        setNativeAttached(true)
+        try {
+          await waitUntilRenderFlush()
+          await suspendTerminal(() => attachNative(agent.workspace, agent.id))
+        } finally {
+          setNativeAttached(false)
+        }
+        return
+      }
+
+      case 'search':
+        setScreen({
+          at: 'search',
+          cwd: currentWorkspace.current,
+          agent: recipient,
+          query: command.query,
+        })
+        return
+
       case 'help':
         for (const entry of COMMANDS) {
           say(recipient, `/${entry.name} ${entry.args}`.padEnd(26) + entry.what)
@@ -506,13 +543,14 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
       return
     }
 
-    await enterSession(cwd, project.agents, project.config)
+    await enterSession(cwd, project.agents, project.config, project.skills)
   }
 
   async function enterSession(
     cwd: string,
     members: AgentDef[],
     config: WorkspaceConfig,
+    skills: Parameters<typeof startTeam>[0]['skills'],
   ): Promise<void> {
     // Declared before it is built, because `onChange` below runs before this
     // assignment does: startTeam spawns the agents, spawning emits events, and
@@ -534,6 +572,9 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
       // Otherwise first launch used defaults and switching projects used the old project's rules.
       orchestration: config.sources.orchestration,
       ...(config.leader ? { leader: config.leader } : {}),
+      ...(config.maxMessagesPerTurn !== undefined
+        ? { maxMessagesPerTurn: config.maxMessagesPerTurn }
+        : {}),
       ...(config.toolCallsPerTurn ? { toolCallsPerTurn: config.toolCallsPerTurn } : {}),
       ...(config.check ? { check: config.check } : {}),
       ...(config.mergeOnDone !== undefined ? { mergeOnDone: config.mergeOnDone } : {}),
@@ -544,7 +585,7 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
       defaultProvider:
         env.AIDCREW_PROVIDER ?? config.defaults.provider ?? defaults.provider ?? 'zen',
       prices: config.prices,
-      skills: [],
+      skills,
       sharedMemory: config.sharedMemory,
       onChange: (nextLines, nextSnapshots) => {
         setLines(nextLines)
@@ -693,7 +734,7 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
     setLayout(remembered)
     setOrder(remembered.order)
     setSharedNotes(project.config.sharedMemory)
-    await enterSession(cwd, project.agents, project.config)
+    await enterSession(cwd, project.agents, project.config, project.skills)
     // The team exists; now what a team is for. A first run used to end at a
     // cursor, with nothing having said what happens when two agents want the
     // same file or where the work goes.
@@ -871,6 +912,7 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
             return
           }
           case 'command':
+            assertWebCommand(action.text)
             await run(action.text, action.agent)
             return
           case 'cancel':
@@ -946,6 +988,8 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
   }, [])
 
   const wrap = (content: React.ReactNode) => <ThemeProvider value={theme}>{content}</ThemeProvider>
+
+  if (nativeAttached) return wrap(<Text>{NATIVE_TEXT.attached}</Text>)
 
   if (screen.at === 'loading') {
     return wrap(<Opening />)
@@ -1094,6 +1138,18 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
     )
   }
 
+  if (screen.at === 'search') {
+    return wrap(
+      <Search
+        lines={lines}
+        agent={screen.agent}
+        query={screen.query}
+        hidden={hidden}
+        onClose={() => setScreen({ at: 'session', cwd: screen.cwd })}
+      />,
+    )
+  }
+
   if (screen.at === 'keys') {
     return wrap(
       <Keys
@@ -1115,6 +1171,19 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
           setNotices((held) => seeing(held, agentId))
           setScreen({ at: 'session', cwd: screen.cwd })
         }}
+        onClose={() => setScreen({ at: 'session', cwd: screen.cwd })}
+      />,
+    )
+  }
+
+  if (screen.at === 'changes') {
+    return wrap(
+      <Changes
+        changes={changeRows(team?.changed() ?? [])}
+        onRevert={async (change, reason, anyway) =>
+          (await team?.revert(change.at, change.hunk, reason, anyway)) ??
+          'there is no team running to take anything back from'
+        }
         onClose={() => setScreen({ at: 'session', cwd: screen.cwd })}
       />,
     )
@@ -1247,6 +1316,9 @@ export function App({ runtime, home, env, initialCwd, web, webAccessFile }: AppP
       onOpenNotices={() => setScreen({ at: 'notices', cwd: screen.cwd })}
       onOpenKeys={(because) =>
         setScreen({ at: 'keys', cwd: screen.cwd, ...(because ? { because } : {}) })
+      }
+      onOpenChanges={() =>
+        setScreen({ at: 'changes', cwd: screen.at === 'session' ? screen.cwd : '' })
       }
       onOpenTasks={() => {
         void refreshTasks(screen.at === 'session' ? screen.cwd : '')

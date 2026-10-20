@@ -33,6 +33,7 @@ export type AgentSnapshot = {
   activity: number[]
   /** Whether this agent acts without asking. Shown, because it is not the default. */
   yolo: boolean
+  permissionOwner?: 'provider'
   /**
    * How many commits this agent's copy of the repository is behind.
    *
@@ -218,7 +219,14 @@ export type HostOptions = {
    * is the agent's own worktree rather than wherever the harness was started.
    */
   providerFor(agent: AgentDef, cwd: string): Provider
+  /** Releases agent-owned resources after its last turn settles and before its worktree goes. */
+  onAgentRemoved?(agentId: string, cwd: string): void | Promise<void>
+  permissionOwnerFor?(agent: AgentDef): 'provider' | undefined
+  /** Resets persistent execution state when history or provider settings change. */
+  onAgentReset?(agentId: string, cwd: string): void
   tools: Tool[]
+  /** Host-selected shared capabilities, available alongside each agent tool list. */
+  commonTools?: readonly string[]
   limits: Limits
   /** Give each agent its own git worktree. Off in tests and in plain directories. */
   isolate: boolean
@@ -630,6 +638,11 @@ export class InProcessHost {
   setYolo(id: string, on: boolean): boolean {
     const agent = this.#agents.get(id)
     if (!agent) return false
+    if (agent.yolo !== on && agent.permissionOwner === 'provider') {
+      if (agent.busy())
+        throw new Error('Stop this provider’s current turn before changing its permission mode.')
+      this.#options.onAgentReset?.(id, agent.snapshot().workspace)
+    }
     agent.yolo = on
     this.#options.onEvent({ type: 'agent_status', id, status: agent.snapshot().status })
     return true
@@ -652,6 +665,13 @@ export class InProcessHost {
     const agent = this.#agents.get(id)
     if (!agent) return false
 
+    const changed =
+      (to.model !== undefined && to.model !== agent.definition.model) ||
+      (to.provider !== undefined && to.provider !== agent.definition.provider)
+    if (changed && agent.permissionOwner === 'provider' && agent.busy()) {
+      throw new Error('Stop this provider’s current turn before changing its model or provider.')
+    }
+    if (changed) this.#options.onAgentReset?.(id, agent.snapshot().workspace)
     agent.retarget(to)
     this.#options.onEvent({ type: 'agent_status', id, status: agent.snapshot().status })
     return true
@@ -689,6 +709,7 @@ export class InProcessHost {
     agent.cancel()
     agent.stop()
     await agent.settled()
+    await this.#options.onAgentRemoved?.(id, agent.snapshot().workspace)
 
     this.#agents.delete(id)
     // Only when nobody else is on that task: removing the checkout out from
@@ -786,6 +807,7 @@ export class InProcessHost {
     const agent = this.#agents.get(id)
     if (!agent || agent.busy()) return false
     this.#settle(id)
+    this.#options.onAgentReset?.(id, agent.snapshot().workspace)
     return agent.forget()
   }
 
@@ -1333,6 +1355,10 @@ class LiveAgent {
     return this.#def.id
   }
 
+  get permissionOwner(): 'provider' | undefined {
+    return this.#host.internals.options.permissionOwnerFor?.(this.#def)
+  }
+
   set yolo(on: boolean) {
     this.#yolo = on
   }
@@ -1372,7 +1398,8 @@ class LiveAgent {
       activity: [...this.#activity],
       workspace: this.#path,
       isolated: this.#isolated,
-      yolo: this.#yolo,
+      yolo: this.yolo,
+      ...(this.permissionOwner ? { permissionOwner: this.permissionOwner } : {}),
       ...(this.#since !== undefined ? { since: this.#since } : {}),
       role: roleOf(this.#def),
       task: taskOf(this.#def),
@@ -1498,6 +1525,7 @@ class LiveAgent {
     this.#running = running
 
     const run = runAgentLoop({
+      yolo: this.yolo,
       signal: running.signal,
       provider: options.providerFor(this.#def, this.#path),
       model: this.#def.model ?? 'default',
@@ -1742,7 +1770,7 @@ class LiveAgent {
   /** One changed-strategy recovery; cancellation and new guidance always win. */
   #recover(message: AgentMessage, reason: string): boolean {
     if (
-      !this.#yolo ||
+      !this.yolo ||
       this.#cancelled ||
       this.stopped() ||
       !this.#host.internals.governor.allowTurn(this.#def.id, 'agent').ok ||
@@ -2030,7 +2058,10 @@ Inspect the evidence already in this conversation. State what failed, choose a m
   #toolsFor(base: Tool[], incoming: AgentMessage): Tool[] {
     this.#origin = incoming.origin
     const allowed = this.#def.tools
-    const usable = allowed ? base.filter((tool) => allowed.includes(tool.name)) : base
+    const common = this.#host.internals.options.commonTools ?? []
+    const usable = allowed
+      ? base.filter((tool) => allowed.includes(tool.name) || common.includes(tool.name))
+      : base
 
     return [
       ...usable,

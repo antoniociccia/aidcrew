@@ -2,7 +2,7 @@
 import { homedir } from 'node:os'
 import type { AgentDef, Hooks, LoopResult, Message, Tool } from '@aidcrew/core'
 import { runAgentLoop } from '@aidcrew/core'
-import { createSkillsPlugin, renderSkillIndex } from '@aidcrew/tool-skills'
+import { createSkillsPlugin } from '@aidcrew/tool-skills'
 import type { CliArgs } from './args.ts'
 import { parseCliArgs, USAGE, UsageError } from './args.ts'
 import type { Config } from './config.ts'
@@ -10,6 +10,8 @@ import { ConfigError, loadConfig, providerOptions } from './config.ts'
 import { keyForProvider } from './credentials.ts'
 import type { Host } from './host.ts'
 import { createHost, createProvider, ProviderNotFoundError } from './host.ts'
+import type { NativeClaudeOptions } from './native-claude.ts'
+import { NativeClaudeError, runNativeClaude } from './native-claude.ts'
 import { buildSystemPrompt } from './prompt.ts'
 import { createRenderer } from './render.ts'
 import { ConfigUsageError, runConfig } from './run-config.ts'
@@ -36,6 +38,7 @@ export type MainIo = {
 }
 
 export type MainOptions = {
+  nativeClaude?: (options: NativeClaudeOptions) => Promise<number>
   /** Overrides where plugins are searched. Used by the tests. */
   pluginDirs?: string[]
   /** Overrides the home directory. Used by the tests. */
@@ -59,6 +62,9 @@ export async function main(
   const options = withHome(env, given)
   try {
     const args = parseCliArgs(argv)
+    if (args.command === 'claude') {
+      return await (given.nativeClaude ?? runNativeClaude)({ args: args.rest, cwd: args.cwd, env })
+    }
     if (args.help) {
       io.write(`${USAGE}\n`)
       return 0
@@ -134,6 +140,7 @@ export async function main(
     // Usage, configuration and provider problems are the user's to fix and
     // need no stack trace; anything else is a bug and gets one.
     if (
+      error instanceof NativeClaudeError ||
       error instanceof UsageError ||
       error instanceof ConfigError ||
       error instanceof ProviderNotFoundError ||
@@ -322,12 +329,9 @@ async function prepare(
     io.writeError(`source not loaded (${failure.path}): ${failure.reason}\n`)
   }
 
-  // Registered after loading, because it serves the skills actually found on
-  // this machine — and not at all when there are none: a tool the model can
-  // never usefully call still costs tokens in every request of every turn.
-  if (sources.skills.length > 0) {
-    host.registry.register(createSkillsPlugin(sources.skills))
-  }
+  // Local skills override the bundled catalog; the plugin publishes its index
+  // through the instruction hook only to agents that can call the skill tool.
+  host.registry.register(createSkillsPlugin(sources.skills))
 
   return {
     host,
@@ -341,14 +345,13 @@ async function prepare(
     ...(store ? { store } : {}),
     provider: createProvider(host, config.providerId, {
       ...resolveKey(config.providerId, env, store),
-      ...providerOptions(config.providerId, env, store),
+      ...providerOptions(config.providerId, env, store, settings.plugins),
     }),
     model: config.model,
     system: buildSystemPrompt({
       cwd: args.cwd,
       platform: process.platform,
       instructions: sources.instructions.map((instruction) => instruction.text),
-      skillIndex: renderSkillIndex(sources.skills),
     }),
     tools: host.registry.tools(),
     hooks: host.registry

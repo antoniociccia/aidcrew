@@ -56,7 +56,7 @@ export type Plan =
 /**
  * Decides whether this turn should shorten the conversation, and what of it.
  *
- * Only whole user-to-assistant exchanges are summarised. Cutting between a
+ * Completed exchanges and tool rounds can be summarised. Cutting between a
  * tool call and its result leaves a call nothing answered, which providers
  * reject outright — and the ones that do not, answer strangely.
  */
@@ -76,8 +76,11 @@ export function plan(messages: Message[], lastUsage: Usage, budget: Budget): Pla
   }
 
   const at = boundaryBefore(messages, messages.length - budget.keep)
-  if (at <= 0) {
-    return { compact: false, because: 'no exchange ends early enough to cut at' }
+  if (at <= 1) {
+    return {
+      compact: false,
+      because: 'no complete exchange can be replaced with a shorter history',
+    }
   }
 
   return { compact: true, summarise: messages.slice(0, at), keep: messages.slice(at) }
@@ -107,9 +110,14 @@ function endsCleanly(messages: Message[], index: number): boolean {
     }
   }
 
-  // Nothing asked for and left unanswered, and the next message starts a turn
-  // rather than continuing one.
-  return calls.size === 0 && messages[index]?.role === 'user'
+  // Autonomous agents may run dozens of tools before another plain user
+  // message arrives. A fully answered tool batch is also a safe boundary:
+  // the summary becomes the user message preceding the retained assistant.
+  // Never keep an orphan result, including one from a parallel batch.
+  const next = messages[index]
+  if (!next || next.content.some((block) => block.type === 'tool_result')) return false
+  const completedTools = messages[index - 1]?.content.some((block) => block.type === 'tool_result')
+  return calls.size === 0 && (next.role === 'user' || completedTools === true)
 }
 
 /** What the summary is asked for, and what it must not leave out. */

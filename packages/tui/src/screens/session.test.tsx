@@ -6,7 +6,7 @@ import { widthOf } from '../components/text-width.ts'
 import { GRAPHITE, GUTTER } from '../theme.ts'
 import { ThemeProvider } from '../theme-context.tsx'
 import type { Pending, SessionProps } from './session.tsx'
-import { askedBefore, Session } from './session.tsx'
+import { askedBefore, Session, transcriptRow } from './session.tsx'
 
 /**
  * The mouse, end to end.
@@ -70,11 +70,14 @@ const press = (column: number, row: number, code = 0, ending = 'M'): string =>
 
 async function mount(
   over: {
+    columns?: number
+    rows?: number
     split?: string[]
     pending?: Pending
     spent?: AgentSnapshot['usage']
     /** An agent turned loose, to see what the tab does about it. */
     loose?: string
+    providerPermissions?: string
     files?: string[]
     extras?: SessionProps['extras']
     /** Commits the worktrees are behind, for the mark that says so. */
@@ -119,8 +122,8 @@ async function mount(
       frames.push(chunk)
       return true
     },
-    columns: COLUMNS,
-    rows: ROWS,
+    columns: over.columns ?? COLUMNS,
+    rows: over.rows ?? ROWS,
     isTTY: true,
   })
 
@@ -133,6 +136,11 @@ async function mount(
     agent('reviewer', over.spent),
   ]
     .map((snapshot) => (snapshot.id === over.loose ? { ...snapshot, yolo: true } : snapshot))
+    .map((snapshot) =>
+      snapshot.id === over.providerPermissions
+        ? { ...snapshot, permissionOwner: 'provider' as const }
+        : snapshot,
+    )
     .map((snapshot) => (over.behind ? { ...snapshot, behind: over.behind } : snapshot))
 
   const app = render(
@@ -142,8 +150,8 @@ async function mount(
         agents={agents}
         lines={over.lines ?? []}
         target={over.target ?? 'coder'}
-        rows={ROWS}
-        columns={COLUMNS}
+        rows={over.rows ?? ROWS}
+        columns={over.columns ?? COLUMNS}
         {...(over.onCancel ? { onCancel: over.onCancel } : {})}
         {...(over.onCopy ? { onCopy: over.onCopy } : {})}
         {...(over.split ? { initialSplit: over.split } : {})}
@@ -1065,5 +1073,90 @@ test('a used shortcut is promoted and highlighted even when ordinary hints do no
       if (value === undefined) delete process.env[key]
       else process.env[key] = value
     }
+  }
+})
+
+describe('painting a change', () => {
+  const row = (text: string) =>
+    transcriptRow({ kind: 'diff', text, first: true }, '#ffffff', GRAPHITE, undefined, false)
+
+  const colours = (text: string) => row(text).segments.map((segment) => segment.color)
+
+  test('an addition is the colour of something that worked', () => {
+    expect(colours('+ 2 TWO')).toContain(GRAPHITE.ok)
+  })
+
+  test('a removal is the colour of something that failed', () => {
+    expect(colours('- 2 two')).toContain(GRAPHITE.bad)
+  })
+
+  test('context is quiet, because it did not change', () => {
+    expect(colours('  1 unchanged')).toContain(GRAPHITE.faint)
+  })
+
+  test('the heading carries the name of the file, in the agent own voice', () => {
+    const painted = row('~ src/rates.ts +2 -1')
+
+    expect(painted.segments.map((segment) => segment.text).join('')).toContain('src/rates.ts')
+    expect(colours('~ src/rates.ts +2 -1')).toContain('#ffffff')
+  })
+})
+
+test('labels native permission ownership and explicit bypass mode', async () => {
+  const ui = await mount({ loose: 'coder', providerPermissions: 'coder' })
+  expect(ui.frame()).toContain('UNLEASHED')
+  expect(ui.frame()).toContain('1 unleashed')
+  ui.unmount()
+  const supervised = await mount({ providerPermissions: 'coder' })
+  expect(supervised.frame()).toContain('native permissions')
+  expect(supervised.frame()).not.toContain('1 unleashed')
+  supervised.unmount()
+})
+
+test('graph and grid commands change local views without sending a model prompt', async () => {
+  const view = await mount({
+    lines: [{ agentId: 'architect', kind: 'note', text: '→ coder: build the graph' }],
+  })
+  try {
+    await view.send('/graph')
+    await view.send('\r')
+    await waitFor(
+      () => printable(view.frames.join('')).includes('Team constellation'),
+      'graph view',
+    )
+    expect(view.sent).toEqual([])
+    expect(printable(view.frames.join(''))).toMatch(/[▶◀▲▼]/)
+    expect(printable(view.frames.join(''))).toContain('Role: coder')
+    expect(printable(view.frames.join(''))).toContain('Provider: unspecified')
+    expect(printable(view.frames.join(''))).toContain('Task: main')
+    await view.send('\t')
+    expect(view.targeted).toContain('reviewer')
+    await view.send('/grid')
+    await view.send('\r')
+    await waitFor(() => printable(view.frames.join('')).includes('Team workspaces'), 'grid view')
+    expect(view.sent).toEqual([])
+  } finally {
+    view.unmount()
+  }
+})
+
+test('bubble graph fits an 80 by 24 terminal with the selected prompt intact', async () => {
+  const view = await mount({ columns: 80, rows: 24 })
+  try {
+    await view.send('/graph')
+    await view.send('\r')
+    await waitFor(
+      () => printable(view.frames.join('')).includes('Team constellation'),
+      'compact bubble graph',
+    )
+    const drawn = view.frames.map(printable).filter((frame) => frame.includes('Team constellation'))
+    expect(drawn.length).toBeGreaterThan(0)
+    expect(drawn.every((frame) => frame.split('\n').length <= 24)).toBe(true)
+    expect(printable(view.frames.join(''))).toContain('Role: coder')
+    await view.send('hello')
+    await view.send('\r')
+    expect(view.sent).toEqual(['hello'])
+  } finally {
+    view.unmount()
   }
 })

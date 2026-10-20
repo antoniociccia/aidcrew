@@ -1,0 +1,16 @@
+export const TEAM_VIEW_TEXT = {
+  graph: 'Team constellation',
+  outgoing: '→ out',
+  incoming: '← in',
+  grid: 'Team workspaces',
+  graphCommand: 'Toggle the live role graph and focused agent transcript.',
+  gridCommand: 'Toggle a balanced grid of live agent workspaces.',
+  hint: '/graph · /grid · Tab focus · Esc transcript',
+  noEdges: 'No recorded handoffs yet.',
+  interactions: 'Recorded interactions',
+  role: 'Role',
+  provider: 'Provider',
+  unspecified: 'unspecified',
+  task: 'Task',
+  latest: 'Latest',
+} as const

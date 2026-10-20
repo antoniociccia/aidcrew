@@ -16,7 +16,7 @@ import { costOf, money } from '@aidcrew/prices'
 /** The models a job is compared against: the two most people would otherwise have used. */
 export const COMPARED_TO = ['claude-sonnet-5', 'gpt-5']
 
-type Spender = { task: string; model: string; usage: Usage }
+type Spender = { task: string; model: string; usage: Usage; reportsUsage?: boolean }
 type PriceFor = (model: string) => Price | undefined
 
 export type JobCost = {
@@ -39,7 +39,7 @@ export function jobCost(agents: Spender[], task: string, priceFor: PriceFor): Jo
   for (const agent of onJob) {
     usage = addUsage(usage, agent.usage)
     if (!models.includes(agent.model)) models.push(agent.model)
-    const cost = costOf(agent.usage, priceFor(agent.model))
+    const cost = costOf(agent.usage, priceFor(agent.model), agent.reportsUsage)
     // One agent without a price makes the total unknowable rather than low:
     // a figure that is quietly a fraction of the truth is the one failure
     // the meter must never have.
@@ -71,6 +71,9 @@ export function jobCostSaid(
   priceFor: PriceFor,
   references = COMPARED_TO,
 ): string | undefined {
+  if (agents.some((agent) => agent.task === task && agent.reportsUsage === false)) {
+    return 'this job: cost and token usage unavailable for one or more agents'
+  }
   const cost = jobCost(agents, task, priceFor)
   if (cost.tokens === 0) return undefined
 

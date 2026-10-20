@@ -42,6 +42,7 @@ export function retrying(
 ): Provider {
   return {
     id: provider.id,
+    ...(provider.run ? { run: provider.run.bind(provider) } : {}),
     async *send(request, signal): AsyncIterable<StreamDelta> {
       for (let attempt = 1; ; attempt++) {
         let started = false

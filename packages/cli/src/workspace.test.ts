@@ -790,3 +790,17 @@ describe('how a job is proved and brought home', () => {
     await expect(loadWorkspaceConfig({ cwd: repo, home })).rejects.toThrow(/mergeOnDone/)
   })
 })
+
+describe('per-project message fan-out', () => {
+  test('accepts a bounded override without changing the default', async () => {
+    expect((await loadWorkspaceConfig({ cwd: repo, home })).maxMessagesPerTurn).toBeUndefined()
+    config(repo, '[defaults]\nmaxMessagesPerTurn = 12\n')
+    expect((await loadWorkspaceConfig({ cwd: repo, home })).maxMessagesPerTurn).toBe(12)
+  })
+  test('rejects invalid or unbounded fan-out limits', async () => {
+    for (const value of ['0', '-1', '1.5', '101', 'true', '"12"']) {
+      config(repo, `[defaults]\nmaxMessagesPerTurn = ${value}\n`)
+      await expect(loadWorkspaceConfig({ cwd: repo, home })).rejects.toThrow('maxMessagesPerTurn')
+    }
+  })
+})
