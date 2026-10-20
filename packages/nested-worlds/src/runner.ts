@@ -41,10 +41,14 @@ export interface RunnerOptions {
 
 type Draft = Omit<WorldEvent, 'seq'>
 
+/** The worlds a run starts from: everything after follows from the seed and the actions. */
+export function hostFor(config: RunConfig): Host {
+  return createHost(generateWorld(config.seed, config.agents))
+}
+
 export function createRunner(opts: RunnerOptions): Runner {
   const runId = opts.runId ?? opts.store.createRun(opts.config)
-  const host = createHost(generateWorld(opts.config.seed, opts.config.agents))
-  return makeRunner(opts.store, runId, opts.config, opts.scheduler, host)
+  return makeRunner(opts.store, runId, opts.config, opts.scheduler, hostFor(opts.config))
 }
 
 /**
