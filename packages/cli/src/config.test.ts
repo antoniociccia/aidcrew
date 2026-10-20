@@ -87,3 +87,42 @@ describe('reasoning settings for the OpenRouter demo', () => {
     ).toThrow('AIDCREW_OPENROUTER_REASONING must be valid JSON')
   })
 })
+
+test('applies project stall limits only to the configured provider', () => {
+  const plugins = {
+    'provider-openai-compat': {
+      providers: { 'opencode-go': { firstByteTimeoutMs: 180_000, idleTimeoutMs: 180_000 } },
+    },
+  }
+  expect(providerOptions('opencode-go', {}, undefined, plugins)).toEqual({
+    firstByteTimeoutMs: 180_000,
+    idleTimeoutMs: 180_000,
+  })
+  expect(providerOptions('zen', {}, undefined, plugins)).toEqual({})
+  expect(providerOptions('claude-code', {}, undefined, plugins)).toEqual({})
+})
+
+test('rejects invalid project stall limits without exposing configuration values', () => {
+  const plugins = {
+    'provider-openai-compat': { providers: { 'opencode-go': { idleTimeoutMs: 'private-value' } } },
+  }
+  expect(() => providerOptions('opencode-go', {}, undefined, plugins)).toThrow(
+    'Invalid project provider stall limits',
+  )
+})
+
+test('bounds project timeouts and rejects arbitrary provider overrides', () => {
+  for (const limits of [
+    { idleTimeoutMs: 0 },
+    { idleTimeoutMs: -1 },
+    { idleTimeoutMs: 1.5 },
+    { idleTimeoutMs: 600001 },
+    { apiKey: 'not-allowed' },
+  ]) {
+    expect(() =>
+      providerOptions('opencode-go', {}, undefined, {
+        'provider-openai-compat': { providers: { 'opencode-go': limits } },
+      }),
+    ).toThrow(ConfigError)
+  }
+})

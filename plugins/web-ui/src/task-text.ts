@@ -1,0 +1,26 @@
+/** English catalog for the task and worktree overview. */
+export const taskText = {
+  empty: 'No task records to display.',
+  activity: {
+    working: 'Agents working',
+    idle: 'No agents working',
+    unassigned: 'No agents assigned',
+  },
+  repository: 'Main task',
+  mainChanges: 'Main-task changes include the repository and its task worktree.',
+  worktree: 'Worktree',
+  checkout: 'Checkout',
+  commit: 'Commit',
+  unknownCommit: 'Unavailable',
+  clean: 'No uncommitted changes',
+  current: 'Up to date with the repository',
+  agents: 'Assigned agents',
+  cost: 'Current agents’ session cost',
+  unknownCost: 'Cost unavailable',
+  partialCost: 'Known cost only; some prices are unavailable',
+  estimatedCost: 'Estimated',
+  activityHelp: 'Agent activity does not indicate whether a task is complete or verified.',
+  changed: (count: number) => `${count} changed ${count === 1 ? 'file' : 'files'}`,
+  behind: (count: number) => `${count} ${count === 1 ? 'commit' : 'commits'} behind`,
+  openAgent: (id: string) => `Open conversation with ${id}`,
+}

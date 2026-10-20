@@ -65,11 +65,38 @@ export function putBackKeys(chunk: string): string {
  * took a while to find.
  */
 export function fixedKeyboard(stdin: NodeJS.ReadStream): NodeJS.ReadStream {
-  if (stdin.isTTY !== true) return stdin
+  return keyboardBridge(stdin).stream
+}
+
+export function keyboardBridge(stdin: NodeJS.ReadStream): {
+  stream: NodeJS.ReadStream
+  pause(): void
+  resume(): void
+  close(): void
+} {
+  if (stdin.isTTY !== true)
+    return { stream: stdin, pause: () => {}, resume: () => {}, close: () => {} }
 
   const out = new PassThrough({ encoding: 'utf8' })
   stdin.setEncoding('utf8')
-  stdin.on('data', (chunk: string) => out.write(putBackKeys(chunk)))
+  const forward = (chunk: string): void => {
+    out.write(putBackKeys(chunk))
+  }
+  let listening = false
+  const resume = (): void => {
+    if (listening) return
+    listening = true
+    stdin.on('data', forward)
+    stdin.resume()
+  }
+  const pause = (): void => {
+    stdin.off('data', forward)
+    stdin.pause()
+    listening = false
+    // Input already delivered belongs to the old screen, never to the child.
+    while (out.read() !== null) {}
+  }
+  resume()
 
   // Everything Ink asks of a stdin, forwarded to the real one. A stream is not
   // a TTY and has none of these: leaving out `ref` alone crashed the whole
@@ -91,5 +118,13 @@ export function fixedKeyboard(stdin: NodeJS.ReadStream): NodeJS.ReadStream {
     return fixed
   }
 
-  return fixed
+  return {
+    stream: fixed,
+    pause,
+    resume,
+    close: () => {
+      pause()
+      out.destroy()
+    },
+  }
 }

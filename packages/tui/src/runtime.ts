@@ -512,6 +512,8 @@ export type TeamOptions = {
   leader?: string
   /** Tool calls one turn may make, when the project says so. */
   toolCallsPerTurn?: number
+  /** Bounded project override for delivered team messages per instruction. */
+  maxMessagesPerTurn?: number
   /** The command a job is proved by, when the project says so. */
   check?: string
   /** Whether a verified job is merged; on unless said otherwise. */
@@ -539,6 +541,13 @@ export type TeamOptions = {
  */
 export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
   const { runtime, cwd, env, agents } = options
+  const providerSettings = (
+    await loadWorkspaceConfig({
+      cwd,
+      home: runtime.home,
+      trusted: trustedClaims(runtime.store, cwd),
+    })
+  ).plugins
 
   // Read once when the session opens rather than per turn: it is a file
   // somebody wrote about how their team works, not a live setting, and a disk
@@ -586,7 +595,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
         apiKey: resolved.apiKey,
         cwd,
         ...(resolved.baseUrl ? { baseUrl: resolved.baseUrl } : {}),
-        ...providerOptions(providerId, env, runtime.store),
+        ...providerOptions(providerId, env, runtime.store, providerSettings),
       })
     } catch {
       // A provider that cannot be built is one summary that does not happen,
@@ -661,12 +670,14 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
   // Trust is per agent, and it is read from the project config rather than
   // from a switch here: it is a decision about this team, and it belongs where
   // the rest of that decision lives.
-  const trusted = new Set(agents.filter((agent) => agent.yolo === true).map((agent) => agent.id))
+  // Read live snapshots so dynamically spawned teammates inherit trusted YOLO.
+  const trustedByHarness = (agentId: string): boolean =>
+    host.list().some((agent) => agent.id === agentId && agent.yolo)
 
   const approval = createApprovalPlugin({
     remembered: new Set(),
     enabled: options.onApproval !== undefined,
-    trusted: (agentId) => trusted.has(agentId),
+    trusted: trustedByHarness,
     ask: options.onApproval ?? (async () => 'no'),
   })
 
@@ -676,7 +687,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
   // Told to the host's guards rather than registered again: registering a
   // second set would mean two of everything, and the headless one refusing
   // what this one is about to ask about.
-  runtime.session.trust = (agentId) => (trusted.has(agentId) ? 'yolo' : 'ask')
+  runtime.session.trust = (agentId) => (trustedByHarness(agentId) ? 'yolo' : 'ask')
   const onApproval = options.onApproval
   if (onApproval) {
     runtime.session.ask = async (request) =>
@@ -810,7 +821,12 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
     host: runtime.host,
     credentials,
     tools: runtime.host.registry.tools(),
-    limits: DEFAULT_LIMITS,
+    limits: {
+      ...DEFAULT_LIMITS,
+      ...(options.maxMessagesPerTurn !== undefined
+        ? { maxMessagesPerTurn: options.maxMessagesPerTurn }
+        : {}),
+    },
     isolate: true,
     defaultProvider: options.defaultProvider,
     ...(options.sharedMemory
@@ -855,7 +871,7 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
         }
       : {}),
     ...(options.onContention ? { onContention: options.onContention } : {}),
-    providerOptions: (id) => providerOptions(id, env, runtime.store),
+    providerOptions: (id) => providerOptions(id, env, runtime.store, providerSettings),
     onEvent: (event) => {
       // A turn ending is when a plan moves; the two-minute timer is the
       // backstop for a session where nothing is happening.
@@ -1006,18 +1022,29 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
    * costs money.
    */
   const priceFor = (model: string) => priceOf(table, model) ?? bundledPriceOf(model)
-  sayJobCost = (task) => jobCostSaid(host.list(), task, priceFor)
+  const reportsUsage = (agentId: string): boolean =>
+    runtime.host.registry.provider(
+      host.list().find((agent) => agent.id === agentId)?.provider ?? options.defaultProvider,
+    )?.reportsUsage !== false
+  sayJobCost = (task) =>
+    jobCostSaid(
+      host.list().map((agent) => ({ ...agent, reportsUsage: reportsUsage(agent.id) })),
+      task,
+      priceFor,
+    )
 
   const costFor = (agentId: string): number | undefined => {
     const agent = host.list().find((one) => one.id === agentId)
     if (!agent) return undefined
-    return costOf(agent.usage, priceFor(agent.model))
+    return costOf(agent.usage, priceFor(agent.model), reportsUsage(agentId))
   }
 
   /** Whether what is shown for an agent is a list price rather than a bill. */
   const estimatedFor = (agentId: string): boolean => {
     const agent = host.list().find((one) => one.id === agentId)
-    return agent !== undefined && isEstimate(agent.usage, priceFor(agent.model))
+    return (
+      agent !== undefined && reportsUsage(agentId) && isEstimate(agent.usage, priceFor(agent.model))
+    )
   }
 
   // What is left of the plan, asked once and refreshed as the session runs:
@@ -1121,7 +1148,10 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
       // What a card was charged and what came off a plan, apart. One team on
       // a subscription and an API key at once is the thing this is for, and a
       // single figure answers neither question it raises.
-      split: () => splitOf(host.list().map((agent) => agent.usage)),
+      split: () =>
+        host.list().some((agent) => !reportsUsage(agent.id))
+          ? {}
+          : splitOf(host.list().map((agent) => agent.usage)),
     },
     sharedNotes: () =>
       Object.fromEntries(
@@ -1318,8 +1348,6 @@ export async function startTeam(options: TeamOptions): Promise<LiveTeam> {
 
     setYolo: (agentId, on) => {
       if (!host.setYolo(agentId, on)) return false
-      if (on) trusted.add(agentId)
-      else trusted.delete(agentId)
       // One word. The sentence explaining what unleashing means was written
       // once per agent, and a team of five turning loose read as five pieces
       // of news that were all the same sentence. The tab already says

@@ -118,7 +118,17 @@ export async function runTeam(
   const priceFor = (model: string) => priceOf(stated, model) ?? bundledPriceOf(model)
   /** The agents as they were when the work stopped; the shutdown empties the host. */
   let agents: AgentSnapshot[] = []
-  const costOf = (task: string) => jobCostSaid(agents, task, priceFor)
+  const costOf = (task: string) =>
+    jobCostSaid(
+      agents.map((agent) => ({
+        ...agent,
+        reportsUsage:
+          session.host.registry.provider(agent.provider ?? session.config.providerId)
+            ?.reportsUsage !== false,
+      })),
+      task,
+      priceFor,
+    )
   /** What the run returns; the JSON at the end carries it too. */
   let code = 0
   const orchestration = await readOrchestration(session.workspace.sources.orchestration)
@@ -145,7 +155,12 @@ export async function runTeam(
     credentials,
     tools: session.host.registry.tools(),
     hooks: session.host.registry.installedHooks().map(({ hooks }) => hooks),
-    limits: DEFAULT_LIMITS,
+    limits: {
+      ...DEFAULT_LIMITS,
+      ...(session.workspace.maxMessagesPerTurn !== undefined
+        ? { maxMessagesPerTurn: session.workspace.maxMessagesPerTurn }
+        : {}),
+    },
     // Without git there is nothing to isolate with; the agents share the
     // directory and the summary says so rather than implying otherwise.
     isolate: true,
@@ -154,7 +169,7 @@ export async function runTeam(
       renderer.handle(event)
     },
     defaultProvider: session.config.providerId,
-    providerOptions: (id) => providerOptions(id, env, session.store),
+    providerOptions: (id) => providerOptions(id, env, session.store, session.workspace.plugins),
   })
 
   const abort = () => void host.shutdown()

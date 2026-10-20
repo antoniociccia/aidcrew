@@ -16,6 +16,10 @@ export type {
   ContentBlock,
   Hooks,
   Loader,
+  LoopEvent,
+  LoopOptions,
+  LoopResult,
+  LoopStopReason,
   Message,
   ModelPrice,
   Plugin,
@@ -44,9 +48,12 @@ export type {
 // its own conversation needs and nobody should write twice.
 export {
   accumulate,
+  applyInstructions,
+  applyPreTurn,
   keepStateOutOfGit,
   ProviderProtocolError,
   ProviderResponseError,
+  runGuardedTool,
 } from '@aidcrew/core'
 export type { ProviderSpec } from './define-plugin.ts'
 export { definePlugin, defineProvider } from './define-plugin.ts'

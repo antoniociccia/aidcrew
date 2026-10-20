@@ -73,7 +73,12 @@ export type PriceTable = Record<string, Price>
  * is free are different facts, and showing the first as the second is how an
  * interface tells a comfortable lie about a bill.
  */
-export function costOf(usage: Usage, price: Price | undefined): number | undefined {
+export function costOf(
+  usage: Usage,
+  price: Price | undefined,
+  reportsUsage = true,
+): number | undefined {
+  if (!reportsUsage) return undefined
   // A provider that reports its own cost is the thing being billed, so its
   // figure is not a better estimate than the table — it is the answer, and the
   // table is not consulted at all. Measured on a recorded turn: the program

@@ -33,6 +33,7 @@ export function withPromptedTools(provider: Provider): Provider {
 
   return {
     id: provider.id,
+    ...(provider.run ? { run: provider.run.bind(provider) } : {}),
 
     async *send(request: CanonicalRequest, signal: AbortSignal): AsyncIterable<StreamDelta> {
       if (request.tools.length === 0) {

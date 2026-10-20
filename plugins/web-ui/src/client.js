@@ -1,4 +1,20 @@
+import { initSettings } from './settings-client.js'
+import { initMemoryGraph } from './memory-graph-client.js'
+import { initOverview } from './overview-client.js'
+import { initTiling } from './tiling-client.js'
+import { initQuickChat } from './quick-chat-client.js'
+import { initActivity } from './activity-client.js'
 'use strict'
+import { agentAvatar } from './agent-avatar.js'
+import { initTeamViews } from './team-graph-client.js'
+import { selectFeed } from './feed.js'
+import { crewPulse } from './crew-pulse.js'
+import { initPalette } from './palette.js'
+import { taskCards } from './tasks.js'
+import { taskText } from './task-text.js'
+import { initNativeTerminal } from './native-client.js'
+import { nativeText } from './native-text.js'
+import { commandText, crewText, feedText, workspaceText } from './ui-text.js'
 const $ = (id) => document.getElementById(id)
 /**
  * Which part of a change a row is. The same four markers as `diffClass` in
@@ -18,7 +34,7 @@ if (location.hash) history.replaceState(null, '', location.pathname)
 if (token) sessionStorage.setItem('aidcrew-token', token)
 let state,
   selected = '',
-  view = 'mission',
+  view = 'overview',
   reasoning = false,
   tab = 'conversation',
   lastFeed = '',
@@ -34,6 +50,9 @@ let cachedState,
   stateTag = '',
   sending = false
 const drafts = new Map()
+let feedQuery = '',
+  feedFilter = 'all',
+  resetFeedPosition = true
 const voice = (id) =>
   palette[Math.max(0, state?.agents.findIndex((a) => a.id === id) ?? 0) % palette.length]
 const money = (n) => (n === undefined ? '—' : `$${n.toFixed(n < 1 ? 4 : 2)}`)
@@ -97,11 +116,13 @@ function perform(action, done) {
     .catch(() => {})
 }
 function choose(id) {
+  if (tab === 'native') { nativeTerminal.close(); tab = 'conversation' }
   drafts.set(selected, $('message').value)
   selected = id
   $('message').value = drafts.get(id) || ''
   lastFeed = ''
   lastRoster = ''
+  resetFeedPosition = true
   render()
 }
 function field(label, name, value = '', type = 'text') {
@@ -109,7 +130,7 @@ function field(label, name, value = '', type = 'text') {
   const input = node(name === 'paths' ? 'textarea' : 'input')
   input.name = name
   input.value = value
-  input.type = type
+  if (input instanceof HTMLInputElement) input.type = type
   input.required = true
   el.append(input)
   return el
@@ -163,6 +184,8 @@ function help() {
       ['J / K', 'Next / previous agent'],
       ['/', 'Focus the composer'],
       ['R', 'Toggle reasoning'],
+      ['F', feedText.searchHelp],
+      ['⌘ / Ctrl + K', commandText.guide],
       ['⌘ / Ctrl + Enter', 'Send message'],
       ['Escape', 'Stop selected agent (outside text fields)'],
       ['?', 'This shortcut guide'],
@@ -183,24 +206,41 @@ function highlight(key, el) {
   }
 }
 function showView(next) {
-  view = next
+  if (tab === 'native') nativeTerminal.close()
+  view = next === 'activity' ? 'overview' : next
   tab = 'conversation'
   lastFeed = ''
+  resetFeedPosition = true
   inspected = undefined
   detailsSignature = ''
   document
     .querySelectorAll('[data-view]')
-    .forEach((el) => el.classList.toggle('active', el.dataset.view === view))
+    .forEach((el) => {
+      el.classList.toggle('active', el.dataset.view === view)
+      if (el.dataset.view === view) el.setAttribute('aria-current', 'page')
+      else el.removeAttribute('aria-current')
+    })
   render()
   if (['memory', 'tasks', 'settings'].includes(view)) inspect()
 }
-for (const el of document.querySelectorAll('[data-view]'))
+for (const el of document.querySelectorAll('[data-view]')) {
+  const label = workspaceText.views[el.dataset.view]
+  el.querySelector('.nav-label').textContent = label
+  el.title = label
+  el.setAttribute('aria-label', label)
+  if (el.dataset.view === view) el.setAttribute('aria-current', 'page')
+  if (['mission', 'graph', 'grid'].includes(el.dataset.view)) el.dataset.teamView = el.dataset.view
   el.onclick = () => showView(el.dataset.view)
+}
+$('help-label').textContent = workspaceText.help
+$('sidebar-toggle').textContent = workspaceText.workspace
 $('conversation-tab').onclick = () => {
+  if (tab === 'native') nativeTerminal.close()
   tab = 'conversation'
   render()
 }
 $('diff-tab').onclick = () => {
+  if (tab === 'native') nativeTerminal.close()
   tab = 'diff'
   render()
   perform({ type: 'diff', agent: selected }, (result) => {
@@ -224,6 +264,7 @@ function confirmMerge() {
 $('thinking').onclick = () => {
   reasoning = !reasoning
   lastFeed = ''
+  resetFeedPosition = true
   render()
 }
 $('stop').onclick = () => perform({ type: 'cancel', agent: selected })
@@ -290,9 +331,11 @@ $('composer').onsubmit = async (e) => {
   }
 }
 document.addEventListener('keydown', (e) => {
+  if (nativePane.contains(document.activeElement)) return
   if ($('modal').open) return
   const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    if (view !== 'mission') return
     e.preventDefault()
     highlight('send', $('send'))
     $('composer').requestSubmit()
@@ -313,26 +356,84 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === '/') {
     e.preventDefault()
+    if (view !== 'mission') showView('mission')
     $('message').focus()
     highlight('/')
+  }
+  if (e.key === 'f' && !$('feed-tools').hidden) {
+    e.preventDefault()
+    $('feed-search').focus()
   }
   if (e.key === 'r') {
     $('thinking').click()
     highlight('r', $('thinking'))
   }
   if (e.key === '?') help()
-  if (e.key === 'Escape' && state?.ready) {
+  if (e.key === 'Escape' && state?.ready && view === 'mission') {
     $('stop').click()
     highlight('stop', $('stop'))
   }
 })
 function avatar(id, label) {
-  const el = node('span', label || id.slice(0, 2).toUpperCase(), 'avatar')
-  el.style.setProperty('--voice', voice(id))
+  const identity = agentAvatar(id, state?.agents.find((agent) => agent.id === id)?.role || id)
+  const el = node('span', undefined, 'avatar')
+  el.style.setProperty('--voice', identity.color)
+  el.title = identity.label
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('viewBox', '0 0 7 7')
+  svg.setAttribute('aria-hidden', 'true')
+  const background = document.createElementNS(svg.namespaceURI, 'rect')
+  for (const [key, value] of Object.entries({width: 7, height: 7, rx: 1.3, fill: identity.background})) background.setAttribute(key, String(value))
+  svg.append(background)
+  for (const cell of identity.cells) {
+    const rect = document.createElementNS(svg.namespaceURI, 'rect')
+    for (const [key, value] of Object.entries({x: cell.x + 1, y: cell.y + 1, width: .85, height: .85, rx: .15, fill: identity.color})) rect.setAttribute(key, String(value))
+    svg.append(rect)
+  }
+  el.append(svg)
+  if (label) { el.setAttribute('aria-label', label); el.append(node('small', label, 'avatar-label')) }
   return el
 }
+const teamSurface = node('section', undefined, 'team-surface')
+teamSurface.id = 'team-surface'
+teamSurface.hidden = true
+$('workspace').before(teamSurface)
+const teamViews = initTeamViews({ host: teamSurface, avatar, choose: (id) => { showView('mission'); choose(id) } })
+const tilingSurface = node('section', undefined, 'tiling-surface')
+tilingSurface.id = 'tiling-surface'
+tilingSurface.hidden = true
+$('workspace').before(tilingSurface)
+const tiling = initTiling({
+  host: tilingSurface,
+  avatar,
+  choose: (id) => { showView('mission'); choose(id) },
+  send: (agent, text) => act({ type: 'send', agent, text }),
+})
+const activitySurface = node('section', undefined, 'activity-surface')
+activitySurface.id = 'activity-surface'
+activitySurface.hidden = true
+$('workspace').before(activitySurface)
+const overviewWorkspace = node('section', undefined, 'session-overview')
+overviewWorkspace.id = 'overview-workspace'
+$('overview-surface').before(overviewWorkspace)
+overviewWorkspace.append($('overview-surface'), activitySurface)
+const activityView = initActivity({ host: activitySurface, avatar, choose: (id) => { showView('mission'); choose(id) } })
+const chatHost = node('aside')
+document.body.append(chatHost)
+const quickChat = initQuickChat({
+  host: chatHost,
+  launcherHost: document.querySelector('.top-actions'),
+  send: (agent, text) => act({ type: 'send', agent, text }),
+  choose: (id) => { showView('mission'); choose(id) },
+})
+const overview = initOverview({
+  host: $('overview-surface'),
+  avatar,
+  choose: (id) => { showView('mission'); choose(id) },
+  showView,
+})
 function renderRoster() {
-  const signature = JSON.stringify([state.agents, selected])
+  const signature = JSON.stringify([state.agents, selected, state.pending?.agentId])
   if (signature === lastRoster) return
   lastRoster = signature
   $('cards').replaceChildren()
@@ -347,8 +448,44 @@ function renderRoster() {
     const top = node('div', undefined, 'card-top')
     top.append(avatar(a.id), node('b', a.id), node('span', a.status, 'card-status'))
     card.append(top, node('div', a.model, 'model'))
+    const reason = crewPulse([a], state.pending?.agentId).attention[0]?.reason
+    if (reason) {
+      const badge = node('span', crewText.reason[reason], 'agent-attention')
+      if (reason === 'behind') badge.title = crewText.behind(a.behind)
+      card.append(badge)
+    }
     $('cards').append(card)
   }
+}
+const pulse = node('div', undefined, 'crew-pulse')
+pulse.id = 'crew-pulse'
+pulse.setAttribute('aria-label', crewText.label)
+$('cards').before(pulse)
+let lastPulse = ''
+function renderPulse() {
+  const summary = crewPulse(state.agents, state.pending?.agentId)
+  const signature = JSON.stringify(summary)
+  if (signature === lastPulse) return
+  lastPulse = signature
+  const attention = button(
+    summary.attention.length ? crewText.attention(summary.attention.length) : crewText.clear,
+    () => {
+      const index = summary.attention.findIndex((item) => item.id === selected)
+      const next = summary.attention[(index + 1) % summary.attention.length]
+      if (!next) return
+      showView('mission')
+      choose(next.id)
+      if (next.reason === 'decision') $('approval').querySelector('button')?.focus()
+      else $('cards').querySelector('[aria-selected="true"]')?.focus()
+    },
+    summary.attention.length ? 'subtle attention-button' : 'subtle',
+  )
+  attention.disabled = !summary.attention.length
+  pulse.replaceChildren(
+    node('span', crewText.working(summary.working), 'pulse-working'),
+    node('span', crewText.queued(summary.queued), 'quiet'),
+    attention,
+  )
 }
 // Render a small Markdown subset with DOM nodes only; model output is never HTML.
 function richText(text) {
@@ -377,47 +514,56 @@ function richText(text) {
 }
 function renderFeed() {
   const all = view === 'activity'
-  const lines = state.lines.filter(
-    (l) => (all || l.agentId === selected) && (reasoning || l.kind !== 'thinking'),
-  )
-  const signature = JSON.stringify([selected, lines])
+  const { groups, total } = selectFeed(state.lines, {
+    agent: all ? undefined : selected,
+    query: feedQuery,
+    filter: feedFilter,
+    reasoning,
+  })
+  const signature = JSON.stringify([selected, view, groups, total, feedQuery, feedFilter])
   if (lastFeed === signature) return
-  lastFeed = signature
   const feed = $('feed'),
-    atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 90,
+    atBottom = resetFeedPosition || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 90,
     previous = feed.scrollTop
+  // Keep the visible window intact when older results roll out of the runtime window.
+  if (!atBottom) {
+    $('feed-latest').textContent = feedText.updates
+    return
+  }
+  lastFeed = signature
+  $('feed-latest').textContent = feedText.latest
   const fragment = document.createDocumentFragment()
-  if (!lines.length) {
+  $('feed-count').textContent = feedText.results(groups.length, total)
+  $('feed-clear').hidden = !feedQuery && feedFilter === 'all'
+  if (!groups.length) {
+    const filtered = feedQuery.trim() || feedFilter !== 'all'
     const empty = node('div', undefined, 'empty')
     empty.append(
       node(
         'strong',
-        state.ready ? 'A blank canvas. A capable crew.' : 'Your session will appear here.',
+        filtered
+          ? feedText.noMatches
+          : state.ready
+            ? 'A blank canvas. A capable crew.'
+            : 'Your session will appear here.',
       ),
       node(
         'p',
-        state.ready
-          ? 'Give an agent a direction below to begin.'
-          : 'Open a project in the terminal. This page reconnects automatically.',
+        filtered
+          ? feedText.tryAgain
+          : state.ready
+            ? 'Give an agent a direction below to begin.'
+            : 'Open a project in the terminal. This page reconnects automatically.',
       ),
     )
     fragment.append(empty)
   }
-  const shown = lines.slice(-400)
-  for (let at = 0; at < shown.length; at++) {
-    const l = shown[at]
+  for (const group of groups) {
+    const l = group[0]
 
-    // A change arrives as one line per row of it. Drawn as separate entries
-    // they would be twelve cards with twelve avatars for one edit, so the run
-    // is gathered back into the single block the terminal draws.
     if (l.kind === 'diff') {
-      const rows = []
+      const rows = group.map((line) => line.text)
       const who = l.agentId
-      while (at < shown.length && shown[at].kind === 'diff' && shown[at].agentId === who) {
-        rows.push(shown[at].text)
-        at++
-      }
-      at--
       const el = node('article', undefined, 'entry diff')
       el.append(avatar(who))
       const content = node('div')
@@ -442,11 +588,144 @@ function renderFeed() {
   }
   feed.replaceChildren(fragment)
   feed.scrollTop = atBottom ? feed.scrollHeight : previous
+  resetFeedPosition = false
+  updateFollow()
 }
+
+function updateFollow() {
+  const feed = $('feed')
+  const live = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 90
+  $('feed-latest').hidden = live
+  $('feed-follow').textContent = live ? feedText.live : feedText.paused
+}
+function filterFeed() {
+  feedQuery = $('feed-search').value
+  feedFilter = $('feed-filter').value
+  resetFeedPosition = true
+  lastFeed = ''
+  render()
+}
+const feedTools = node('div', undefined, 'feed-tools')
+feedTools.id = 'feed-tools'
+const search = node('input')
+search.id = 'feed-search'
+search.type = 'search'
+search.placeholder = feedText.search
+search.setAttribute('aria-label', feedText.searchLabel)
+search.setAttribute('aria-describedby', 'feed-scope')
+search.maxLength = 500
+search.oninput = filterFeed
+const filter = node('select')
+filter.id = 'feed-filter'
+filter.setAttribute('aria-label', feedText.filterLabel)
+for (const [value, label] of Object.entries(feedText.filters)) {
+  const option = node('option', label)
+  option.value = value
+  filter.append(option)
+}
+filter.onchange = filterFeed
+const clear = button(feedText.clear, () => {
+  search.value = ''
+  filter.value = 'all'
+  filterFeed()
+  search.focus()
+})
+clear.id = 'feed-clear'
+clear.hidden = true
+const count = node('span', '', 'quiet small')
+count.id = 'feed-count'
+count.title = feedText.scope
+count.setAttribute('role', 'status')
+feedTools.append(search, filter, clear, count)
+$('feed').before(feedTools)
+const scope = node('small', feedText.scope, 'quiet feed-scope')
+scope.id = 'feed-scope'
+$('feed').before(scope)
+const follow = node('div', undefined, 'feed-follow')
+follow.id = 'feed-navigation'
+const followStatus = node('span', feedText.live, 'quiet small')
+followStatus.id = 'feed-follow'
+const latest = button(feedText.latest, () => {
+  resetFeedPosition = true
+  lastFeed = ''
+  render()
+  $('feed').scrollTop = $('feed').scrollHeight
+  updateFollow()
+  $('feed').focus()
+})
+latest.id = 'feed-latest'
+latest.hidden = true
+follow.append(followStatus, latest)
+$('feed').after(follow)
+$('feed').addEventListener('scroll', updateFollow, { passive: true })
+
+const nativePane = node('section', undefined, 'native-pane')
+nativePane.id = 'native-pane'
+nativePane.hidden = true
+nativePane.addEventListener('keydown', (event) => event.stopPropagation())
+const nativeControls = node('div', undefined, 'native-controls')
+const nativeBody = node('div', undefined, 'native-body')
+nativePane.append(nativeControls, node('p', nativeText.context, 'quiet small'), nativeBody)
+$('details').after(nativePane)
+const nativeTerminal = initNativeTerminal({
+  container: nativeBody, token: () => token, session: () => state?.sessionId,
+  agent: () => selected, onError: toast,
+})
+nativeControls.append(
+  button(nativeText.reconnect, () => nativeTerminal.open()),
+  button(nativeText.stop, () => nativeTerminal.stop()),
+  button(nativeText.detach, () => { nativeTerminal.close(); tab = 'conversation'; render() }),
+)
+const nativeTab = button(nativeText.tab, () => {
+  tab = 'native'
+  render()
+  nativeTerminal.open()
+}, 'tab')
+nativeTab.id = 'native-tab'
+nativeTab.hidden = true
+document.querySelector('.tabs').append(nativeTab)
+
+const commandTrigger = button(commandText.trigger, () => {}, 'subtle')
+commandTrigger.id = 'commands'
+commandTrigger.append(node('kbd', '⌘ K'))
+document.querySelector('.top-actions').prepend(commandTrigger)
+const commandPalette = initPalette({
+  trigger: commandTrigger,
+  getActions: () => [
+    ...Object.entries(commandText.views).map(([id, label]) => ({
+      id: `view:${id}`, label, run: () => showView(id),
+    })),
+    ...(state?.agents || []).map((agent) => ({
+      id: `agent:${agent.id}`,
+      label: commandText.agent(agent.id),
+      description: `${agent.model} · ${agent.status}`,
+      keywords: [agent.role, agent.provider || ''],
+      run: () => { showView('mission'); choose(agent.id) },
+    })),
+    { id: 'compose', label: commandText.compose, run: () => { showView('mission'); $('message').focus() } },
+    { id: 'search', label: commandText.search, run: () => {
+      if (view === 'mission' && !$('feed-tools').hidden) search.focus()
+      else {
+        showView('overview')
+        activitySurface.scrollIntoView({ block: 'start' })
+        activitySurface.querySelector('input')?.focus()
+      }
+    } },
+    { id: 'latest', label: commandText.latest, run: () => {
+      if (view === 'mission' && !$('feed').hidden) latest.click()
+      else {
+        showView('overview')
+        activitySurface.scrollIntoView({ block: 'start' })
+        activitySurface.querySelector('.activity-log-stats button')?.click()
+      }
+    } },
+    { id: 'help', label: commandText.help, run: help },
+  ],
+})
 let pendingId = ''
 function renderApproval() {
   const p = state.pending
-  $('approval').hidden = !p
+  $('approval').hidden = !p || view !== 'mission'
   if (!p || pendingId === p.id) return
   pendingId = p.id
   $('approval').replaceChildren(
@@ -555,6 +834,8 @@ function editDefinition(definition = {}) {
     'Save role',
   )
 }
+const settingsView = initSettings({ node, button, avatar, dialog, field, act, perform, inspect, editModel, editDefinition, toast })
+const memoryView = initMemoryGraph({ toggle: (on) => perform({ type: 'memory', on }, () => inspect()) })
 function renderDetails() {
   if (!['tasks', 'memory', 'settings'].includes(view)) return
   const signature = JSON.stringify([
@@ -562,12 +843,22 @@ function renderDetails() {
     inspected,
     state.memory,
     state.sharedMemory,
-    state.agents.map((a) => [a.id, a.model, a.yolo]),
+    state.agents.map((a) => [a.id, a.model, a.yolo, a.task, a.status, a.provider, a.cost, a.estimated, a.queued, a.permissionOwner]),
     state.plugins,
+    state.themes,
+    state.cwd,
   ])
   if (signature === detailsSignature) return
   detailsSignature = signature
   const el = $('details')
+  if (view === 'memory') {
+    memoryView.render(el, state.memory || inspected?.memory || {}, state.sharedMemory)
+    return
+  }
+  if (view === 'settings') {
+    settingsView.render(el, state, inspected)
+    return
+  }
   el.replaceChildren()
   if (view === 'tasks') {
     el.append(
@@ -595,238 +886,76 @@ function renderDetails() {
         ),
       ),
     )
-    for (const task of inspected?.tasks || []) {
-      const row = node('div', undefined, 'settings-row')
-      row.append(node('pre', JSON.stringify(task, null, 2)))
+    el.append(node('p', taskText.activityHelp, 'quiet small'))
+    for (const task of taskCards(inspected?.tasks || [], state.agents)) {
+      const row = node('article', undefined, 'task-card')
+      const title = node('div', undefined, 'task-card-title')
+      title.append(node('h3', task.name), node('span', taskText.activity[task.activity], 'quiet'))
+      row.append(title, node('p', task.main ? taskText.repository : taskText.worktree, 'quiet small'))
+      const evidence = node('div', undefined, 'task-evidence')
+      evidence.append(
+        node('span', task.changed ? taskText.changed(task.changed) : taskText.clean),
+        node('span', task.behind ? taskText.behind(task.behind) : taskText.current),
+      )
+      const metadata = node('dl')
+      metadata.append(
+        node('dt', taskText.checkout), node('dd', task.path),
+        node('dt', taskText.commit), node('dd', task.head || taskText.unknownCommit),
+        node('dt', taskText.cost), node('dd', money(task.knownCost)),
+      )
+      row.append(evidence, metadata)
+      if (task.main) row.append(node('p', taskText.mainChanges, 'quiet small'))
+      if (task.partialCost) row.append(node('p', taskText.partialCost, 'quiet small'))
+      if (task.estimatedCost) row.append(node('p', taskText.estimatedCost, 'quiet small'))
+      const agents = node('div', undefined, 'task-agents')
+      agents.setAttribute('aria-label', taskText.agents)
+      for (const agent of task.agents) {
+        const link = button(`${agent.id} · ${agent.status} · ${agent.model}`, () => {
+          showView('mission')
+          choose(agent.id)
+        })
+        link.setAttribute('aria-label', taskText.openAgent(agent.id))
+        link.setAttribute('aria-description', `${agent.status} · ${agent.model}`)
+        agents.append(link)
+      }
+      row.append(agents)
       el.append(row)
     }
-    if (!inspected?.tasks?.length) el.append(node('p', 'No task records to display.'))
+    if (!inspected?.tasks?.length) el.append(node('p', taskText.empty))
   }
-  if (view === 'memory') {
-    el.append(
-      node('h3', 'A shared understanding.'),
-      node(
-        'p',
-        state.sharedMemory
-          ? 'Shared memory is enabled. Notes below come from the session journal.'
-          : 'Shared memory is paused. Saved notes are retained.',
-      ),
-      button(state.sharedMemory ? 'Pause shared memory' : 'Enable shared memory', () =>
-        perform({ type: 'memory', on: !state.sharedMemory }, () => inspect()),
-      ),
-    )
-    for (const [task, memory] of Object.entries(state.memory || inspected?.memory || {}))
-      el.append(node('h4', task), node('pre', JSON.stringify(memory, null, 2)))
-  }
-  if (view === 'settings') {
-    el.append(node('h3', 'Your team. Your choice of models.'))
-    for (const a of state.agents) {
-      const row = node('div', undefined, 'settings-row')
-      row.append(
-        avatar(a.id),
-        node('strong', a.id),
-        node('span', `${a.provider || ''} / ${a.model}`, 'quiet'),
-      )
-      row.append(button('Model', () => editModel(a)))
-      row.append(
-        button(a.yolo ? 'YOLO on' : 'Ask first', () =>
-          dialog(
-            'Agent autonomy',
-            [
-              node(
-                'p',
-                a.yolo
-                  ? 'Require approval for guarded operations again.'
-                  : 'Allow this agent to execute tools without asking, including irreversible shell commands. This applies to this session.',
-              ),
-            ],
-            () => act({ type: 'yolo', agent: a.id, on: !a.yolo }),
-            'Apply',
-          ),
-        ),
-      )
-      row.append(
-        button('Clear queue', () => perform({ type: 'clearQueue', agent: a.id })),
-        button('Reset history', () =>
-          dialog(
-            'Reset conversation',
-            [
-              node(
-                'p',
-                'Forget this idle agent’s conversation. Stop the agent first if a turn is running.',
-              ),
-            ],
-            () => act({ type: 'forget', agent: a.id }),
-            'Reset',
-          ),
-        ),
-        button(
-          'Remove',
-          () =>
-            dialog(
-              'Remove agent',
-              [node('p', 'The normal harness worktree rules apply. Unmerged work is preserved.')],
-              () => act({ type: 'kill', agent: a.id }),
-              'Remove',
-            ),
-          'subtle danger',
-        ),
-      )
-      el.append(row)
-    }
-    el.append(node('h3', 'Plugins'))
-    for (const p of state.plugins) {
-      const row = node('div', undefined, 'settings-row')
-      row.append(
-        node('strong', p.name),
-        node('span', `${p.version || ''} · ${p.tools.length} tools`, 'quiet'),
-      )
-      el.append(row)
-    }
-    el.append(
-      node('h3', 'Agent definitions'),
-      button('＋ Create a role', () => editDefinition()),
-    )
-    for (const definition of inspected?.definitions || []) {
-      const row = node('div', undefined, 'settings-row')
-      row.append(
-        node('strong', definition.id),
-        button('Edit instructions', () => editDefinition(definition)),
-        button(
-          'Delete definition',
-          () =>
-            dialog(
-              'Delete saved role',
-              [
-                node(
-                  'p',
-                  'This removes the role from the project. Running agents of this role must be removed first.',
-                ),
-              ],
-              () => act({ type: 'removeDefinition', id: definition.id }).then(() => inspect()),
-              'Delete',
-            ),
-          'subtle danger',
-        ),
-      )
-      el.append(row)
-    }
-    el.append(
-      node('h3', 'Provider credentials'),
-      node('p', 'Keys are write-only here and saved by the existing credential store.'),
-      button('Save API key', () =>
-        dialog(
-          'Provider API key',
-          [
-            field(
-              'Credential scope (for example provider:openrouter)',
-              'scope',
-              'provider:openrouter',
-            ),
-            field('API key', 'key', '', 'password'),
-          ],
-          (d) =>
-            act({ type: 'credentials', scope: String(d.get('scope')), key: String(d.get('key')) }),
-          'Save key',
-        ),
-      ),
-    )
-    for (const credential of inspected?.credentials || []) {
-      const row = node('div', undefined, 'settings-row')
-      row.append(
-        node('strong', credential.scope),
-        node('span', credential.hint || 'saved', 'quiet'),
-        button(
-          'Forget key',
-          () =>
-            dialog(
-              'Forget saved credential',
-              [
-                node(
-                  'p',
-                  `Remove ${credential.scope} from the credential store. Existing environment variables are unaffected.`,
-                ),
-              ],
-              () =>
-                act({ type: 'forgetCredential', scope: credential.scope }).then(() => inspect()),
-              'Forget key',
-            ),
-          'subtle danger',
-        ),
-      )
-      el.append(row)
-    }
-    el.append(
-      button('Set default model', () =>
-        dialog(
-          'Default provider and model',
-          [
-            field('Provider', 'provider', inspected?.defaults?.provider || ''),
-            field('Model', 'model', inspected?.defaults?.model || ''),
-          ],
-          async (d) => {
-            await act({ type: 'default', setting: 'provider', value: String(d.get('provider')) })
-            await act({ type: 'default', setting: 'model', value: String(d.get('model')) })
-            await inspect()
-          },
-          'Save defaults',
-        ),
-      ),
-    )
-    el.append(node('h3', 'Project sources'))
-    for (const source of inspected?.sources || [])
-      el.append(
-        button(source.label, () =>
-          dialog(
-            `Sources: ${source.label}`,
-            [field('Paths (one per line)', 'paths', source.paths.join('\n'))],
-            (d) =>
-              act({
-                type: 'sources',
-                kind: source.label,
-                paths: String(d.get('paths')).split('\n').filter(Boolean),
-              }).then(() => inspect()),
-            'Save paths',
-          ),
-        ),
-      )
-    el.append(node('h3', 'Terminal appearance'))
-    el.append(
-      button('Hairline', () => perform({ type: 'appearance', fill: 'hairline' })),
-      button('Solid', () => perform({ type: 'appearance', fill: 'solid' })),
-      button('Hide terminal paths', () => perform({ type: 'appearance', hidePaths: true })),
-      button('Show terminal paths', () => perform({ type: 'appearance', hidePaths: false })),
-    )
-    for (const name of state.themes)
-      el.append(
-        button(name, () => perform({ type: 'theme', name }, () => toast('Terminal theme updated'))),
-      )
-    el.append(
-      node(
-        'p',
-        'The composer accepts the same slash commands as the terminal. Provider credentials remain in the harness credential store.',
-      ),
-    )
-  }
+
 }
 function render() {
   if (!state) return
+  quickChat.render(state, connected)
   if (!state.agents.some((a) => a.id === selected)) {
+    if (tab === 'native') {
+      nativeTerminal.close()
+      tab = 'conversation'
+    }
     drafts.set(selected, $('message').value)
-    selected = state.target || state.agents[0]?.id || ''
+    selected = quickChat.contact() || state.target || state.agents[0]?.id || ''
     $('message').value = drafts.get(selected) || ''
   }
   $('project').textContent = state.cwd.split('/').filter(Boolean).pop() || 'Workspace'
+  $('breadcrumb-project').textContent = $('project').textContent
   $('path').textContent = state.cwd
   $('cost').textContent = money(state.total)
-  $('cost-note').textContent = state.agents.some((a) => a.estimated)
+  $('cost-note').textContent = state.agents.some((a) => a.provider === 'claude-code')
+    ? nativeText.unreportedUsage
+    : state.agents.some((a) => a.estimated)
     ? 'Includes list-price estimates'
     : 'Reported usage'
   $('recipient').textContent = selected || 'your crew'
+  $('message').placeholder = workspaceText.placeholder(selected || 'your crew')
+  $('send').textContent = workspaceText.message(selected || 'your crew')
   const agent = state.agents.find((a) => a.id === selected)
+  if (tab === 'native' && agent?.provider !== 'claude-code') {
+    nativeTerminal.close()
+    tab = 'conversation'
+  }
   $('queue-label').textContent = agent?.queued ? `${agent.queued} waiting` : ''
-  $('footer-status').textContent =
-    `${state.agents.length} agents · ${state.outstanding} handoffs outstanding · memory ${state.sharedMemory ? 'on' : 'off'}`
+  $('footer-status').textContent = workspaceText.footer(state.agents.length, state.sharedMemory)
   $('live').textContent = connected
     ? state.ready
       ? 'LIVE SESSION'
@@ -834,23 +963,42 @@ function render() {
     : 'DISCONNECTED'
   $('send').disabled = sending || !connected || !state.ready
   $('stop').disabled = !connected || !agent
-  const names = {
-    mission: 'Mission control',
-    activity: 'Activity',
-    tasks: 'Tasks & worktrees',
-    memory: 'Shared memory',
-    settings: 'Team & plugins',
-  }
+  const names = workspaceText.views
+  document.querySelector('main').dataset.view = view
   $('view-label').textContent = names[view]
-  $('heading').textContent = view === 'mission' ? 'Your crew, in motion.' : names[view]
+  $('heading').textContent = names[view]
+  $('subheading').textContent = workspaceText.descriptions[view]
   $('thinking').setAttribute('aria-pressed', String(reasoning))
   $('conversation-tab').classList.toggle('active', tab === 'conversation')
   $('diff-tab').classList.toggle('active', tab === 'diff')
-  const detail = ['tasks', 'memory', 'settings'].includes(view) || tab === 'diff'
+  nativeTab.hidden = agent?.provider !== 'claude-code'
+  nativeTab.classList.toggle('active', tab === 'native')
+  nativePane.hidden = tab !== 'native'
+  document.querySelector('.panel-actions').hidden = tab === 'native'
+  const detail = ['tasks', 'memory', 'settings'].includes(view) || tab === 'diff' || tab === 'native'
   $('feed').hidden = detail
-  $('details').hidden = !detail
+  $('feed-tools').hidden = detail
+  $('feed-scope').hidden = detail
+  $('feed-navigation').hidden = detail
+  $('details').hidden = !detail || tab === 'native'
+  const teamMode = ['graph', 'grid'].includes(view)
+  const overviewMode = view === 'overview'
+  overviewWorkspace.hidden = !overviewMode
+  $('overview-surface').hidden = !overviewMode
+  $('workspace').hidden = teamMode || overviewMode
+  $('cards').hidden = view !== 'mission'
+  $('composer').hidden = view !== 'mission'
+  document.querySelector('.panel-toolbar').hidden = view !== 'mission'
+  $('approval').hidden = view !== 'mission' || !state.pending
+  pulse.hidden = overviewMode
+  teamViews.render(state, view === 'graph' ? 'graph' : 'mission', selected)
+  tiling.render(state, view === 'grid', selected)
+  activityView.render(state, overviewMode)
+  if (overviewMode) overview.render(state)
   renderRoster()
+  renderPulse()
   renderApproval()
+  if (overviewMode) return
   if (!detail) renderFeed()
   else if (tab !== 'diff') renderDetails()
 }
@@ -862,6 +1010,9 @@ async function poll() {
     }
     const next = await api('/api/state')
     if (state && next.sessionId !== state.sessionId) {
+      nativeTerminal.close()
+      if (tab === 'native') tab = 'conversation'
+      commandPalette.close()
       $('modal').close()
       modalSubmit = undefined
       drafts.clear()
@@ -870,6 +1021,11 @@ async function poll() {
       inspected = undefined
       lastFeed = ''
       lastRoster = ''
+      feedQuery = ''
+      feedFilter = 'all'
+      search.value = ''
+      filter.value = 'all'
+      resetFeedPosition = true
       detailsSignature = ''
       toast('Workspace changed. Your browser is now connected to the new session.')
     }
@@ -882,6 +1038,7 @@ async function poll() {
       void inspect()
   } catch (e) {
     connected = false
+    if (state) quickChat.render(state, false)
     $('connection').textContent = 'Disconnected · retrying'
     $('connection-dot').className = ''
     $('live').textContent = 'DISCONNECTED'

@@ -89,3 +89,16 @@ describe('what a job cost', () => {
     expect(said).not.toContain('¢')
   })
 })
+
+test('does not report zero or compare partial token totals when usage is unreported', () => {
+  const silent = {
+    id: 'native',
+    task: 'main',
+    model: 'claude-sonnet-5',
+    reportsUsage: false,
+    usage: { inputTokens: 0, outputTokens: 0 },
+  }
+  expect(jobCost([silent], 'main', priceFor).dollars).toBeUndefined()
+  expect(jobCostSaid([...agents, silent], 'main', priceFor)).toContain('usage unavailable')
+  expect(jobCostSaid([...agents, silent], 'main', priceFor)).not.toContain('$')
+})

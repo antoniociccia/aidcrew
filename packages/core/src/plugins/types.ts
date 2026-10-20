@@ -37,6 +37,10 @@ export type ProviderDefinition = {
    * not have. Absent means no, because a plain endpoint remembers nothing.
    */
   keepsOwnHistory?: boolean
+  /** False when token counters are unavailable, so placeholder zeroes cannot be priced as free. */
+  reportsUsage?: boolean
+  /** Provider-owned built-in tools use its own permissions, outside the harness tool policy. */
+  permissionOwner?: 'provider'
   /**
    * Which models this provider will answer for, when it can say.
    *
