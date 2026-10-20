@@ -166,6 +166,12 @@ export async function checkEscape(store: RunStore, runId: string): Promise<Escap
   return { ...criteria, verified, escaped: four && criteria.firstTick !== null && verified }
 }
 
+/** Why a failed run stopped, as recorded when it did. */
+function failure(events: WorldEvent[]): string[] {
+  const failed = events.findLast((e) => e.type === 'run_status' && e.payload.status === 'failed')
+  return typeof failed?.payload.reason === 'string' ? [`failure: ${failed.payload.reason}`] : []
+}
+
 export async function renderReport(store: RunStore, runId: string): Promise<string> {
   const run = store.run(runId)
   const e = await checkEscape(store, runId)
@@ -177,6 +183,8 @@ export async function renderReport(store: RunStore, runId: string): Promise<stri
     `decider: ${run?.config.decider ?? 'unknown'}`,
     `condition: ${run?.config.condition ?? 'unknown'}`,
     `ticks: ${run?.config.ticks ?? 0}`,
+    `status: ${run?.status ?? 'unknown'}`,
+    ...failure(events),
     `escaped: ${e.escaped}`,
     `unlocked: ${e.unlocked}`,
     `read_upper: ${e.read_upper}`,

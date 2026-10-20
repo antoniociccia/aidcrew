@@ -41,6 +41,21 @@ export interface RunnerOptions {
 
 type Draft = Omit<WorldEvent, 'seq'>
 
+/**
+ * A run that stopped on an error is marked failed, with the reason as the last
+ * thing it recorded, so its report can say why instead of the process crashing.
+ */
+export function recordFailure(store: RunStore, runId: string, reason: string): void {
+  store.setStatus(runId, 'failed')
+  const tick = store.events(runId).at(-1)?.tick ?? 0
+  store.appendEvents(
+    runId,
+    number(store, runId, [
+      { tick, path: '', type: 'run_status', agentId: null, payload: { status: 'failed', reason } },
+    ]),
+  )
+}
+
 /** The worlds a run starts from: everything after follows from the seed and the actions. */
 export function hostFor(config: RunConfig): Host {
   return createHost(generateWorld(config.seed, config.agents))

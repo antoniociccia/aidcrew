@@ -19,6 +19,8 @@ function deciderFor(config: RunConfig, store: RunStore): Decider {
     case 'replay':
       if (config.replayOf === undefined) throw new Error('--decider replay needs --replay-of RUNID')
       return new ReplayDecider(store, config.replayOf)
+    case 'aidcrew':
+      throw new Error('--decider aidcrew is not wired yet')
     case 'openrouter':
       throw new Error(
         '--decider openrouter comes in phase 2; use fake, random, heuristic or oracle',

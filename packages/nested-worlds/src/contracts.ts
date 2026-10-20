@@ -225,13 +225,22 @@ export interface Scheduler {
   ): Promise<{ outputs: Map<AgentId, DecisionOutput>; exhausted: boolean }>
   usage(): BudgetUsage
 }
-export type DeciderKind = 'fake' | 'random' | 'heuristic' | 'oracle' | 'openrouter' | 'replay'
+export type DeciderKind =
+  | 'fake'
+  | 'random'
+  | 'heuristic'
+  | 'oracle'
+  | 'openrouter'
+  | 'aidcrew'
+  | 'replay'
 export interface RunConfig {
   seed: number
   condition: Condition
   ticks: number
   agents: number // 1..8
   decider: DeciderKind
+  /** The aidcrew provider a real-model run talks through. */
+  provider?: string
   model?: string
   models?: Record<AgentId, string>
   replayOf?: string

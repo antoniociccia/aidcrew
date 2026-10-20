@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { type CliDeps, main, parseCli } from './cli.ts'
 import type { AgentId, DecisionOutput, Scheduler } from './contracts.ts'
+import { renderReport } from './eval/escape.ts'
 import { openStore } from './store/sqlite.ts'
 
 const db = () => `${process.env.TMPDIR ?? '/tmp'}/nw-cli-${crypto.randomUUID()}.sqlite`
@@ -226,5 +227,77 @@ describe('watch', () => {
     } finally {
       viewer?.stop()
     }
+  })
+})
+
+describe('aidcrew runs', () => {
+  it('should_default_to_opencode_go_and_a_small_budget', () => {
+    const cmd = parseCli(['run', '--seed', '7', '--decider', 'aidcrew', '--db', 'd'])
+    expect(cmd).toMatchObject({
+      cmd: 'run',
+      config: {
+        decider: 'aidcrew',
+        provider: 'opencode-go',
+        model: 'muse-spark-1.3-contributor',
+        budget: { maxCalls: 400, maxCostUsd: 2, maxConcurrent: 4 },
+      },
+    })
+  })
+
+  it('should_take_a_provider_a_model_and_budget_overrides', () => {
+    const cmd = parseCli([
+      'run',
+      '--seed',
+      '7',
+      '--decider',
+      'aidcrew',
+      '--db',
+      'd',
+      '--provider',
+      'anthropic',
+      '--model',
+      'claude-haiku-5-5',
+      '--max-calls',
+      '50',
+      '--max-cost',
+      '0.5',
+    ])
+    expect(cmd).toMatchObject({
+      config: {
+        provider: 'anthropic',
+        model: 'claude-haiku-5-5',
+        budget: { maxCalls: 50, maxCostUsd: 0.5 },
+      },
+    })
+    const fake = parseCli(['run', '--seed', '7', '--decider', 'fake', '--db', 'd'])
+    expect(fake).toMatchObject({ config: { budget: { maxCalls: 10_000, maxCostUsd: 5 } } })
+    expect(fake.cmd === 'run' ? fake.config.provider : 'not a run').toBeUndefined()
+    expect(() =>
+      parseCli(['run', '--seed', '7', '--decider', 'fake', '--db', 'd', '--max-cost', '-1']),
+    ).toThrow()
+  })
+
+  it('should_end_a_run_whose_transport_fails_as_failed_with_the_reason_in_its_report', async () => {
+    const path = db()
+    const out: string[] = []
+    let calls = 0
+    const flaky: Scheduler = {
+      async decideAll(inputs) {
+        calls++
+        if (calls > 2) throw new Error('connect ECONNREFUSED 127.0.0.1:443')
+        return waiting().decideAll(inputs)
+      },
+      usage: () => waiting().usage(),
+    }
+    const deps: CliDeps = { scheduler: () => flaky, report: renderReport }
+    await expect(
+      main(['run', '--seed', '3', '--decider', 'fake', '--ticks', '10', '--db', path], deps, (s) =>
+        out.push(s),
+      ),
+    ).rejects.toThrow('ECONNREFUSED')
+    const runId = out[0] as string
+    expect(openStore(path).run(runId)?.status).toBe('failed')
+    expect(out[1]).toContain('status: failed')
+    expect(out[1]).toContain('failure: connect ECONNREFUSED 127.0.0.1:443')
   })
 })
