@@ -1,4 +1,4 @@
-// nested-worlds run | report. Arguments are validated before anything is
+// nested-worlds run | report | watch. Arguments are validated before anything is
 // opened; what the run needs beyond the engine — a scheduler with its
 // deciders, a report — comes in as deps, so tests can stand in for models.
 import { parseArgs } from 'node:util'
@@ -6,6 +6,7 @@ import { z } from 'zod'
 import type { Budget, RunConfig, RunStore, Scheduler } from './contracts.ts'
 import { createRunner } from './runner.ts'
 import { openStore } from './store/sqlite.ts'
+import { startViewer, type Viewer } from './view/server.ts'
 import { cliDeps } from './wiring.ts'
 
 export const DEFAULT_BUDGET: Budget = {
@@ -19,9 +20,12 @@ export const DEFAULT_BUDGET: Budget = {
   maxAgents: 8,
 }
 
+export const DEFAULT_PORT = 4747
+
 export type CliCommand =
-  | { cmd: 'run'; db: string; config: RunConfig }
+  | { cmd: 'run'; db: string; config: RunConfig; watch?: { port: number } }
   | { cmd: 'report'; db: string; runId: string }
+  | { cmd: 'watch'; db: string; runId?: string; port: number }
 
 export interface CliDeps {
   scheduler(config: RunConfig, store: RunStore, runId: string): Scheduler
@@ -42,12 +46,20 @@ const RunArgs = z
     'no-memory': z.boolean().default(false),
     model: z.string().min(1).optional(),
     'checkpoint-every': Int(1, 100_000).default(10),
+    watch: z.boolean().default(false),
+    port: Int(0, 65_535).default(DEFAULT_PORT),
   })
   .refine((a) => a.decider !== 'replay' || a['replay-of'] !== undefined, {
     message: '--decider replay needs --replay-of RUNID',
   })
 
 const ReportArgs = z.object({ db: z.string().min(1), run: z.string().min(1) })
+
+const WatchArgs = z.object({
+  db: z.string().min(1),
+  run: z.string().min(1).optional(),
+  port: Int(0, 65_535).default(DEFAULT_PORT),
+})
 
 const OPTIONS = {
   seed: { type: 'string' },
@@ -61,13 +73,16 @@ const OPTIONS = {
   'no-memory': { type: 'boolean' },
   model: { type: 'string' },
   'checkpoint-every': { type: 'string' },
+  watch: { type: 'boolean' },
+  port: { type: 'string' },
 } as const
 
 export const USAGE = `usage:
   nested-worlds run --seed N --decider fake|random|heuristic|oracle|openrouter|replay --db PATH
                     [--condition A|B] [--ticks N] [--agents 1..8] [--replay-of RUNID] [--no-memory]
-                    [--model ID] [--checkpoint-every N]
-  nested-worlds report --db PATH --run RUNID`
+                    [--model ID] [--checkpoint-every N] [--watch [--port N]]
+  nested-worlds report --db PATH --run RUNID
+  nested-worlds watch --db PATH [--run RUNID] [--port N]`
 
 export function parseCli(argv: string[]): CliCommand {
   const { positionals, values } = parseArgs({
@@ -81,6 +96,15 @@ export function parseCli(argv: string[]): CliCommand {
   if (cmd === 'report') {
     const a = ReportArgs.parse(values)
     return { cmd: 'report', db: a.db, runId: a.run }
+  }
+  if (cmd === 'watch') {
+    const a = WatchArgs.parse(values)
+    return {
+      cmd: 'watch',
+      db: a.db,
+      port: a.port,
+      ...(a.run === undefined ? {} : { runId: a.run }),
+    }
   }
   if (cmd !== 'run') throw new Error(USAGE)
   const a = RunArgs.parse(values)
@@ -97,7 +121,7 @@ export function parseCli(argv: string[]): CliCommand {
     ...(a.model === undefined ? {} : { model: a.model }),
     ...(a['replay-of'] === undefined ? {} : { replayOf: a['replay-of'] }),
   }
-  return { cmd: 'run', db: a.db, config }
+  return { cmd: 'run', db: a.db, config, ...(a.watch ? { watch: { port: a.port } } : {}) }
 }
 
 // A report already rendered as text is printed as it is; anything else as JSON.
@@ -105,21 +129,49 @@ function render(report: unknown): string {
   return typeof report === 'string' ? report : JSON.stringify(report, null, 2)
 }
 
+/**
+ * Returns the viewer when the command started one: it keeps serving, and the
+ * store stays open under it, until it is stopped (or the process ends).
+ */
 export async function main(
   argv: string[],
   deps: CliDeps,
   print: (line: string) => void,
-): Promise<void> {
+): Promise<Viewer | null> {
   const command = parseCli(argv)
   const store = openStore(command.db)
+  let server: Viewer | null = null
+  const watch = (port: number, runId?: string) => {
+    server = startViewer({ store, port })
+    print(`watch: ${server.url}${runId === undefined ? '' : `?run=${runId}`}`)
+  }
+  const serving = (): Viewer | null => {
+    const s: Viewer | null = server
+    if (!s) return null
+    return {
+      url: s.url,
+      stop() {
+        s.stop()
+        store.close()
+      },
+    }
+  }
   try {
     if (command.cmd === 'report') {
       if (!store.run(command.runId)) throw new Error(`no run ${command.runId} in ${command.db}`)
       print(render(await deps.report(store, command.runId)))
-      return
+      return null
+    }
+    if (command.cmd === 'watch') {
+      if (command.runId !== undefined && !store.run(command.runId)) {
+        throw new Error(`no run ${command.runId} in ${command.db}`)
+      }
+      watch(command.port, command.runId)
+      return serving()
     }
     const runId = store.createRun(command.config)
     print(runId)
+    if (command.watch) watch(command.watch.port, runId)
     try {
       const runner = createRunner({
         store,
@@ -134,8 +186,14 @@ export async function main(
       throw err
     }
     print(render(await deps.report(store, runId)))
+    return serving()
+  } catch (err) {
+    ;(server as Viewer | null)?.stop()
+    server = null
+    throw err
   } finally {
-    store.close()
+    // A viewer still serving reads this store; it closes it when stopped.
+    if (!server) store.close()
   }
 }
 

@@ -154,3 +154,77 @@ describe('main', () => {
     expect(openStore(path).run(out[0] as string)?.status).toBe('failed')
   })
 })
+
+describe('watch', () => {
+  it('should_read_watch_commands_with_a_port', () => {
+    expect(parseCli(['watch', '--db', 'd', '--port', '0'])).toEqual({
+      cmd: 'watch',
+      db: 'd',
+      port: 0,
+    })
+    expect(parseCli(['watch', '--db', 'd', '--run', 'r1'])).toEqual({
+      cmd: 'watch',
+      db: 'd',
+      runId: 'r1',
+      port: 4747,
+    })
+    const run = parseCli(['run', '--seed', '1', '--decider', 'fake', '--db', 'd', '--watch'])
+    expect(run).toMatchObject({ cmd: 'run', watch: { port: 4747 } })
+    expect(() => parseCli(['watch', '--db', 'd', '--port', '70000'])).toThrow()
+  })
+
+  it('should_serve_an_existing_store_and_print_where', async () => {
+    const path = db()
+    const deps: CliDeps = { scheduler: () => waiting(), report: () => 'r' }
+    const out: string[] = []
+    await main(
+      ['run', '--seed', '3', '--decider', 'fake', '--ticks', '3', '--db', path],
+      deps,
+      (s) => out.push(s),
+    )
+    const viewer = await main(['watch', '--db', path, '--port', '0'], deps, (s) => out.push(s))
+    try {
+      const url = (out.at(-1) ?? '').replace(/^watch: /, '')
+      const runs = (await (await fetch(`${url}api/runs`)).json()) as { runId: string }[]
+      expect(runs.map((r) => r.runId)).toEqual([out[0] as string])
+    } finally {
+      viewer?.stop()
+    }
+  })
+
+  it('should_print_a_url_that_follows_the_run_it_is_running', async () => {
+    const path = db()
+    const deps: CliDeps = { scheduler: () => waiting(), report: () => 'escaped: false' }
+    const out: string[] = []
+    const viewer = await main(
+      [
+        'run',
+        '--seed',
+        '3',
+        '--decider',
+        'fake',
+        '--ticks',
+        '4',
+        '--db',
+        path,
+        '--watch',
+        '--port',
+        '0',
+      ],
+      deps,
+      (s) => out.push(s),
+    )
+    try {
+      const runId = out[0] as string
+      expect(out[1]).toMatch(new RegExp(`^watch: http://127\\.0\\.0\\.1:\\d+/\\?run=${runId}$`))
+      expect(out[2]).toBe('escaped: false')
+      const url = new URL((out[1] as string).replace(/^watch: /, ''))
+      const frames = (await (
+        await fetch(`${url.origin}/api/runs/${runId}/frames`)
+      ).json()) as unknown[]
+      expect(frames).toHaveLength(4)
+    } finally {
+      viewer?.stop()
+    }
+  })
+})
