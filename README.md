@@ -90,16 +90,115 @@ aidcrew                               # the interface: the whole team, one scree
 
 ## Terminal + Web
 
+This repository's checked-in `.aidcrew/config.toml` describes its development
+crew: native Claude Code for architect/coder, OpenCode Go for the other roles,
+and YOLO enabled for all configured agents. It references `~/.codex/AGENTS.md`
+for local instructions. Adjust these settings to your accounts and instruction
+files before running this crew; set `yolo = false` to retain permission prompts.
+
 Starting `aidcrew` opens a terminal interface and a browser interface over the
 **same live session**. Inspect agents, send messages, review changes, manage models
 and approve tool calls from either surface. The bundled `web-ui` plugin runs
 locally; remote access works through an authenticated SSH tunnel or a private
 Tailscale Serve bridge with an explicitly configured HTTPS origin. The Studio
 palette coordinates both interfaces, and active keyboard shortcuts are highlighted.
+Search the selected agent or the whole team's recent activity, filter messages,
+tools, changes and errors, and inspect matching diffs with their context intact.
+Reading earlier activity pauses automatic scrolling; **Jump to latest** resumes it.
+**Command/Ctrl+K** opens a searchable palette for views, agents and navigation.
+The crew overview brings pending decisions, stopped agents, waiting queues and
+out-of-date worktrees into focus. Task cards show checkout evidence and assigned
+agents without confusing inactivity with verified completion.
+
+The web UI opens on **Overview**, a single page combining session status and the
+event log. The latest lead update, queued messages and decisions appear above the
+log; a collapsed team section exposes current assignments and availability when
+needed. The log retains agent/type filters, search and expandable details.
+Event numbers indicate journal order, not inferred timestamps.
+The original request is shown when it remains available in the recent journal.
+An idle agent is ready for direction; this does not imply that its task is complete.
+Use the labeled navigation to open **Agents**, **Team graph**, **Split screen**,
+**Tasks**, **Memory**, or **Settings**. Message and Stop controls
+belong to the selected agent in **Agents**; each split pane also has its own
+explicitly addressed message input.
+
+The top-bar **Chat · agent** button opens a quick conversation without leaving the
+current view. Choose the default contact in that panel; the choice is saved per
+workspace in this browser. Drafts stay separate per agent in memory, and quick
+chat shows human messages and agent replies only. Open **Full conversation** for
+tools and earlier context.
+
+The **Team graph** shows agents as small glass spheres with external labels and thin
+directed connections from the recorded conversation. Select a point to inspect
+its agent and incoming/outgoing exchanges; the full-team view keeps the surrounding
+network visible.
+**Split screen** provides a tiling workspace with a live transcript per agent.
+Drag a pane header onto another pane's center to swap them, or onto an edge to
+split that space. Drag the dividers to resize; focused dividers also accept arrow
+keys. Pane menus offer keyboard-accessible placement, and panes can be maximized.
+The layout is saved locally per workspace; **Restore layout** recalculates balanced
+pane sizes for the current viewport and exits maximized mode without clearing drafts.
+Every agent
+has a stable, locally generated identicon; clones get distinct identities, and
+no agent names are sent to an avatar service.
+
+Role, provider and task tags filter the map; agent details and avatars live in
+the inspector instead of occupying the graph. Split panes preserve their
+user-chosen sizes as agent activity changes.
+
+Hover or keyboard-focus an Incoming/Outgoing control to illuminate its arrows.
+Hover an individual exchange, message, or numbered connection to trace that exact
+route and its two agents. Node glows respond to hover and keyboard focus;
+reduced-motion preferences disable animated transitions.
+
+Opening a numbered connection reveals its individual messages as ordered points.
+Hover or focus a message to highlight its exact point, or activate a point to
+expand and locate that message in the inspector. Repeated messages retain their
+own identities.
+
+The memory inspector lists recorded task and author relationships with explicit
+directions. Hover or focus a relationship to illuminate its arrow and endpoints;
+activate it to inspect the other endpoint.
+
+Select an agent for its incoming and outgoing exchanges, or select a connection
+count to inspect the individual messages behind it. Full received copies restore
+handoffs shortened in the sender's activity feed. Task labels show current
+assignments; the journal does not record historical task attribution per message.
+
+**Shared memory** shows a clustered constellation of saved notes, their task and
+their author. Small memory points connect to larger source hubs; positions follow
+the recorded relationships rather than fixed columns.
+Select a memory to read its complete content and provenance, or search across
+notes, tasks and authors. Links represent recorded provenance, not inferred
+semantic similarity. The view shows up to 80 matching memories and reports any
+omitted entries; pausing sharing retains the saved network.
+
+**Settings** uses seven tabs for live agents, defaults, roles, credentials,
+sources, extensions and terminal appearance. Only the selected panel is visible;
+arrow keys navigate the tabs. Each panel explains its scope; destructive agent
+and credential actions retain their confirmation dialogs.
+
+In the terminal, `/graph` opens a spatial bubble graph with directed handoff
+links. Working agents have larger bubbles; role groups stay together. Tab moves
+the focus, with the selected agent's details and transcript below the map.
+`/grid` opens the tiled view. Both use the same live team and keep the prompt available.
+For a terminal session you can detach and reopen, start the harness inside a
+current version of tmux: `tmux new -s harness 'aidcrew'`. Reconnect with
+`tmux attach -t harness`; detach with **Ctrl+B**, then **D**. Legacy macOS GNU
+screen can corrupt UTF-8 and mouse input, so it is not recommended for this TUI.
 
 See [Web UI setup and remote access](plugins/web-ui/README.md). Use
 `AIDCREW_WEB_OPEN=0` to keep the browser closed while the web server runs, or
 `AIDCREW_WEB=0` for a terminal-only session.
+
+Claude Code can also join the team through the bundled `claude-code` provider,
+using your installed CLI and its own subscription login. It receives the same
+task context and team communication tools; `/native` or the Web UI's native
+terminal attaches to that agent's interactive Claude session. See
+[native agent setup and permission boundaries](plugins/agent-native/README.md).
+Explicit per-agent YOLO also starts native Claude with bypass permissions.
+Changing native permission mode requires an idle agent and starts a new native
+process on its next turn; its harness conversation remains available.
 
 ## Measured, not claimed
 
@@ -240,6 +339,11 @@ and into the same checkout, without leaving what you were doing. `/help` lists
 the rest, and `/tour` is eight pages on what the whole thing is — the same
 ones a first run ends on.
 
+`/search <text>` searches the selected agent's loaded terminal transcript, with
+literal case-insensitive matching and contextual excerpts, newest first. Use
+arrow keys or PageUp/PageDown to browse and Escape to return. Results stay fixed
+while agents continue working; reopen search to include new messages.
+
 When they are all busy there is a decision to make, and it is not the sender's.
 The question appears in the pane of the agent it is about, with the three
 answers that exist: wait, start a second agent of that role, or drop it and tell
@@ -253,6 +357,12 @@ you have turned loose with `/yolo` is sent back to carry on when it reaches
 the bound with the work unfinished, a few times, before the stop is real. A project whose jobs are bigger than that raises the bound in its
 config, with `[defaults] toolCallsPerTurn`. Nobody watching means nobody to say "go on", so the harness says
 it. An agent that is asking first stops and waits for you.
+
+Team fan-out defaults to three delivered messages per agent instruction, including native
+Claude turns. Larger teams can set `[defaults] maxMessagesPerTurn = 12` in
+`.aidcrew/config.toml` (integer from 1 to 100). This applies to the next session
+startup in both the TUI and headless CLI; hop, token and turn limits still apply.
+Automatic closing replies do not consume this allowance.
 
 `/yolo` skips all built-in tool approval prompts for that agent, including
 irreversible shell commands such as recursive deletion and force pushes.
@@ -388,6 +498,23 @@ bun run lint
 bun run build:all # every platform, cross-compiled from any one of them
 ```
 
+Web interaction regressions use isolated fixture sessions and the browser plugin's
+installed Puppeteer bundle. With Chrome installed, run:
+
+```sh
+bun plugins/web-ui/browser-tests/graph-interactions.browser.js
+bun plugins/web-ui/browser-tests/memory-interactions.browser.js
+bun plugins/web-ui/browser-tests/tiling.browser.js
+bun plugins/web-ui/browser-tests/settings.browser.js
+bun plugins/web-ui/browser-tests/activity.browser.js
+bun plugins/web-ui/browser-tests/quick-chat.browser.js
+bun plugins/web-ui/browser-tests/overview.browser.js
+```
+
+Set `CHROME_PATH` to the Chrome executable outside its default macOS location.
+These checks exercise real pointer and keyboard interactions without sending
+messages to a running crew.
+
 What changed between releases is in [CHANGELOG.md](CHANGELOG.md).
 
 Releases are cut from a tag:
@@ -427,3 +554,17 @@ something broken goes to an [issue](https://github.com/antoniociccia/aidcrew/iss
 ## Licence
 
 MIT.
+
+Project-specific provider stall limits can be set in `.aidcrew/config.toml`:
+
+```toml
+[plugins.provider-openai-compat.providers.opencode-go]
+firstByteTimeoutMs = 180000
+idleTimeoutMs = 180000
+```
+
+These limits apply only to the named provider in this project, including cloned
+agents and summaries. Values must be positive integer milliseconds, at most
+600000. Other providers keep their defaults; cancelling a request still stops it
+immediately. A longer limit accommodates slow reasoning without making a failed
+model healthy.
