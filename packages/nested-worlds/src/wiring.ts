@@ -15,6 +15,12 @@ import { ReplayDecider } from './llm/replay.ts'
 import { createScheduler } from './llm/scheduler.ts'
 import { generateWorld } from './world/generate.ts'
 
+/**
+ * Room for a reasoning model to think and still answer: at 1024 a live run saw
+ * 59 of its 90 answers come back empty, the whole budget spent thinking.
+ */
+const LIVE_MAX_TOKENS = 4096
+
 export type ProviderFor = (providerId: string) => Promise<AidcrewProvider>
 
 async function deciderFor(
@@ -37,6 +43,7 @@ async function deciderFor(
         provider: await providerFor(provider),
         providerId: provider,
         model,
+        maxTokens: LIVE_MAX_TOKENS,
       })
     }
     case 'openrouter':

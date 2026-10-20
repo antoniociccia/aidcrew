@@ -79,7 +79,7 @@ describe('cliDeps', () => {
     const provider: AidcrewProvider = {
       id: 'stub',
       async *send(request) {
-        asked.push(request.model)
+        asked.push(`${request.model}@${request.maxTokens}`)
         yield { type: 'text_delta', text: '{"action":{"type":"wait"},"rationale":"resting"}' }
         yield {
           type: 'done',
@@ -108,9 +108,38 @@ describe('cliDeps', () => {
     }).run()
     expect(found).toEqual(['opencode-go'])
     expect(asked).toHaveLength(6)
-    expect(new Set(asked)).toEqual(new Set(['muse-spark-1.3-contributor']))
+    expect(new Set(asked)).toEqual(new Set(['muse-spark-1.3-contributor@4096']))
     const decision = store.events(runId, { type: 'decision' })[0]
     expect(decision?.payload).toMatchObject({ decider: 'aidcrew', rationale: 'resting' })
+    expect(await deps.report(store, runId)).toContain('verified: true')
+  })
+
+  it('should_replay_a_live_run_whose_model_sometimes_answers_nothing', async () => {
+    let calls = 0
+    const provider: AidcrewProvider = {
+      id: 'stub',
+      async *send() {
+        calls++
+        // A reasoning model that spends its whole budget thinking answers with no text.
+        if (calls % 2 === 0)
+          yield { type: 'text_delta', text: '{"action":{"type":"move","dir":"N"}}' }
+        yield { type: 'done', stopReason: 'max_tokens', usage: { inputTokens: 1, outputTokens: 1 } }
+      },
+    }
+    const deps = makeCliDeps(async () => provider)
+    const store = openStore(':memory:')
+    const cfg = config('aidcrew', { provider: 'stub', model: 'm', ticks: 3 })
+    const runId = store.createRun(cfg)
+    await createRunner({
+      store,
+      config: cfg,
+      scheduler: await deps.scheduler(cfg, store, runId),
+      runId,
+    }).run()
+    const unanswered = store
+      .events(runId, { type: 'action_rejected' })
+      .filter((e) => e.payload.action === null && e.payload.raw === '')
+    expect(unanswered.length).toBeGreaterThan(0)
     expect(await deps.report(store, runId)).toContain('verified: true')
   })
 
