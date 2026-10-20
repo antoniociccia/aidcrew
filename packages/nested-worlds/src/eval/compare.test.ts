@@ -28,7 +28,7 @@ async function runWith(store: RunStore, cfg: RunConfig): Promise<string> {
   await createRunner({
     store,
     config: cfg,
-    scheduler: cliDeps.scheduler(cfg, store, runId),
+    scheduler: await cliDeps.scheduler(cfg, store, runId),
     runId,
   }).run()
   return runId

@@ -25,7 +25,7 @@ async function oracleRun(): Promise<{ store: RunStore; runId: string }> {
   await createRunner({
     store,
     config,
-    scheduler: cliDeps.scheduler(config, store, runId),
+    scheduler: await cliDeps.scheduler(config, store, runId),
     runId,
   }).run()
   return { store, runId }

@@ -301,3 +301,17 @@ describe('aidcrew runs', () => {
     expect(out[1]).toContain('failure: connect ECONNREFUSED 127.0.0.1:443')
   })
 })
+
+describe('deps', () => {
+  it('should_wait_for_a_scheduler_that_is_built_asynchronously', async () => {
+    const path = db()
+    const out: string[] = []
+    const deps: CliDeps = { scheduler: async () => waiting(), report: () => 'ok' }
+    await main(
+      ['run', '--seed', '3', '--decider', 'fake', '--ticks', '2', '--db', path],
+      deps,
+      (s) => out.push(s),
+    )
+    expect(openStore(path).run(out[0] as string)?.status).toBe('finished')
+  })
+})

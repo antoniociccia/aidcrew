@@ -20,7 +20,7 @@ const config = (decider: DeciderKind, over: Partial<RunConfig> = {}): RunConfig 
 
 async function runWith(store: ReturnType<typeof openStore>, cfg: RunConfig) {
   const runId = store.createRun(cfg)
-  const scheduler = cliDeps.scheduler(cfg, store, runId)
+  const scheduler = await cliDeps.scheduler(cfg, store, runId)
   await createRunner({ store, config: cfg, scheduler, runId }).run()
   return runId
 }
@@ -73,9 +73,10 @@ describe('cliDeps', () => {
     expect(report).toContain('verified: true')
   })
 
-  it('should_refuse_openrouter_until_phase_2', () => {
+  it('should_refuse_openrouter_until_phase_2', async () => {
     const store = openStore(':memory:')
-    expect(() => cliDeps.scheduler(config('openrouter'), store, 'r')).toThrow(/phase 2/)
+    const built = Promise.resolve().then(() => cliDeps.scheduler(config('openrouter'), store, 'r'))
+    await expect(built).rejects.toThrow(/phase 2/)
   })
 
   it('should_hold_the_run_to_its_budget', async () => {

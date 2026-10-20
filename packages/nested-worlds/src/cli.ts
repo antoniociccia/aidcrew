@@ -37,7 +37,8 @@ export type CliCommand =
   | { cmd: 'watch'; db: string; runId?: string; port: number }
 
 export interface CliDeps {
-  scheduler(config: RunConfig, store: RunStore, runId: string): Scheduler
+  /** May be async: a real model's provider is found before the run starts. */
+  scheduler(config: RunConfig, store: RunStore, runId: string): Scheduler | Promise<Scheduler>
   report(store: RunStore, runId: string): unknown | Promise<unknown>
 }
 
@@ -201,7 +202,7 @@ export async function main(
       const runner = createRunner({
         store,
         config: command.config,
-        scheduler: deps.scheduler(command.config, store, runId),
+        scheduler: await deps.scheduler(command.config, store, runId),
         runId,
       })
       await runner.run()
