@@ -1,5 +1,6 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import nativeAgentPlugin from '@aidcrew/agent-native'
 import type {
   Plugin,
   PluginCandidate,
@@ -57,6 +58,7 @@ const BUNDLED: Plugin[] = [
   anthropic,
   gemini,
   claudeLoaderPlugin,
+  nativeAgentPlugin,
   pricesPlugin,
 ]
 

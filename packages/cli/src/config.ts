@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import type { SettingsStore } from './store.ts'
 
 export class ConfigError extends Error {
@@ -46,10 +47,14 @@ export function providerOptions(
   providerId: string,
   env: Record<string, string | undefined>,
   store?: SettingsStore,
+  plugins: Record<string, Record<string, unknown>> = {},
 ): Record<string, unknown> {
   const prompted = env.AIDCREW_PROMPTED_TOOLS ?? store?.get(`provider.${providerId}.promptedTools`)
 
-  const options: Record<string, unknown> = prompted ? { promptedTools: true } : {}
+  const options: Record<string, unknown> = {
+    ...projectStallLimits(providerId, plugins),
+    ...(prompted ? { promptedTools: true } : {}),
+  }
   const reasoning = env.AIDCREW_OPENROUTER_REASONING
   if (providerId === 'openrouter' && reasoning !== undefined) {
     try {
@@ -62,4 +67,19 @@ export function providerOptions(
     options.dialect = 'chat'
   }
   return options
+}
+
+const stallLimits = z
+  .object({
+    firstByteTimeoutMs: z.number().int().positive().max(600_000).optional(),
+    idleTimeoutMs: z.number().int().positive().max(600_000).optional(),
+  })
+  .strict()
+
+function projectStallLimits(providerId: string, plugins: Record<string, Record<string, unknown>>) {
+  const table = plugins['provider-openai-compat']?.providers
+  if (table === undefined) return {}
+  const parsed = z.record(z.string(), stallLimits).safeParse(table)
+  if (!parsed.success) throw new ConfigError('Invalid project provider stall limits')
+  return Object.hasOwn(parsed.data, providerId) ? (parsed.data[providerId] ?? {}) : {}
 }

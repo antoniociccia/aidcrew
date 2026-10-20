@@ -98,6 +98,8 @@ export type WorkspaceConfig = {
    * the default.
    */
   toolCallsPerTurn?: number
+  /** Delivered team messages allowed per instruction; defaults to the governor bound. */
+  maxMessagesPerTurn?: number
   /** The command a job is proved by before it is called done; read off the project's files when absent. */
   check?: string
   /** Whether a verified job's branch is merged into the repository. On unless said otherwise. */
@@ -356,6 +358,21 @@ function apply(
       )
     }
     config.toolCallsPerTurn = calls
+  }
+
+  const messages = raw.defaults?.maxMessagesPerTurn
+  if (messages !== undefined) {
+    if (
+      typeof messages !== 'number' ||
+      !Number.isInteger(messages) ||
+      messages < 1 ||
+      messages > 100
+    ) {
+      throw new WorkspaceConfigError(
+        `${path}: defaults.maxMessagesPerTurn must be a whole number between 1 and 100`,
+      )
+    }
+    config.maxMessagesPerTurn = messages
   }
 
   const check = readString(raw.defaults?.check, 'defaults.check', path)

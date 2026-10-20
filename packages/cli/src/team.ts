@@ -1,4 +1,5 @@
 import { join, resolve } from 'node:path'
+import { bindNativeDispatcher, closeNativeAgent } from '@aidcrew/agent-native'
 import type {
   AgentDef,
   AgentSnapshot,
@@ -129,14 +130,33 @@ export type TeamOptions = {
  */
 export function createTeamHost(options: TeamOptions): InProcessHost {
   const providers = new Map<string, Provider>()
+  const owned = new Map<string, string>()
+  const dispatchers = new Map<string, { agents: Set<string>; unbind(): void }>()
 
-  return new InProcessHost({
+  const releaseAgent = (agentId: string, cwd: string): void => {
+    closeNativeAgent(cwd, agentId)
+    const cacheKey = owned.get(agentId)
+    if (cacheKey) providers.delete(cacheKey)
+    owned.delete(agentId)
+    const dispatcher = dispatchers.get(cwd)
+    dispatcher?.agents.delete(agentId)
+    if (dispatcher && dispatcher.agents.size === 0) {
+      dispatcher.unbind()
+      dispatchers.delete(cwd)
+    }
+  }
+
+  const host = new InProcessHost({
     cwd: options.cwd,
     tools: options.tools,
     commonTools: ['skill'],
     limits: options.limits,
     isolate: options.isolate,
     onEvent: options.onEvent,
+    permissionOwnerFor: (agent) =>
+      options.host.registry.provider(agent.provider ?? options.defaultProvider)?.permissionOwner,
+    onAgentRemoved: releaseAgent,
+    onAgentReset: releaseAgent,
     ...(options.sharedMemory !== undefined ? { sharedMemory: options.sharedMemory } : {}),
     ...(options.summariseNotes ? { summariseNotes: options.summariseNotes } : {}),
     ...(options.onContention ? { onContention: options.onContention } : {}),
@@ -168,7 +188,14 @@ export function createTeamHost(options: TeamOptions): InProcessHost {
       // Keyed by service, credential *and* directory: two agents on the same
       // provider but on different plans need two clients, and one that runs a
       // program needs one per worktree.
-      const cacheKey = `${id}::${resolved.source}::${cwd}`
+      const keepsHistory = options.host.registry.provider(id)?.keepsOwnHistory === true
+      const cacheKey = JSON.stringify([
+        id,
+        resolved.source,
+        cwd,
+        ...(keepsHistory ? [agent.id] : []),
+      ])
+      if (keepsHistory) owned.set(agent.id, cacheKey)
       const existing = providers.get(cacheKey)
       if (existing) return existing
 
@@ -178,10 +205,22 @@ export function createTeamHost(options: TeamOptions): InProcessHost {
         ...(resolved.baseUrl ? { baseUrl: resolved.baseUrl } : {}),
         ...options.providerOptions(id),
       })
+      if (provider.run) {
+        let dispatcher = dispatchers.get(cwd)
+        if (!dispatcher) {
+          dispatcher = {
+            agents: new Set(),
+            unbind: bindNativeDispatcher(cwd, (agentId, prompt) => host.tell(agentId, prompt)),
+          }
+          dispatchers.set(cwd, dispatcher)
+        }
+        dispatcher.agents.add(agent.id)
+      }
       providers.set(cacheKey, provider)
       return provider
     },
   })
+  return host
 }
 
 export class MissingCredentialError extends Error {
