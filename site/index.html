@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>aidcrew — a team of coding agents, each on its own model, in one shared session</title>
-<meta name="description" content="aidcrew runs a team of coding agents in your terminal, each on its own model and provider. Every job in its own git worktree; the harness runs the tests and merges. Everything is a plugin. Single binary for macOS, Linux and Windows. MIT.">
+<meta name="description" content="Follow coding-agent teams in your terminal and browser. Inspect real handoffs, arrange agent workspaces, share memory and bring native Claude Code into the crew. Open source, MIT.">
 <link rel="canonical" href="https://aidcrew.dev/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="aidcrew — a team of coding agents, each on its own model">
-<meta property="og:description" content="Choose a model for each role. Follow the work and its cost in one session. Every job in its own git worktree; the harness runs the tests and merges. MIT, single binary.">
+<meta property="og:description" content="See who is doing what and what agents tell each other. Interactive team graphs, resizable workspaces and native Claude Code. Terminal and browser, one session.">
 <meta property="og:url" content="https://aidcrew.dev/">
-<meta property="og:image" content="https://aidcrew.dev/media/social-preview.png">
+<meta property="og:image" content="https://aidcrew.dev/media/crew-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2356b4e9'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='36' font-weight='700' text-anchor='middle' fill='%230e0f15'%3ED%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=nav-doodle1">
+<link rel="stylesheet" href="style.css?v=crew-workspace-040">
 <script>
 try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElement.dataset.skin = s } catch (e) {}
 </script>
@@ -26,6 +26,7 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
   </a>
   <nav>
     <a class="nav-built" href="#built-with"><svg class="nav-doodle" viewBox="0 0 40 40" fill="none" aria-hidden="true" focusable="false"><path d="m3 14 14-7 14 7-14 7Z" fill="#b9edac"/><path d="m3 14 14 7v14L3 28Z" fill="#438f79"/><path d="m17 21 14-7v14l-14 7Z" fill="#286354"/><path d="m25 6 5-3 5 3-5 3Z" fill="#e8b678"/><path d="m25 6 5 3v5l-5-3Z" fill="#ba8d57"/><path d="m30 9 5-3v5l-5 3Z" fill="#8b643d"/></svg><span>Built with AIDCrew</span></a>
+    <a href="#workspace">Workspace</a>
     <a href="#how">How it works</a>
     <a href="#plugins">Plugins</a>
     <a href="#guards">Guards</a>
@@ -49,30 +50,41 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
 <main>
 
 <section class="hero">
-  <h1>A team of coding agents,<br>each on its own model,<br>in one shared session.</h1>
-  <p class="lead">
-    An architect plans, a coder implements and a reviewer checks the result. Choose a model and
-    budget for each role. Follow the same session in the terminal and browser. Each with its own key, on its own service, in its own git worktree — and when the
-    leader says a job is done, the harness runs the tests and merges. It does not take the model's
-    word for it.
-  </p>
+<a class="release-note" href="https://github.com/antoniociccia/aidcrew/releases/tag/v0.4.0">Available now · v0.4.0 <span aria-hidden="true">↗</span></a>
+<h1>Your coding agents.<br>One shared workspace.</h1>
+<p class="lead">Choose a model for each role. See who is working, trace what agents tell each other,
+  and step in when they need you. Your terminal and browser follow the same live session.</p>
   <div class="actions">
     <a class="button primary" href="#install">Install</a>
     <a class="button" href="https://github.com/antoniociccia/aidcrew" rel="noopener">Read the source</a>
-    <span class="meta">MIT · macOS, Linux, Windows · one file, nothing to install beside it</span>
+    <span class="meta">MIT · macOS, Linux, Windows · terminal + browser</span>
   </div>
 
+<figure class="film product-hero">
+  <a href="media/team-interactions.png" aria-label="Open the team graph screenshot at full size">
+    <img src="media/team-interactions.png" width="2880" height="1900" fetchpriority="high" alt="A real AIDCrew session with seven agents, a selected connection, numbered handoffs and their corresponding messages">
+  </a>
+  <figcaption><span class="capture-label">Actual session</span> Every connection leads back to the conversation. Open a handoff to inspect its messages; hover a message to highlight its point. <a href="media/team-interactions.png">View full size ↗</a></figcaption>
+</figure>
+
+</section>
+
+<section class="workspace-story" id="workspace">
+  <div class="workspace-intro">
+    <p class="eyebrow">Inside the workspace</p>
+    <h2>Follow the work without losing the team.</h2>
+    <p class="lead">Keep the conversations you need side by side. Move agents between panes, resize a divider, or restore a balanced layout.</p>
+  </div>
   <figure class="film">
-    <video autoplay muted loop playsinline preload="metadata" poster="media/social-preview.png">
-      <source src="media/demo.mp4" type="video/mp4">
-    </video>
-    <figcaption>
-      One take, cut for length. An empty repository, the setup wizard, a key, a team of two. The
-      architect plans on <code>glm-5.3-flash</code>; the coder builds, tests and commits on
-      <code>deepseek-v4-flash</code>; the leader verifies the branch and it comes home to
-      <code>main</code>. The whole run, through OpenRouter, cost under a cent.
-    </figcaption>
+    <a href="media/agent-workspaces.png" aria-label="Open the agent workspace screenshot at full size"><img src="media/agent-workspaces.png" width="2880" height="1900" loading="lazy" alt="Seven agent conversations arranged in resizable split-screen panes with a separate message input for each agent"></a>
+    <figcaption><span class="capture-label">Actual session</span> Separate conversations, shared context. Drag a pane to arrange the team around your work.</figcaption>
   </figure>
+  <div class="workspace-details">
+    <article><span class="feature-number">01 / Context</span><h3>Memory you can inspect.</h3><p>Explore shared notes as a graph of tasks and authors. Follow a connection to see where the context came from.</p></article>
+    <article><span class="feature-number">02 / Direction</span><h3>One agent to talk to.</h3><p>Choose your default contact and open a quick chat from any view. Keep decisions and the event log together in Overview.</p></article>
+    <article><span class="feature-number">03 / Native agents</span><h3>Bring Claude Code along.</h3><p>Use your installed Claude Code CLI and subscription login as a team member. Share role, task and team context; attach to its native terminal when you need it.</p><a href="https://github.com/antoniociccia/aidcrew/blob/v0.4.0/plugins/agent-native/README.md">Native setup and limits ↗</a></article>
+  </div>
+  <p class="aside">Native Claude Code requires a separate installation on macOS or Linux. Its own permissions and subscription limits apply; unavailable usage costs remain unknown.</p>
 </section>
 
 <section class="three" id="why">
@@ -157,13 +169,29 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
   </div>
 </section>
 
+<section class="recorded-demo" id="terminal-demo">
+<h2>From a brief to a checked-in result.</h2>
+<p class="aside">An earlier terminal walkthrough. The workspace above shows the current interface.</p>
+  <figure class="film">
+    <video autoplay muted loop playsinline preload="metadata" poster="media/social-preview.png">
+      <source src="media/demo.mp4" type="video/mp4">
+    </video>
+    <figcaption>
+      One take, cut for length. An empty repository, the setup wizard, a key, a team of two. The
+      architect plans on <code>glm-5.3-flash</code>; the coder builds, tests and commits on
+      <code>deepseek-v4-flash</code>; the leader verifies the branch and it comes home to
+      <code>main</code>. The whole run, through OpenRouter, cost under a cent.
+    </figcaption>
+  </figure>
+</section>
+
 <section class="how" id="how">
   <div class="text">
     <h2>How a job goes home</h2>
     <ol>
       <li><strong>You ask the leader.</strong> One instruction, to one agent. Everything that follows reports back to it.</li>
       <li><strong>It hands the work on.</strong> A plan goes to the coder with <code>agent_send</code>: the files to touch, what each should do, and the check that proves it. The configured permissions determine which actions can proceed automatically.</li>
-      <li><strong>The coder commits as it goes,</strong> on <code>work/&lt;job&gt;</code>, made for it when the checkout was. A commit is safe from the moment it exists; the shell cannot even <code>cd</code> out of the checkout.</li>
+      <li><strong>The coder commits as it goes,</strong> on <code>work/&lt;job&gt;</code>, made for it when the checkout was. The harness shell tools enforce checkout boundaries; native Claude Code tools follow Claude’s own permissions.</li>
       <li><strong>The harness brings it home.</strong> When the leader says done, the check runs on the branch, the branch merges, and the pane says what it cost — or the leader is sent back, twice at most.</li>
     </ol>
     <p class="aside">
@@ -228,6 +256,7 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
 
 <section class="guards" id="guards">
   <h2>Cloning a repository is not consent.</h2>
+  <p class="aside">The guards below apply to harness tools. Native Claude Code retains its own tool permissions; its native tools are not sandboxed by the harness.</p>
   <p>
     Everything that arrives with a clone is inert until you type a command: a project's plugins
     are not imported, its MCP servers are not started, the parts of its config that let an agent
@@ -248,7 +277,7 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
 
 <section class="install" id="install">
   <h2>Install</h2>
-  <p>One file, no runtime to install alongside it.</p>
+  <p>Download v0.4.0 as a single binary. Native Claude Code is an optional, separately installed integration.</p>
 <pre class="code"><code><span class="c"># macOS, Apple silicon</span>
 curl -Lo aidcrew https://github.com/antoniociccia/aidcrew/releases/latest/download/aidcrew-macos-arm64
 chmod +x aidcrew &amp;&amp; sudo mv aidcrew /usr/local/bin/
@@ -268,7 +297,7 @@ aidcrew demo</code></pre>
   </p>
   <p class="platforms">
     From source, with <a href="https://bun.sh" rel="noopener">Bun</a> 1.3 or later:
-    <code>git clone https://github.com/antoniociccia/aidcrew &amp;&amp; cd aidcrew &amp;&amp; bun install &amp;&amp; bun run build</code>
+    <code>git clone --branch v0.4.0 https://github.com/antoniociccia/aidcrew &amp;&amp; cd aidcrew &amp;&amp; bun install &amp;&amp; bun run build</code>
   </p>
 </section>
 

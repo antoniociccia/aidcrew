@@ -414,3 +414,24 @@ pre.code, .plugins pre, pre { max-width: 100%; overflow-x: auto; }
 .nav-doodle { width: 28px; height: 28px; flex: none; transition: transform .2s ease; }
 .nav-built:hover .nav-doodle { transform: translateY(-2px) rotate(-5deg); }
 @media (prefers-reduced-motion: reduce) { .nav-doodle { transition: none; } .nav-built:hover .nav-doodle { transform: none; } }
+
+/* Product captures carry the detail; surrounding copy stays short and readable. */
+.release-note { display: inline-flex; gap: 1.5rem; align-items: center; padding: .5rem .8rem; margin-bottom: 1.2rem; border: 1px solid var(--line); border-radius: 99px; color: var(--sky); font: .8rem var(--mono); text-decoration: none; }
+.product-hero { margin-top: 2.5rem; }
+.product-hero img, .workspace-story .film img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 24px 70px #0003; }
+.film > a { display: block; border-radius: 12px; }
+.film > a:focus-visible { outline: 3px solid var(--sky); outline-offset: 5px; }
+.capture-label { color: var(--teal); font: .75rem var(--mono); text-transform: uppercase; letter-spacing: .06em; margin-right: .75rem; }
+.workspace-intro { max-width: 44rem; margin-bottom: 2rem; }
+.workspace-intro h2 { font-size: clamp(1.8rem, 3.4vw, 2.8rem); letter-spacing: -.035em; line-height: 1.14; }
+.workspace-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; margin-top: 2.6rem; }
+.workspace-details article { border-top: 1px solid var(--line); padding-top: 1rem; }
+.workspace-details h3 { font-size: 1.2rem; margin: .8rem 0; }
+.workspace-details p { color: var(--muted); }
+.feature-number { color: var(--sky); font: .75rem var(--mono); }
+.recorded-demo .film { max-width: 54rem; }
+@media (max-width: 700px) {
+  .workspace-details { grid-template-columns: 1fr; gap: 1.4rem; }
+  .product-hero { margin-top: 1.5rem; }
+  .release-note { font-size: .72rem; }
+}
