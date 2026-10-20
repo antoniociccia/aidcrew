@@ -3,15 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>aidcrew — a team of coding agents, each on its own model, in one shared session</title>
+<title>AIDCrew — your coding agents, one shared workspace</title>
 <meta name="description" content="Follow coding-agent teams in your terminal and browser. Inspect real handoffs, arrange agent workspaces, share memory and bring native Claude Code into the crew. Open source, MIT.">
 <link rel="canonical" href="https://aidcrew.dev/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="aidcrew — a team of coding agents, each on its own model">
+<meta property="og:title" content="AIDCrew — your coding agents, one shared workspace">
 <meta property="og:description" content="See who is doing what and what agents tell each other. Interactive team graphs, resizable workspaces and native Claude Code. Terminal and browser, one session.">
 <meta property="og:url" content="https://aidcrew.dev/">
 <meta property="og:image" content="https://aidcrew.dev/media/crew-preview.png">
+<meta property="og:image:alt" content="A real AIDCrew session showing the team graph with individual messages and resizable agent workspaces">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://aidcrew.dev/media/crew-preview.png">
+<meta name="twitter:image:alt" content="AIDCrew team interactions and split-screen agent workspaces">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2356b4e9'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='36' font-weight='700' text-anchor='middle' fill='%230e0f15'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css?v=crew-workspace-040">
 <script>
@@ -245,12 +248,12 @@ try { var s = localStorage.getItem('aidcrew-skin'); if (s) document.documentElem
 <section class="what">
   <h2>What is here</h2>
   <dl>
-    <dt>Providers</dt><dd>Anthropic; Gemini; anything OpenAI-compatible — Zen, OpenRouter, DeepSeek, OpenAI, Ollama, vLLM, or any endpoint by URL — in both dialects, chosen by trying. A model without native tool calling gets its tools in the prompt and its calls read back from the text.</dd>
+    <dt>Providers</dt><dd>Anthropic; Gemini; OpenAI-compatible services including OpenCode Go, OpenRouter and local endpoints. Native Claude Code can join through its installed CLI and subscription login. Each role can use a different provider and model.</dd>
     <dt>Tools</dt><dd><code>read</code>, <code>write</code>, <code>edit</code>, <code>grep</code>, <code>glob</code>, <code>tree</code>, <code>head</code>, <code>stat</code>, <code>json</code>, <code>toml</code>, <code>outline</code>, <code>symbols</code>, <code>imports</code>, <code>deps</code>, <code>git-log</code>, <code>bash</code>, <code>skill</code>, <code>agent_send</code>. Everything that only reads is a tool of its own, so looking something up never needs approving.</dd>
     <dt>MCP</dt><dd>Any MCP server, over stdio or HTTP, from the <code>.mcp.json</code> a project already has. Its tools arrive as ordinary tools; a server a project declares does not start until you say it may.</dd>
-    <dt>Cost</dt><dd>Per agent, per job and per session, from the service's own price list, the project's stated prices, or a bundled list checked against what the services publish — with a tilde when it is an estimate.</dd>
+    <dt>Cost</dt><dd>Per agent, per job and per session, from provider or configured prices, with estimates labelled. Native subscription token counts and costs are unavailable and remain unknown, never reported as zero.</dd>
     <dt>Sessions</dt><dd>Every turn written to disk; a session resumes where it was left — transcript, history and checkouts included. A checkout with uncommitted work outlives the session.</dd>
-    <dt>The screen</dt><dd>The alternate buffer, every frame exactly the window's height, drawn over the last rather than after a wipe: nothing scrolls, nothing blinks. Nine palettes, each solid or hairline; the default stays six hues under the common forms of colour blindness, and that is a test.</dd>
+    <dt>Workspace</dt><dd>Terminal and browser share the same session. Inspect message-level team graphs, resize agent panes, explore shared memory, and keep decisions and the event log together in Overview. Choose a default agent for quick chat from any view.</dd>
   </dl>
 </section>
 

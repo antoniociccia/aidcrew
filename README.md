@@ -4,21 +4,38 @@
 [![Release](https://img.shields.io/github/v/release/antoniociccia/aidcrew?display_name=tag)](https://github.com/antoniociccia/aidcrew/releases/latest)
 [![MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-A team of coding agents, each on its own provider and model, every job in a git
-worktree of its own, in one terminal.
+A shared terminal and browser workspace for coding-agent teams. Choose a provider
+and model for each role, follow their conversations, and inspect the work in a
+git worktree for each job.
 
-```
-  architect  claude-opus-5      coder  deepseek-v4-flash ◆   reviewer  free-tier
-  ▸ Plan in PLAN.md: rotate…  ⠹ thinking                   ▸ The multiplier is fine…
-```
+[Website](https://aidcrew.dev/) ·
+[Download v0.4.0](https://github.com/antoniociccia/aidcrew/releases/tag/v0.4.0) ·
+[Try it](#try-it) · [Native Claude Code](plugins/agent-native/README.md)
 
-![From an empty repository to a tested CLI: the setup wizard, a team of two on two cheap models, one instruction, and the handoff watched side by side](docs/demo.gif)
+[![A real AIDCrew session: the team graph with individual handoffs and resizable agent workspaces](docs/media/launch-preview.png)](docs/media/launch-preview.png)
 
-*One take, cut for length. An empty repository, the setup wizard, a key, a team
-of two. The architect plans on `glm-5.3-flash`; the coder builds, tests and
-commits on `deepseek-v4-flash`; the architect verifies the branch and merges it
-— both through OpenRouter, the whole run under a cent. What the shell runs at
-the end is `main`.*
+*Actual session screenshots. Open the image at full size, or inspect the
+[message-level team graph](docs/media/team-interactions.png) and
+[split workspace](docs/media/split-screen.png) separately.*
+
+## In v0.4.0
+
+- **Trace handoffs.** Open a graph connection to read the individual messages.
+  Hover a message to highlight its corresponding interaction point.
+- **Arrange the team.** Drag, dock and resize agent panes, or restore a balanced
+  layout. Each pane has its own conversation and addressed message input.
+- **Inspect shared context.** Explore memory by task and author; connections
+  show recorded provenance.
+- **Keep direction close.** Choose a default chat agent, talk without leaving
+  your current view, and follow decisions and events in one Overview.
+- **Bring native Claude Code.** Use the installed CLI with its subscription
+  login, shared team tools and terminal attachment. Its own permissions and
+  subscription limits apply; unavailable usage costs remain unknown.
+
+The standalone harness runs on macOS, Linux and Windows. Native Claude Code
+integration currently requires macOS or Linux and a separate CLI installation.
+
+## Architecture
 
 Two claims, and the code is the argument for both.
 
@@ -64,7 +81,7 @@ under WSL, which is the better-worn road.
 From source, which is what you want if you are going to change it:
 
 ```sh
-git clone git@github.com:antoniociccia/aidcrew.git
+git clone https://github.com/antoniociccia/aidcrew.git
 cd aidcrew && bun install     # Bun 1.3 or later
 bun run build                 # a binary for this machine, in dist/
 ```
@@ -200,7 +217,27 @@ Explicit per-agent YOLO also starts native Claude with bypass permissions.
 Changing native permission mode requires an idle agent and starts a new native
 process on its next turn; its harness conversation remains available.
 
+## Recorded walkthrough
+
+![An earlier terminal walkthrough: setup, two models and a verified branch](docs/demo.gif)
+
+An earlier recording shows an empty repository, setup, and a two-agent run through
+OpenRouter. The architect uses `glm-5.3-flash`; the coder uses
+`deepseek-v4-flash`. The recorded run cost under a cent. The screenshots above
+show the current workspace.
+
+## Nested Worlds experiment
+
+[Nested Worlds](packages/nested-worlds/README.md) is a separate simulation lab
+included in this repository, with seeded worlds, recorded decisions, replay and
+evaluation. Agents can discover a deliberately designed route to a simulated
+upper level. This is a constrained experiment, not evidence of AGI or escape
+from an actual execution sandbox.
+
 ## Measured, not claimed
+
+The benchmark below is a separate experiment, not a performance claim for every
+team configuration or for the new interface.
 
 Thirty tasks — bugs, features, refactors, changes across files — each with
 tests the agents never see and a reference solution that proves it solvable.
